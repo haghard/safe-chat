@@ -1,0 +1,78 @@
+[
+{
+   "type":"record",
+   "name":"MsgEnvelope",
+   "namespace":"com.safechat.domain",
+   "fields":[
+      {
+         "name":"correlationId",
+         "type":"string"
+      },
+      {
+         "name":"when",
+         "type":"long"
+      },
+      {
+         "name":"tz",
+         "type":"string"
+      },
+      {
+         "name": "payload",
+         "type":[
+            {
+               "name": "Joined",
+               "type": "record",
+               "namespace": "com.safechat.domain",
+               "fields": [
+                   { "name": "login", "type": "string" },
+                   { "name": "email", "type": [ "null", "string" ], "default" : null, "doc": "optional email" }
+               ]
+            },
+            {
+               "name": "TextAdded",
+               "type": "record",
+               "namespace": "com.safechat.domain",
+               "fields": [
+                   { "name": "user", "type": "string" },
+                   { "name": "text", "type": "string" }
+               ]
+            },
+            {
+               "name": "Disconnected",
+               "type": "record",
+               "namespace": "com.safechat.domain",
+               "fields": [
+                 { "name": "login", "type": "string" },
+                 { "name": "email", "type": [ "null", "string" ], "default" : null, "doc": "optional email" }
+               ]
+            },
+            {
+               "name": "LikedText",
+               "type": "record",
+               "namespace": "com.safechat.domain",
+               "fields": [
+                 { "name": "login", "type": [ "null", "string" ], "default" : null, "doc": "Since v3" },
+                 { "name": "seqNum", "type": [ "null", "long" ], "default" : null, "doc": "Since v3" }
+               ]
+            }
+         ]
+      }
+   ]
+},
+{
+     "type":"record",
+     "name":"ChatState",
+     "namespace":"com.safechat.domain",
+     "fields":[
+        {
+          "name" : "registeredUsers",
+          "type" : {
+            "type" : "array",
+            "items" : "string",
+            "default": []
+          },
+          "doc": "Users that have registered"
+        }
+      ]
+  }
+]
