@@ -1,11 +1,15 @@
+// Copyright (c) 2018-19 by Haghard. All rights reserved.
+
 package com.safechat.rest
 
 import akka.http.scaladsl.server._
 import spray.json._
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
+import akka.actor.typed.scaladsl.adapter._
 import akka.NotUsed
 import akka.stream.scaladsl.Flow
 import akka.actor.typed.ActorSystem
+import akka.management.cluster.scaladsl.ClusterHttpManagementRoutes
 import com.safechat.actors.{ChatRoomEntity, JoinChatRoom, JoinReply, ShardedChats}
 
 import scala.concurrent.duration._
@@ -37,10 +41,15 @@ class ChatRoomApi(rooms: ShardedChats)(implicit sys: ActorSystem[Nothing]) exten
           getChatRoomFlow(rooms, m)
       }
 
-  //More resilient chat room flow. The clients, very rate, have to reconnect
-  //Downside: online user count is wrong
-  val route: Route =
+  val routes: Route =
     path("chat" / Segment / "user" / Segment) { (chatId, user) ⇒
+      /**
+        * As long as at least one client connected to the chat room, the associated persistent entity won't be passivated.
+        *
+        * Downsides:
+        *   online user count is currently wrong
+        *
+        */
       val flow = akka.stream.scaladsl.RestartFlow.withBackoff(1.second, 5.second, 0.3) { () ⇒
         val f = getChatRoomFlow(rooms, JoinChatRoom(chatId, user))
           .map(reply ⇒ Flow.fromSinkAndSourceCoupled(reply.sinkRef.sink, reply.sourceRef.source))
@@ -48,7 +57,7 @@ class ChatRoomApi(rooms: ShardedChats)(implicit sys: ActorSystem[Nothing]) exten
         Await.result(f, Duration.Inf)
       }
       handleWebSocketMessages(flow)
-    }
+    } ~ ClusterHttpManagementRoutes(akka.cluster.Cluster(sys.toClassic))
 
   val route0: Route =
     path("chat" / Segment / "user" / Segment) { (chatId, user) ⇒

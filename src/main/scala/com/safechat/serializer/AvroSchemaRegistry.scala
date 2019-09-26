@@ -1,3 +1,5 @@
+// Copyright (c) 2018-19 by Haghard. All rights reserved.
+
 package com.safechat.serializer
 
 import org.apache.avro.Schema
@@ -7,12 +9,11 @@ import org.apache.commons.codec.digest.DigestUtils
 
 object AvroSchemaRegistry {
 
-  //java.net.URL
-
-  private val activeSchema: File = new File("./src/main/avro/UsersEnvelopeV1.avsc")
+  //private val activeSchema: File = new File("./src/main/avro/UsersEventsV1.avsc")
+  private val activeSchema: File = new File("avro/UsersEventsV1.avsc")
 
   private val schemaHistory: List[File] = Nil
-  //List(new File("./src/main/avroHistory/UsersEnvelopeV1.avsc")) //, "/avro/UsersEnvelopeV1.avsc")
+  //List(new File("./src/main/avroHistory/UsersEventsV1.avsc")) //, "/avro/UsersEventsV1.avsc")
 
   private val activeSchemaHash: String = getMD5FromUrl(activeSchema)
 

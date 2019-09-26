@@ -1,3 +1,5 @@
+// Copyright (c) 2018-19 by Haghard. All rights reserved.
+
 package com.safechat.actors
 
 import java.util.{TimeZone, UUID}
@@ -23,7 +25,7 @@ object ChatRoomEntity {
 
   val snapshotEveryN = 100
   val bs             = 1 << 4
-  val hubInitTimeout = 3.seconds
+  val hubInitTimeout = 6.seconds
 
   val wakeUpUserName   = "John Doe"
   val wakeUpEntityName = "none"
@@ -156,7 +158,7 @@ object ChatRoomEntity {
             )
           )
           .thenRun { newState: FullChatState ⇒
-            //ctx.log.info("users online:[{}]", newState.online.mkString(","))
+            ctx.log.info("users online:[{}]", newState.online.mkString(","))
             cmd.replyTo.tell(TextPostedReply(cmd.chatId, num))
           }
 

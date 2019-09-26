@@ -1,3 +1,5 @@
+// Copyright (c) 2018-19 by Haghard. All rights reserved.
+
 package com.safechat
 package serializer
 

@@ -7,9 +7,30 @@ https://github.com/wiringbits/safer.chat
 
 
 ws://192.168.77.10:9000/chat/aaa/user/harry
-ws://192.168.77.10:9000/chat/aaa/user/charley
+
+ws://85.119.150.35:8080/chat/aaa/user/charley
+ws://188.68.210.125:8080/chat/aaa/user/charley
 
 http GET 192.168.77.10:9000/chat/aaa/user/haghard
+
+
+
+### How to build and publish
+
+```bash
+  sbt -Denv=development docker && docker push haghard/safe-chat:0.0.1
+      
+```
+
+docker run --net="host" -d -p 2551:2551 -p 8080:8080 -e HOSTNAME=188.68.210.125 -e HTTP_PORT=8080 -e AKKA_PORT=2551 -e CASSANDRA=84.201.150.26 -e SEEDS=188.68.210.125:2551,85.119.150.35:2551 -m 700MB haghard/safe-chat:0.0.1
+
+
+docker run --net="host" -d -p 2551:2551 -p 8080:8080 -e HOSTNAME=85.119.150.35 -e HTTP_PORT=8080 -e AKKA_PORT=2551 -e CASSANDRA=84.201.150.26 -e SEEDS=188.68.210.125:2551,85.119.150.35:2551 -m 700MB haghard/safe-chat:0.0.1
+
+
+ws://95.213.236.45:8080/chat/aaa/user/harry
+ws://46.21.248.170:8080/chat/aaa/user/harry
+
 
 ## Links
 

@@ -23,7 +23,7 @@ addCommandAlias(
     "-DHTTP_PORT=8080 " +
     "-DAKKA_PORT=2550 " +
     "-Dakka.remote.artery.tcp.port=2550\n" +
-    "-Dakka.remote.artery.tcp.hostname=192.168.77.5\n" +
+    "-Dakka.remote.artery.tcp.hostname=46.21.248.170\n" +
     "-Dakka.cluster.seed-nodes.0=akka://echatter@95.213.236.45:2550\n" +
     "-Dakka.cluster.seed-nodes.1=akka://echatter@46.21.248.170:2550\n" +
     "-Dcassandra.hosts=84.201.150.26 "
