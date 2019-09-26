@@ -31,8 +31,6 @@ class ChatRoomApi(rooms: ShardedChats)(implicit sys: ActorSystem[Nothing]) exten
     }
   )
 
-  //DistributedShardedChatRooms(sys)
-
   private def getChatRoomFlow(rooms: ShardedChats, m: JoinChatRoom): Future[JoinReply] =
     (rooms ? m)
       .mapTo[JoinReply]
@@ -52,7 +50,16 @@ class ChatRoomApi(rooms: ShardedChats)(implicit sys: ActorSystem[Nothing]) exten
         */
       val flow = akka.stream.scaladsl.RestartFlow.withBackoff(1.second, 5.second, 0.3) { () ⇒
         val f = getChatRoomFlow(rooms, JoinChatRoom(chatId, user))
-          .map(reply ⇒ Flow.fromSinkAndSourceCoupled(reply.sinkRef.sink, reply.sourceRef.source))
+          .map { reply ⇒
+            Flow.fromSinkAndSourceCoupled(reply.sinkRef.sink, reply.sourceRef.source)
+              .watchTermination() { (_, c) ⇒
+                c.flatMap { _ ⇒
+                  sys.log.info("Flow for {}@{} has been terminated", user, chatId)
+                  rooms.disconnect(chatId, user)
+                }
+                NotUsed
+              }
+          }
         //TODO: remove blocking
         Await.result(f, Duration.Inf)
       }
