@@ -46,7 +46,7 @@ object Server extends Ops {
     val opts: Map[String, String] = argsToOpts(args.toList)
     applySystemProperties(opts)
 
-    val confPath = System.getProperty("CONFIG")
+    val confPath = Option(System.getProperty("CONFIG")).getOrElse(throw new Exception("CONFIG env var is expected"))
     val env      = Option(System.getProperty("ENV")).getOrElse(throw new Exception("ENV env var is expected"))
 
     val akkaExternalHostName = Option(System.getProperty("akka.remote.artery.canonical.hostname"))
@@ -74,12 +74,24 @@ object Server extends Ops {
 
     val configFile = new File(s"${new File(confPath).getAbsolutePath}/" + env + ".conf")
 
+    val dbPsw =
+      Option(System.getProperty("cassandra.psw")).getOrElse(throw new Exception("cassandra.psw env var is expected"))
+    val dbUser =
+      Option(System.getProperty("cassandra.user")).getOrElse(throw new Exception("cassandra.user env var is expected"))
+
     val dbConf = Option(System.getProperty("cassandra.hosts")).map { hs ⇒
       val contactPoints = hs.split(",").map(h ⇒ s""" "$h" """).mkString(",").dropRight(1)
       ConfigFactory.parseString(
         s"""
            |cassandra-journal.contact-points = [ $contactPoints ]
            |cassandra-snapshot-store.contact-points = [ $contactPoints ]
+           |
+           |cassandra-journal.authentication.username = $dbUser
+           |cassandra-snapshot-store.authentication.username = $dbUser
+           |
+           |cassandra-journal.authentication.password = $dbPsw
+           |cassandra-snapshot-store.authentication.password = $dbPsw
+           |
           """.stripMargin
       )
     }
@@ -127,6 +139,7 @@ object Server extends Ops {
       .append(s"★ ★ ★   Seed nodes: [$seedNodes]  ★ ★ ★")
       .append('\n')
       .append(s"★ ★ ★   Cassandra: ${cfg.getStringList("cassandra-journal.contact-points").asScala.mkString(",")} ")
+      .append('\n')
       .append(s"Partition size: ${cfg.getInt("cassandra-journal.target-partition-size")} ★ ★ ★")
       .append('\n')
       .append(s"★ ★ ★   Environment: [TZ:${TimeZone.getDefault.getID}. Start time:${LocalDateTime.now}]  ★ ★ ★")

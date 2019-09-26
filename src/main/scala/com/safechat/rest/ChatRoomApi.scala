@@ -42,16 +42,18 @@ class ChatRoomApi(rooms: ShardedChats)(implicit sys: ActorSystem[Nothing]) exten
   val routes: Route =
     path("chat" / Segment / "user" / Segment) { (chatId, user) ⇒
       /**
-        * As long as at least one client connected to the chat room, the associated persistent entity won't be passivated.
+        * As long as at least one client's connected to the chat room, the associated persistent entity won't be passivated.
         *
         * Downsides:
-        *   online user count is currently wrong
+        *   online users count is currently wrong
         *
         */
       val flow = akka.stream.scaladsl.RestartFlow.withBackoff(1.second, 5.second, 0.3) { () ⇒
         val f = getChatRoomFlow(rooms, JoinChatRoom(chatId, user))
+          .mapTo[JoinReply]
           .map { reply ⇒
-            Flow.fromSinkAndSourceCoupled(reply.sinkRef.sink, reply.sourceRef.source)
+            Flow
+              .fromSinkAndSourceCoupled(reply.sinkRef.sink, reply.sourceRef.source)
               .watchTermination() { (_, c) ⇒
                 c.flatMap { _ ⇒
                   sys.log.info("Flow for {}@{} has been terminated", user, chatId)

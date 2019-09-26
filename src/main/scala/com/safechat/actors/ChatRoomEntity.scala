@@ -25,7 +25,7 @@ object ChatRoomEntity {
 
   val snapshotEveryN = 100
   val bs             = 1 << 4
-  val hubInitTimeout = 6.seconds
+  val hubInitTimeout = 3.seconds
 
   val wakeUpUserName   = "John Doe"
   val wakeUpEntityName = "none"

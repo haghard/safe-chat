@@ -18,6 +18,8 @@ APP_OPTS="-server \
           -DSEEDS=${SEEDS} \
           -Dakka.remote.artery.canonical.hostname=${HOSTNAME} \
           -Dakka.remote.artery.canonical.port=${AKKA_PORT} \
-          -Dcassandra.hosts="${CASSANDRA}
+          -Dcassandra.hosts=${CASSANDRA} \
+          -Dcassandra.user=${CAS_USER} \
+          -Dcassandra.psw="${CAS_PWS}
 
 java ${APP_OPTS} -cp ${APP_BASE}/conf -jar ${APP_BASE}/safe-chat-${VERSION}.jar

@@ -10,7 +10,9 @@ addCommandAlias(
     "-Dakka.remote.artery.canonical.hostname=95.213.236.45\n" +
     "-Dakka.cluster.seed-nodes.0=akka://echatter@95.213.236.45:2550\n" +
     "-Dakka.cluster.seed-nodes.1=akka://echatter@46.21.248.170:2550\n" +
-    "-Dcassandra.hosts=84.201.150.26"
+    "-Dcassandra.hosts=84.201.150.26\n" +
+    "-Dcassandra.psw=... \n " +
+    "-Dcassandra.user=... \n "
 )
 
 //192.168.77.10
@@ -26,5 +28,7 @@ addCommandAlias(
     "-Dakka.remote.artery.tcp.hostname=46.21.248.170\n" +
     "-Dakka.cluster.seed-nodes.0=akka://echatter@95.213.236.45:2550\n" +
     "-Dakka.cluster.seed-nodes.1=akka://echatter@46.21.248.170:2550\n" +
-    "-Dcassandra.hosts=84.201.150.26 "
+    "-Dcassandra.hosts=84.201.150.26\n" +
+    "-Dcassandra.psw=... \n " +
+    "-Dcassandra.user=... \n "
 )

@@ -5,27 +5,41 @@ We want to have a MergeHub followed by a BroadcastHub to achieve dynamic fan-in 
 
 https://github.com/wiringbits/safer.chat 
 
-
 ws://192.168.77.10:9000/chat/aaa/user/harry
-
-ws://85.119.150.35:8080/chat/aaa/user/charley
-ws://188.68.210.125:8080/chat/aaa/user/charley
-
-http GET 192.168.77.10:9000/chat/aaa/user/haghard
-
 
 
 ### How to build and publish
 
 ```bash
-  sbt -Denv=development docker && docker push haghard/safe-chat:0.0.1
+  sbt -Denv=development docker && docker push haghard/safe-chat:0.1.0
       
 ```
 
-docker run --net="host" -d -p 2551:2551 -p 8080:8080 -e HOSTNAME=188.68.210.125 -e HTTP_PORT=8080 -e AKKA_PORT=2551 -e CASSANDRA=84.201.150.26 -e SEEDS=188.68.210.125:2551,85.119.150.35:2551 -m 700MB haghard/safe-chat:0.0.1
+
+```bash
+
+docker run --net="host" -d -p 2551:2551 -p 8080:8080 -e HOSTNAME=188.68.210.125 -e HTTP_PORT=8080 -e AKKA_PORT=2551 -e CASSANDRA=84.201.150.26 -e SEEDS=188.68.210.125:2551,85.119.150.35:2551 -e CAS_USER=fsa -e CAS_PWS= -m 700MB haghard/safe-chat:0.1.0
+
+docker run --net="host" -d -p 2551:2551 -p 8080:8080 -e HOSTNAME=85.119.150.35 -e HTTP_PORT=8080 -e AKKA_PORT=2551 -e CASSANDRA=84.201.150.26 -e SEEDS=188.68.210.125:2551,85.119.150.35:2551 -e CAS_USER=fsa -e CAS_PWS= -m 700MB haghard/safe-chat:0.1.0
+
+```
 
 
-docker run --net="host" -d -p 2551:2551 -p 8080:8080 -e HOSTNAME=85.119.150.35 -e HTTP_PORT=8080 -e AKKA_PORT=2551 -e CASSANDRA=84.201.150.26 -e SEEDS=188.68.210.125:2551,85.119.150.35:2551 -m 700MB haghard/safe-chat:0.0.1
+```bash
+
+http GET 188.68.210.125:8080/cluster/members
+ws://85.119.150.35:8080/chat/aaa/user/charley
+ws://188.68.210.125:8080/chat/aaa/user/charley
+
+
+
+http GET 188.68.210.125:8080/cluster/shards/chat-rooms
+
+Executes leave operation in cluster for provided {address}
+http DELETE 188.68.210.125:8080/cluster/members/akka://echatter@85.119.150.35:2551
+
+
+```
 
 
 ws://95.213.236.45:8080/chat/aaa/user/harry
