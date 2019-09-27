@@ -25,6 +25,7 @@
                "namespace": "com.safechat.domain",
                "fields": [
                    { "name": "login", "type": "string" },
+                   { "name": "pubKey", "type": "string" },
                    { "name": "email", "type": [ "null", "string" ], "default" : null, "doc": "optional email" }
                ]
             },
@@ -67,11 +68,11 @@
         {
           "name" : "registeredUsers",
           "type" : {
-            "type" : "array",
-            "items" : "string",
+            "type" : "map",
+            "values" : "string",
             "default": []
           },
-          "doc": "Users that have registered"
+          "doc": "Registered users and their pub keys"
         }
       ]
   }

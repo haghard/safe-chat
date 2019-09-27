@@ -49,52 +49,69 @@ ws://46.21.248.170:8080/chat/aaa/user/harry
 ## Links
 
 http://allaboutscala.com/scala-frameworks/akka/
+
 https://doc.akka.io/docs/akka/2.6/typed/from-classic.html
+
 https://www.lightbend.com/blog/cloud-native-app-design-techniques-distributed-state
+
 https://www.lightbend.com/blog/cloud-native-app-design-techniques-cqrs-event-sourcing-messaging
 
-
 https://doc.akka.io/docs/akka/current/typed/persistence.html
+
 https://doc.akka.io/docs/akka/current/typed/persistence.html#example
+
 https://doc.akka.io/docs/akka/current/typed/cluster-sharding.html
 
 ## message evolution/versioning
 
 https://www.scala-exercises.org/shapeless/coproducts
+
 https://github.com/Keenworks/akka-avro-evolution.git
+
 https://softwaremill.com/schema-registry-and-topic-with-multiple-message-types/
+
 https://blog.softwaremill.com/the-best-serialization-strategy-for-event-sourcing-9321c299632b
+
 https://github.com/IainHull/akka-persistence-message-bug
 
 
 ## Akka Typed from Classic:
 
-https://doc.akka.io/docs/akka/2.6/index.html 
+https://doc.akka.io/docs/akka/2.6/index.html
+ 
 https://doc.akka.io/docs/akka/2.6/typed/from-classic.html
+
 https://discuss.lightbend.com/t/akka-2-6-0-m7-released/5008
+
 AtLeastOnceDelivery with typed-actors: https://gist.github.com/patriknw/514bae62134050f24ca7af95ee977e54
+
 https://doc.akka.io/docs/akka/2.6/project/migration-guide-2.5.x-2.6.x.html
 
-CRDT
-https://github.com/cloudstateio/cloudstate/blob/master/docs/src/main/paradox/user/features/crdts.md
 
-Cassandra
+## Cassandra
 
 https://medium.com/@27.rahul.k/cassandra-ttl-intricacies-and-usage-by-examples-d54248f2853c
+
 https://blog.softwaremill.com/7-mistakes-when-using-apache-cassandra-51d2cf6df519
 
 
+##  Avro
+
+https://avro.apache.org/docs/1.8.2/spec.html#Maps
+
+## Git
+
+git tag -a v0.1.0 -m "v0.1.0" &&  git push --tags
+
 ```bash
 
-select persistence_id, partition_nr, sequence_nr, timestamp, ser_id, ser_manifest from chat_journal where persistence_id= 'chat-rooms|703c1ae555da3cd4' and partition_nr = 0;
+select persistence_id, partition_nr, sequence_nr, timestamp, ser_id, ser_manifest from safe_chat_journal where persistence_id= 'chat-rooms|aaa' and partition_nr = 0;
 
-persistence_id              | partition_nr | sequence_nr | timestamp                            | ser_id | ser_manifest
------------------------------+--------------+-------------+--------------------------------------+--------+----------------------------------------------------------------------------
-chat-rooms|703c1ae555da3cd4 |            0 |           1 | 50c1a460-dfa0-11e9-a486-5d0eb9688ce0 |   9999 |    com.safechat.domain.MsgEnvelope/Joined:8502517e2598f7913c22e81ae257f66a
-chat-rooms|703c1ae555da3cd4 |            0 |           2 | 567d1470-dfa0-11e9-a486-5d0eb9688ce0 |   9999 | com.safechat.domain.MsgEnvelope/TextAdded:8502517e2598f7913c22e81ae257f66a
-chat-rooms|703c1ae555da3cd4 |            0 |           3 | 56e59a40-dfa0-11e9-a486-5d0eb9688ce0 |   9999 | com.safechat.domain.MsgEnvelope/TextAdded:8502517e2598f7913c22e81ae257f66a
-chat-rooms|703c1ae555da3cd4 |            0 |           4 | 573b5b60-dfa0-11e9-a486-5d0eb9688ce0 |   9999 | com.safechat.domain.MsgEnvelope/TextAdded:8502517e2598f7913c22e81ae257f66a
-chat-rooms|703c1ae555da3cd4 |            0 |           5 | 577249e0-dfa0-11e9-a486-5d0eb9688ce0 |   9999 | com.safechat.domain.MsgEnvelope/TextAdded:8502517e2598f7913c22e81ae257f66a
-
+ persistence_id | partition_nr | sequence_nr | timestamp                            | ser_id | ser_manifest
+----------------+--------------+-------------+--------------------------------------+--------+----------------------------------------------------------------------------
+ chat-rooms|aaa |            0 |           1 | db81f100-e120-11e9-8862-59ab458a602d |   9999 |    com.safechat.domain.MsgEnvelope/Joined:1fc4afd458d3777ba86644ac39f51b70
+ chat-rooms|aaa |            0 |           2 | df48bd00-e120-11e9-8862-59ab458a602d |   9999 | com.safechat.domain.MsgEnvelope/TextAdded:1fc4afd458d3777ba86644ac39f51b70
+ chat-rooms|aaa |            0 |           3 | dfe1c8b0-e120-11e9-8862-59ab458a602d |   9999 | com.safechat.domain.MsgEnvelope/TextAdded:1fc4afd458d3777ba86644ac39f51b70
+ chat-rooms|aaa |            0 |           4 | e048a0d0-e120-11e9-8862-59ab458a602d |   9999 | com.safechat.domain.MsgEnvelope/TextAdded:1fc4afd458d3777ba86644ac39f51b70
 
 ```

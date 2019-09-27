@@ -28,16 +28,18 @@ sealed trait UserCmd {
   def replyTo: ActorRef[ChatRoomReply]
 }
 
-case class JoinUser(chatId: String, user: String, replyTo: ActorRef[ChatRoomReply]) extends UserCmd
+case class JoinUser(chatId: String, user: String, pubKey: String, replyTo: ActorRef[ChatRoomReply]) extends UserCmd
 
 case class PostText(chatId: String, user: String, text: String, replyTo: ActorRef[ChatRoomReply]) extends UserCmd
 
-case class DeactivateUser(chatId: String, user: String, replyTo: ActorRef[ChatRoomReply]) extends UserCmd
+case class DisconnectUser(chatId: String, user: String, replyTo: ActorRef[ChatRoomReply]) extends UserCmd
+
+case class StopChatRoom(chatId: String, replyTo: ActorRef[ChatRoomReply]) extends UserCmd
 
 case class ChatRoomHub(sinkHub: Sink[Message, NotUsed], srcHub: Source[Message, NotUsed], ks: UniqueKillSwitch)
 
 case class FullChatState(
-  regUsers: Set[String] = Set.empty,
+  regUsers: Map[String, String] = Map.empty,
   online: Set[String] = Set.empty,
   //recentHistory: RingBuffer[String],
   hub: Option[ChatRoomHub] = None

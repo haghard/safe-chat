@@ -20,7 +20,7 @@ lazy val commonSettings = Seq(
   startYear := Some(2019),
   //sbt headerCreate
   licenses += ("Apache-2.0", new URL("https://www.apache.org/licenses/LICENSE-2.0.txt")),
-  scalaVersion := "2.13.1",
+  scalaVersion := "2.13.0",
   headerMappings := headerMappings.value + (HeaderFileType.scala -> HeaderCommentStyle.cppStyleLineComment),
   headerLicense  := Some(HeaderLicense.Custom("Copyright (c) 2018-19 by Haghard. All rights reserved."))
 )
@@ -160,21 +160,20 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-testkit" % akkaVersion % Test,
 
   // li haoyi ammonite repl embed
-  //("com.lihaoyi" % "ammonite" % "1.7.1" % "test").cross(CrossVersion.full)
+  ("com.lihaoyi" % "ammonite" % "1.7.1" % "test").cross(CrossVersion.full)
 )
 
 //workaround for sbt 1.3.0 https://github.com/sbt/sbt/issues/5075
 //comment out for test:run
-Compile / run / fork := true
+//Compile / run / fork := true
 
 scalafmtOnCompile := true
 
 // ammonite repl
 // test:run
-/*
 sourceGenerators in Test += Def.task {
   val file = (sourceManaged in Test).value / "amm.scala"
   IO.write(file, """object amm extends App { ammonite.Main().run() }""")
   Seq(file)
 }.taskValue
-*/
+

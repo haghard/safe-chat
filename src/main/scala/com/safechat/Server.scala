@@ -14,7 +14,7 @@ import com.typesafe.config.{Config, ConfigFactory}
 import akka.actor.typed.scaladsl.adapter._
 
 import scala.jdk.CollectionConverters._
-import com.safechat.actors.ShardedChats
+import com.safechat.actors.ShardedChatRooms
 import com.safechat.rest.ChatRoomApi
 
 import scala.collection.Map
@@ -23,7 +23,7 @@ import scala.util.Try
 object Server extends Ops {
 
   val Dispatcher     = "akka.actor.default-dispatcher"
-  val AkkaSystemName = "echatter"
+  val AkkaSystemName = "safe-chat"
 
   def guardian(config: Config, hostName: String, httpPort: Int): Behavior[Nothing] =
     Behaviors
@@ -36,7 +36,7 @@ object Server extends Ops {
           //ctx.log.info(info)
           cluster.subscriptions ! Unsubscribe(ctx.self)
 
-          new Bootstrap(new ChatRoomApi(new ShardedChats).routes, hostName, httpPort)(sys.toClassic)
+          new Bootstrap(new ChatRoomApi(new ShardedChatRooms).routes, hostName, httpPort)(sys.toClassic)
           Behaviors.empty
         }
       }

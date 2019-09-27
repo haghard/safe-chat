@@ -19,6 +19,7 @@ import akka.stream.scaladsl.{BroadcastHub, Keep, MergeHub, StreamRefs}
 
 import scala.concurrent.Future
 import akka.actor.typed.scaladsl.AskPattern._
+import com.safechat.crypto.Account
 import com.safechat.rest.WsScaffolding
 
 object ChatRoomEntity {
@@ -135,7 +136,7 @@ object ChatRoomEntity {
               UUID.randomUUID.toString,
               System.currentTimeMillis,
               TimeZone.getDefault.getID,
-              Joined.newBuilder.setLogin(m.user).build()
+              Joined.newBuilder.setLogin(m.user).setPubKey(m.pubKey).build()
             )
           ) //Note that the new state after applying the event is passed as parameter to the thenRun function
           .thenRun { newState: FullChatState ⇒
@@ -162,7 +163,7 @@ object ChatRoomEntity {
             cmd.replyTo.tell(TextPostedReply(cmd.chatId, num))
           }
 
-      case cmd: DeactivateUser ⇒
+      case cmd: DisconnectUser ⇒
         /*Effect.none.thenRun { s: FullChatState ⇒
           ctx.log.info("{} left - online:[{}]", user, s.online.mkString(","))
           replyTo.tell(LeaveReply(chatId, user))
@@ -188,17 +189,21 @@ object ChatRoomEntity {
   ): FullChatState =
     if (event.getPayload.isInstanceOf[Joined]) {
       val ev = event.getPayload.asInstanceOf[Joined]
+
       if (state.online.isEmpty && state.hub.isEmpty)
         if (ev.getLogin.toString == ChatRoomEntity.wakeUpUserName)
           state
         else
           state.copy(
-            regUsers = state.regUsers + ev.getLogin.toString,
+            regUsers = state.regUsers + (ev.getLogin.toString → ev.getPubKey.toString),
             hub = Some(createHub(bs, persistenceId, ctx.self.narrow[PostText])),
             online = Set(ev.getLogin.toString)
           )
       else
-        state.copy(regUsers = state.regUsers + ev.getLogin.toString, online = state.online + ev.getLogin.toString)
+        state.copy(
+          regUsers = state.regUsers + (ev.getLogin.toString → ev.getPubKey.toString),
+          online = state.online + ev.getLogin.toString
+        )
 
     } else if (event.getPayload.isInstanceOf[com.safechat.domain.Disconnected]) {
       state.copy(

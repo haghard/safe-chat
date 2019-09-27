@@ -78,9 +78,10 @@ final class JournalEventsSerializer extends SerializerWithStringManifest {
       case state: FullChatState ⇒
         Using.resource(new ByteArrayOutputStream()) { out ⇒
           Using.resource(EncoderFactory.get.binaryEncoder(out, null)) { enc ⇒
-            val users = new java.util.ArrayList[java.lang.CharSequence]()
-            state.regUsers.foreach { u ⇒
-              users.add(u)
+            val users = new java.util.HashMap[java.lang.CharSequence, java.lang.CharSequence]()
+            state.regUsers.foreach {
+              case (login, pubKey) ⇒
+                users.put(login, pubKey)
             }
             new SpecificDatumWriter[ChatState](schema)
               .write(new ChatState(users), enc)
@@ -100,11 +101,11 @@ final class JournalEventsSerializer extends SerializerWithStringManifest {
     if (manifest.startsWith(classOf[MsgEnvelope].getName)) {
       deserialize[MsgEnvelope](bytes, writerSchema, readerSchema)
     } else if (manifest.startsWith(classOf[FullChatState].getName)) {
-      var users = Set.empty[String]
-      deserialize[ChatState](bytes, writerSchema, readerSchema).getRegisteredUsers.forEach { u ⇒
-        users = users + u.toString
+      var userKeys = Map.empty[String, String]
+      deserialize[ChatState](bytes, writerSchema, readerSchema).getRegisteredUsers.forEach { (login, pubKey) ⇒
+        userKeys = userKeys + (login.toString → pubKey.toString)
       }
-      FullChatState(regUsers = users)
+      FullChatState(regUsers = userKeys)
     } else
       throw new IllegalStateException(
         s"Deserialization for $manifest not supported. Check fromBinary method in ${this.getClass.getName} class."

@@ -10,20 +10,21 @@ import akka.NotUsed
 import akka.stream.scaladsl.Flow
 import akka.actor.typed.ActorSystem
 import akka.management.cluster.scaladsl.ClusterHttpManagementRoutes
-import com.safechat.actors.{ChatRoomEntity, JoinChatRoom, JoinReply, ShardedChats}
+import com.safechat.actors.{ChatRoomEntity, JoinReply, ShardedChatRooms}
 
 import scala.concurrent.duration._
 import scala.util.control.NonFatal
 import scala.concurrent.{Await, Future}
 
-class ChatRoomApi(rooms: ShardedChats)(implicit sys: ActorSystem[Nothing]) extends RestApi {
+class ChatRoomApi(rooms: ShardedChatRooms)(implicit sys: ActorSystem[Nothing]) extends RestApi {
   implicit val cx  = sys.executionContext
   implicit val sch = sys.scheduler
 
   //wake up ChatRoom shard region using a fake user
   sch.scheduleOnce(
     200.millis, { () ⇒
-      (rooms ? JoinChatRoom(ChatRoomEntity.wakeUpEntityName, ChatRoomEntity.wakeUpUserName))
+      rooms
+        .enter(ChatRoomEntity.wakeUpEntityName, ChatRoomEntity.wakeUpUserName, "fake-pub-key")
         .mapTo[JoinReply]
         .flatMap { _ ⇒
           rooms.disconnect(ChatRoomEntity.wakeUpEntityName, ChatRoomEntity.wakeUpUserName)
@@ -31,25 +32,30 @@ class ChatRoomApi(rooms: ShardedChats)(implicit sys: ActorSystem[Nothing]) exten
     }
   )
 
-  private def getChatRoomFlow(rooms: ShardedChats, m: JoinChatRoom): Future[JoinReply] =
-    (rooms ? m)
+  private def getChatRoomFlow(
+    rooms: ShardedChatRooms,
+    chatId: String,
+    user: String,
+    pubKey: String
+  ): Future[JoinReply] =
+    rooms
+      .enter(chatId, user, pubKey)
       .mapTo[JoinReply]
       .recoverWith {
         case NonFatal(_) ⇒
-          getChatRoomFlow(rooms, m)
+          getChatRoomFlow(rooms, chatId, user, pubKey)
       }
 
   val routes: Route =
-    path("chat" / Segment / "user" / Segment) { (chatId, user) ⇒
+    (path("chat" / Segment / "user" / Segment) & parameter("key".as[String])) { (chatId, user, pubKey) ⇒
       /**
         * As long as at least one client's connected to the chat room, the associated persistent entity won't be passivated.
         *
         * Downsides:
         *   online users count is currently wrong
-        *
         */
       val flow = akka.stream.scaladsl.RestartFlow.withBackoff(1.second, 5.second, 0.3) { () ⇒
-        val f = getChatRoomFlow(rooms, JoinChatRoom(chatId, user))
+        val f = getChatRoomFlow(rooms, chatId, user, pubKey)
           .mapTo[JoinReply]
           .map { reply ⇒
             Flow
@@ -69,9 +75,9 @@ class ChatRoomApi(rooms: ShardedChats)(implicit sys: ActorSystem[Nothing]) exten
     } ~ ClusterHttpManagementRoutes(akka.cluster.Cluster(sys.toClassic))
 
   val route0: Route =
-    path("chat" / Segment / "user" / Segment) { (chatId, user) ⇒
+    (path("chat" / Segment / "user" / Segment) & parameter("key".as[String])) { (chatId, user, pubKey) ⇒
       //(rooms ? JoinChatRoom(chatId, user)).mapTo[JoinReply]
-      val f = getChatRoomFlow(rooms, JoinChatRoom(chatId, user))
+      val f = getChatRoomFlow(rooms, chatId, user, pubKey)
       onComplete(f) {
         case scala.util.Success(reply) ⇒
           val flow = Flow
