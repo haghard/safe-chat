@@ -35,6 +35,7 @@
                "namespace": "com.safechat.domain",
                "fields": [
                    { "name": "user", "type": "string" },
+                   { "name": "receiver", "type": "string" },
                    { "name": "text", "type": "string" }
                ]
             },
