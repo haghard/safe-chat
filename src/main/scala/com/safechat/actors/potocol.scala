@@ -30,11 +30,10 @@ sealed trait UserCmd {
 
 case class JoinUser(chatId: String, user: String, pubKey: String, replyTo: ActorRef[ChatRoomReply]) extends UserCmd
 
-case class PostText(chatId: String, user: String, text: String, replyTo: ActorRef[ChatRoomReply]) extends UserCmd
+case class PostText(chatId: String, sender: String, receiver: String, text: String, replyTo: ActorRef[ChatRoomReply])
+    extends UserCmd
 
 case class DisconnectUser(chatId: String, user: String, replyTo: ActorRef[ChatRoomReply]) extends UserCmd
-
-case class StopChatRoom(chatId: String, replyTo: ActorRef[ChatRoomReply]) extends UserCmd
 
 case class ChatRoomHub(sinkHub: Sink[Message, NotUsed], srcHub: Source[Message, NotUsed], ks: UniqueKillSwitch)
 

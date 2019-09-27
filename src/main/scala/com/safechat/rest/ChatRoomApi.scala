@@ -58,8 +58,7 @@ class ChatRoomApi(rooms: ShardedChatRooms)(implicit sys: ActorSystem[Nothing]) e
         val f = getChatRoomFlow(rooms, chatId, user, pubKey)
           .mapTo[JoinReply]
           .map { reply ⇒
-            Flow
-              .fromSinkAndSourceCoupled(reply.sinkRef.sink, reply.sourceRef.source)
+            Flow.fromSinkAndSourceCoupled(reply.sinkRef.sink, reply.sourceRef.source)
               .watchTermination() { (_, c) ⇒
                 c.flatMap { _ ⇒
                   sys.log.info("Flow for {}@{} has been terminated", user, chatId)

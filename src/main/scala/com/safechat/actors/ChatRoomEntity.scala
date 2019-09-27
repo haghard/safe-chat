@@ -15,21 +15,20 @@ import akka.stream.{KillSwitches, StreamRefAttributes}
 import com.safechat.LoggingBehaviorInterceptor
 import com.safechat.domain.{Disconnected, Joined, MsgEnvelope, RingBuffer, TextAdded}
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
-import akka.stream.scaladsl.{BroadcastHub, Keep, MergeHub, StreamRefs}
+import akka.stream.scaladsl.{BroadcastHub, Keep, MergeHub, Source, StreamRefs}
 
 import scala.concurrent.Future
 import akka.actor.typed.scaladsl.AskPattern._
-import com.safechat.crypto.Account
 import com.safechat.rest.WsScaffolding
 
 object ChatRoomEntity {
 
   val snapshotEveryN = 100
   val bs             = 1 << 4
-  val hubInitTimeout = 3.seconds
+  val hubInitTimeout = 5.seconds
 
   val wakeUpUserName   = "John Doe"
-  val wakeUpEntityName = "none"
+  val wakeUpEntityName = "dungeon"
 
   val settings = StreamRefAttributes
     .subscriptionTimeout(hubInitTimeout)
@@ -57,16 +56,16 @@ object ChatRoomEntity {
         eventHandler = eh(ctx, ctx.self.path.name)
       ).receiveSignal {
           case (state, RecoveryCompleted) ⇒
-            ctx.log.info(s"Recovered: [${state.regUsers.mkString(",")}]")
+            ctx.log.info(s"Recovered: [${state.regUsers.keySet.mkString(",")}]")
           case (state, PreRestart) ⇒
-            ctx.log.info(s"PreRestart ${state.regUsers.mkString(",")}")
+            ctx.log.info(s"Pre-restart ${state.regUsers.keySet.mkString(",")}")
           case (state, PostStop) ⇒
             state.hub.foreach(_.ks.shutdown)
             ctx.log.info("PostStop. Clean up chat resources")
           case (state, SnapshotCompleted(_)) ⇒
-            ctx.log.info(s"SnapshotCompleted [${state.regUsers.mkString(",")}]")
+            ctx.log.info(s"SnapshotCompleted [${state.regUsers.keySet.mkString(",")}]")
           case (state, SnapshotFailed(_, ex)) ⇒
-            ctx.log.error(s"SnapshotFailed ${state.regUsers.mkString(",")}", ex)
+            ctx.log.error(s"SnapshotFailed ${state.regUsers.keySet.mkString(",")}", ex)
           case (_, RecoveryFailed(cause)) ⇒
             ctx.log.error(s"RecoveryFailed $cause", cause)
           case (_, signal) ⇒
@@ -107,10 +106,13 @@ object ChatRoomEntity {
             .flowWithHeartbeat()
             .mapAsync(1) { //to preserve the real time ordering
               case TextMessage.Strict(text) ⇒
+                //message pattern alice:bob:......message body....
                 val segments = text.split(":")
-                if (segments.size == 2) {
+                if (segments.size == 3) {
                   ctx
-                    .ask[ChatRoomReply](PostText(persistenceId, segments(0).trim, segments(1).trim, _))
+                    .ask[ChatRoomReply](
+                      PostText(persistenceId, segments(0).trim, segments(1).trim, segments(2).trim, _)
+                    )
                     .collect { case r: TextPostedReply ⇒ TextMessage.Strict(s"${r.chatId}:${r.seqNum}") }
                 } else if (text eq WsScaffolding.hbMessage)
                   Future.successful(TextMessage.Strict(s"$persistenceId:ping"))
@@ -141,7 +143,9 @@ object ChatRoomEntity {
           ) //Note that the new state after applying the event is passed as parameter to the thenRun function
           .thenRun { newState: FullChatState ⇒
             newState.hub.foreach { h ⇒
-              val srcRefF  = h.srcHub.runWith(StreamRefs.sourceRef[Message].addAttributes(settings))
+              val body = newState.regUsers.map { case (k, v) ⇒ s"$k:$v" }.mkString("\n")
+              val srcRefF = (Source.single[Message](TextMessage(body)) ++ h.srcHub)
+                .runWith(StreamRefs.sourceRef[Message].addAttributes(settings))
               val sinkRefF = h.sinkHub.runWith(StreamRefs.sinkRef[Message].addAttributes(settings))
               cmd.replyTo.tell(JoinReply(m.chatId, m.user, sinkRefF, srcRefF))
             }
@@ -155,7 +159,7 @@ object ChatRoomEntity {
               UUID.randomUUID.toString,
               System.currentTimeMillis,
               TimeZone.getDefault.getID,
-              new TextAdded(cmd.user, cmd.text)
+              new TextAdded(cmd.sender, cmd.receiver, cmd.text)
             )
           )
           .thenRun { newState: FullChatState ⇒
@@ -186,10 +190,10 @@ object ChatRoomEntity {
 
   def eh(ctx: ActorContext[UserCmd], persistenceId: String)(state: FullChatState, event: MsgEnvelope)(
     implicit sys: ActorSystem[Nothing]
-  ): FullChatState =
+  ): FullChatState = {
+    ctx.log.info("*****eh******")
     if (event.getPayload.isInstanceOf[Joined]) {
       val ev = event.getPayload.asInstanceOf[Joined]
-
       if (state.online.isEmpty && state.hub.isEmpty)
         if (ev.getLogin.toString == ChatRoomEntity.wakeUpUserName)
           state
@@ -212,10 +216,11 @@ object ChatRoomEntity {
             .getLogin
             .toString
       )
-    } else if (event.getPayload.isInstanceOf[com.safechat.domain.TextAdded])
+    } else if (event.getPayload.isInstanceOf[TextAdded])
       state
     else
       state
+  }
 
   def snapshotPredicate(
     ctx: ActorContext[UserCmd]

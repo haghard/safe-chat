@@ -165,7 +165,7 @@ libraryDependencies ++= Seq(
 
 //workaround for sbt 1.3.0 https://github.com/sbt/sbt/issues/5075
 //comment out for test:run
-//Compile / run / fork := true
+Compile / run / fork := true
 
 scalafmtOnCompile := true
 

@@ -28,9 +28,9 @@ docker run --net="host" -d -p 2551:2551 -p 8080:8080 -e HOSTNAME=85.119.150.35 -
 ```bash
 
 http GET 188.68.210.125:8080/cluster/members
-ws://85.119.150.35:8080/chat/aaa/user/charley
-ws://188.68.210.125:8080/chat/aaa/user/charley
 
+ws://188.68.210.125:8080/chat/aaa/user/charley
+ws://85.119.150.35:8080/chat/aaa/user/charley
 
 
 http GET 188.68.210.125:8080/cluster/shards/chat-rooms
