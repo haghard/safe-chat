@@ -19,6 +19,7 @@ import akka.stream.scaladsl.{BroadcastHub, Keep, MergeHub, Source, StreamRefs}
 
 import scala.concurrent.Future
 import akka.actor.typed.scaladsl.AskPattern._
+import akka.persistence.typed.scaladsl.RetentionCriteria
 import com.safechat.rest.WsScaffolding
 
 object ChatRoomEntity {
@@ -72,6 +73,7 @@ object ChatRoomEntity {
             ctx.log.info(s"Signal $signal")
         }
         .snapshotWhen(snapshotPredicate(ctx))
+        .withRetention(RetentionCriteria.snapshotEvery(numberOfEvents = snapshotEveryN, keepNSnapshots = 2)) //.withDeleteEventsOnSnapshot
         .onPersistFailure(
           SupervisorStrategy.restartWithBackoff(minBackoff = 2.seconds, maxBackoff = 20.seconds, randomFactor = 0.3)
         )
@@ -143,8 +145,8 @@ object ChatRoomEntity {
           ) //Note that the new state after applying the event is passed as parameter to the thenRun function
           .thenRun { newState: FullChatState ⇒
             newState.hub.foreach { h ⇒
-              val body = newState.regUsers.map { case (k, v) ⇒ s"$k:$v" }.mkString("\n")
-              val srcRefF = (Source.single[Message](TextMessage(body)) ++ h.srcHub)
+              val userKeys = newState.regUsers.map { case (k, v) ⇒ s"$k:$v" }.mkString("\n")
+              val srcRefF = (Source.single[Message](TextMessage(userKeys)) ++ h.srcHub)
                 .runWith(StreamRefs.sourceRef[Message].addAttributes(settings))
               val sinkRefF = h.sinkHub.runWith(StreamRefs.sinkRef[Message].addAttributes(settings))
               cmd.replyTo.tell(JoinReply(m.chatId, m.user, sinkRefF, srcRefF))
@@ -190,8 +192,7 @@ object ChatRoomEntity {
 
   def eh(ctx: ActorContext[UserCmd], persistenceId: String)(state: FullChatState, event: MsgEnvelope)(
     implicit sys: ActorSystem[Nothing]
-  ): FullChatState = {
-    ctx.log.info("*****eh******")
+  ): FullChatState =
     if (event.getPayload.isInstanceOf[Joined]) {
       val ev = event.getPayload.asInstanceOf[Joined]
       if (state.online.isEmpty && state.hub.isEmpty)
@@ -220,7 +221,6 @@ object ChatRoomEntity {
       state
     else
       state
-  }
 
   def snapshotPredicate(
     ctx: ActorContext[UserCmd]

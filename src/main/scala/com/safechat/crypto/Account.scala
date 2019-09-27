@@ -138,28 +138,8 @@ object Account {
       Account(pub, priv)
     }
 
-  //public
   def recoverFromPubKey(bs: String): Option[RSAPublicKey] =
     crypto
       .base64Decode(bs)
       .map(bts ⇒ KeyFactory.getInstance(ALG).generatePublic(new X509EncodedKeySpec(bts)).asInstanceOf[RSAPublicKey])
-
-  /*
-      def privateKey(keyAlgorithm: String, keyBase64Url: String): PrivateKey =
-        KeyFactory.getInstance(keyAlgorithm).generatePrivate(new PKCS8EncodedKeySpec(Base64.forUrl(keyBase64Url)))
-
-      def publicKey(keyAlgorithm: String, keyBase64Url: String): PublicKey =
-        KeyFactory.getInstance(keyAlgorithm).generatePublic(new X509EncodedKeySpec(Base64.forUrl(keyBase64Url)))
-   */
-
-  /*
-   val pubKeyStr = Crypto.base64UrlEncode(ra.pub.getEncoded)
-   publicKey(Crypto.base64UrlDecode(pubKeyStr).get)
-   */
-
-  /*
-    def publicKey(bs: Array[Byte]): RSAPublicKey =
-      KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(bs)).asInstanceOf[RSAPublicKey]
- */
-
 }

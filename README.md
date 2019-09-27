@@ -5,7 +5,7 @@ We want to have a MergeHub followed by a BroadcastHub to achieve dynamic fan-in 
 
 https://github.com/wiringbits/safer.chat 
 
-ws://192.168.77.10:9000/chat/aaa/user/harry
+ws://192.168.77.10:8080/chat/aaa/user/harry?key=...
 
 
 ### How to build and publish
@@ -29,9 +29,8 @@ docker run --net="host" -d -p 2551:2551 -p 8080:8080 -e HOSTNAME=85.119.150.35 -
 
 http GET 188.68.210.125:8080/cluster/members
 
-ws://188.68.210.125:8080/chat/aaa/user/charley
-ws://85.119.150.35:8080/chat/aaa/user/charley
-
+ws://188.68.210.125:8080/chat/aaa/user/charley?key=...
+ws://85.119.150.35:8080/chat/aaa/user/charley?key=...
 
 http GET 188.68.210.125:8080/cluster/shards/chat-rooms
 
@@ -40,10 +39,6 @@ http DELETE 188.68.210.125:8080/cluster/members/akka://echatter@85.119.150.35:25
 
 
 ```
-
-
-ws://95.213.236.45:8080/chat/aaa/user/harry
-ws://46.21.248.170:8080/chat/aaa/user/harry
 
 
 ## Links

@@ -11,7 +11,7 @@ addCommandAlias(
     "-Dakka.cluster.seed-nodes.0=akka://safe-chat@192.168.77.10:2550\n" +
     "-Dakka.cluster.seed-nodes.1=akka://safe-chat@192.168.77.5:2550\n" +
     "-Dcassandra.hosts=84.201.150.26\n" +
-    "-Dcassandra.psw=ncXMbELjuDycnokVhnQowLaFzcsPfnRJrmgTAeRmxouuexrcQFdx3mBPzcJNawEy\n" +
+    "-Dcassandra.psw=...\n" +
     "-Dcassandra.user=fsa"
 )
 
