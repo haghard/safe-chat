@@ -145,7 +145,7 @@ object ChatRoomEntity {
           ) //Note that the new state after applying the event is passed as parameter to the thenRun function
           .thenRun { newState: FullChatState ⇒
             newState.hub.foreach { h ⇒
-              val userKeys = newState.regUsers.map { case (k, v) ⇒ s"$k:$v" }.mkString("\n")
+              val userKeys = newState.regUsers.filter(_._1 ne m.user).map { case (k, v) ⇒ s"$k:$v" }.mkString("\n")
               val srcRefF = (Source.single[Message](TextMessage(userKeys)) ++ h.srcHub)
                 .runWith(StreamRefs.sourceRef[Message].addAttributes(settings))
               val sinkRefF = h.sinkHub.runWith(StreamRefs.sinkRef[Message].addAttributes(settings))
