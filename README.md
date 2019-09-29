@@ -1,7 +1,7 @@
 # End-to-End encrypted chat
 
 # Main idea
-We want to have a MergeHub followed by a BroadcastHub to achieve dynamic fan-in and fan-out (many-to-many) per chat room in combination with StreamRefs to get long-running streams of data between two entities over the network. 
+We want to have a MergeHub followed by a BroadcastHub to achieve dynamic fan-in/fan-out (many-to-many) per a chat room in combination with StreamRefs to get long-running streams of data between two entities over the network. 
 
 https://github.com/wiringbits/safer.chat 
 
@@ -57,6 +57,13 @@ https://doc.akka.io/docs/akka/current/typed/persistence.html#example
 
 https://doc.akka.io/docs/akka/current/typed/cluster-sharding.html
 
+##  Akka release notes         
+
+https://discuss.lightbend.com/t/akka-2-6-0-m6-released/4857
+
+https://discuss.lightbend.com/t/akka-2-6-0-m7-released/5008
+
+
 ## message evolution/versioning
 
 https://www.scala-exercises.org/shapeless/coproducts
@@ -100,7 +107,7 @@ git tag -a v0.1.0 -m "v0.1.0" &&  git push --tags
 
 ```bash
 
-select persistence_id, partition_nr, sequence_nr, timestamp, ser_id, ser_manifest from safe_chat_journal where persistence_id= 'chat-rooms|aaa' and partition_nr = 0;
+select persistence_id, partition_nr, sequence_nr, timestamp, ser_id, ser_manifest from safe_chat_journal where persistence_id='703c1ae555da3cd4' and partition_nr = 0;
 
  persistence_id | partition_nr | sequence_nr | timestamp                            | ser_id | ser_manifest
 ----------------+--------------+-------------+--------------------------------------+--------+----------------------------------------------------------------------------

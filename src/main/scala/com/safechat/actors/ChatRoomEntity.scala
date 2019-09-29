@@ -8,8 +8,8 @@ import akka.actor.typed.{ActorRef, ActorSystem, Behavior, PostStop, PreRestart, 
 
 import scala.concurrent.duration._
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
-import akka.cluster.sharding.typed.scaladsl.{EntityTypeKey, EventSourcedEntity}
-import akka.persistence.typed.{RecoveryCompleted, RecoveryFailed, SnapshotCompleted, SnapshotFailed}
+import akka.cluster.sharding.typed.scaladsl.EntityTypeKey
+import akka.persistence.typed.{PersistenceId, RecoveryCompleted, RecoveryFailed, SnapshotCompleted, SnapshotFailed}
 import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior}
 import akka.stream.{KillSwitches, StreamRefAttributes}
 import com.safechat.LoggingBehaviorInterceptor
@@ -48,13 +48,11 @@ object ChatRoomEntity {
       implicit val sch = ctx.system.scheduler
       implicit val ec  = ctx.system.executionContext
 
-      EventSourcedEntity(
-        entityTypeKey = entityKey,
-        entityId = entId,
-        emptyState = FullChatState(),
-        commandHandler = ch(ctx.self.path.name, ctx),
-        //When an event has been persisted successfully the new state is created by applying the event to the current state with the eventHandler.
-        eventHandler = eh(ctx, ctx.self.path.name)
+      EventSourcedBehavior(
+        PersistenceId(entId),
+        FullChatState(),
+        ch(ctx.self.path.name, ctx),
+        eh(ctx, ctx.self.path.name)
       ).receiveSignal {
           case (state, RecoveryCompleted) ⇒
             ctx.log.info(s"Recovered: [${state.regUsers.keySet.mkString(",")}]")

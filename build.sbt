@@ -4,11 +4,7 @@ import sbtdocker.ImageName
 val projectName   = "safe-chat"
 val Version       = "0.1.0"
 
-//https://discuss.lightbend.com/t/akka-2-6-0-m6-released/4857
-//https://discuss.lightbend.com/t/akka-2-6-0-m7-released/5008
-val akkaVersion = "2.6.0-M7"
-//"2.5.25"
-
+val akkaVersion = "2.6.0-M8" //"2.5.25"
 val akkaHttpVersion = "10.1.10"
 
 promptTheme := ScalapenosTheme
@@ -22,7 +18,7 @@ lazy val commonSettings = Seq(
   licenses += ("Apache-2.0", new URL("https://www.apache.org/licenses/LICENSE-2.0.txt")),
   scalaVersion := "2.13.0",
   headerMappings := headerMappings.value + (HeaderFileType.scala -> HeaderCommentStyle.cppStyleLineComment),
-  headerLicense  := Some(HeaderLicense.Custom("Copyright (c) 2018-19 by Haghard. All rights reserved."))
+  headerLicense  := Some(HeaderLicense.Custom("Copyright (c) 2018-19 Vadim Bondarev. All rights reserved."))
 )
 
 lazy val root = project
@@ -34,11 +30,7 @@ lazy val root = project
     resolvers ++= Seq("Typesafe Snapshots" at "https://repo.akka.io/snapshots"),
 
     parallelExecution in Test := false,
-    javaOptions ++= Seq(
-      "-Xmx1024m",
-      "-XX:MaxMetaspaceSize=900m",
-      "-XX:+UseG1GC"
-    ),
+    javaOptions ++= Seq("-Xmx1024m", "-XX:MaxMetaspaceSize=900m", "-XX:+UseG1GC"),
 
     mainClass in assembly := Some("com.safechat.Server"),
     assemblyJarName in assembly := s"$projectName-${version.value}.jar",
@@ -133,8 +125,6 @@ libraryDependencies ++= Seq(
   "com.github.TanUkkii007" %% "akka-cluster-custom-downing" % "0.0.13-SNAPSHOT", //local build that uses CoordinatedShutdown to down self
 
   "com.typesafe.akka" %% "akka-slf4j" % akkaVersion,
-  "com.typesafe.akka" %% "akka-persistence" % akkaVersion,
-  "com.typesafe.akka" %% "akka-cluster-sharding" % akkaVersion,
 
   "com.typesafe.akka" %% "akka-persistence-typed" % akkaVersion,
   "com.typesafe.akka" %% "akka-cluster-sharding-typed" % akkaVersion,
@@ -148,10 +138,7 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
   "com.typesafe.akka" %% "akka-http-spray-json" % akkaHttpVersion,
 
-  //"com.typesafe.akka" %% "akka-stream-contrib" % "0.10",
-
   "ch.qos.logback" % "logback-classic" % "1.2.3",
-
   "org.apache.avro" % "avro" % "1.9.1",
 
   "commons-codec" % "commons-codec" % "1.11",

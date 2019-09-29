@@ -3,18 +3,19 @@
 package com.safechat.actors
 
 import java.nio.ByteBuffer
-import java.nio.charset.StandardCharsets
+import java.nio.charset.StandardCharsets.UTF_8
 
 import akka.actor.typed.ActorSystem
-import akka.cluster.sharding.typed.{ClusterShardingSettings, ShardingMessageExtractor}
+import com.safechat.domain.CassandraHash
 import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, Entity}
 import akka.cluster.sharding.typed.ClusterShardingSettings.StateStoreModeDData
-import com.safechat.domain.CassandraHash
+import akka.cluster.sharding.typed.{ClusterShardingSettings, ShardingMessageExtractor}
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import ShardedChatRooms._
 import akka.actor.typed.scaladsl.AskPattern._
+import akka.persistence.AbstractPersistentActorWithAtLeastOnceDelivery
 
 object ShardedChatRooms {
 
@@ -22,8 +23,8 @@ object ShardedChatRooms {
     def apply[T <: UserCmd](numberOfShards: Int): ShardingMessageExtractor[T, T] =
       new ShardingMessageExtractor[T, T] {
 
-        def hash3_128(entityId: String): Long = {
-          val bts = entityId.getBytes(StandardCharsets.UTF_8)
+        private def hash3_128(entityId: String): Long = {
+          val bts = entityId.getBytes(UTF_8)
           CassandraHash.hash3_x64_128(ByteBuffer.wrap(bts), 0, bts.length, 512L)(1)
         }
 
@@ -53,13 +54,11 @@ class ShardedChatRooms(implicit system: ActorSystem[Nothing]) {
        */
       .withRememberEntities(false)
       .withStateStoreMode(StateStoreModeDData)
-      .withPassivateIdleEntitiesAfter(passivationTO)
+      .withPassivateIdleEntityAfter(passivationTO)
 
   val chatShardRegion = sharding.init(
-    Entity(
-      ChatRoomEntity.entityKey,
-      entityCtx ⇒ ChatRoomEntity(entityCtx.entityId)
-    ).withMessageExtractor(ChatRoomsMsgExtractor[UserCmd](512)) //ShardingMessageExtractor[UserCmd](512)
+    Entity(ChatRoomEntity.entityKey)(entityCtx ⇒ ChatRoomEntity(entityCtx.entityId))
+      .withMessageExtractor(ChatRoomsMsgExtractor[UserCmd](512)) //ShardingMessageExtractor[UserCmd](512)
       .withSettings(settings)
   )
 
@@ -82,5 +81,4 @@ class ShardedChatRooms(implicit system: ActorSystem[Nothing]) {
 
   def enter(chatId: String, login: String, pubKey: String): Future[ChatRoomReply] =
     chatShardRegion.ask[ChatRoomReply](JoinUser(chatId, login, pubKey, _))
-
 }

@@ -68,7 +68,7 @@ class ChatRoomApi(rooms: ShardedChatRooms)(implicit sys: ActorSystem[Nothing]) e
                 NotUsed
               }
           }
-        //TODO: remove blocking
+        //TODO: remove blocking, but how ???
         Await.result(f, Duration.Inf)
       }
       handleWebSocketMessages(flow)
@@ -80,6 +80,13 @@ class ChatRoomApi(rooms: ShardedChatRooms)(implicit sys: ActorSystem[Nothing]) e
       val f = getChatRoomFlow(rooms, chatId, user, pubKey)
       onComplete(f) {
         case scala.util.Success(reply) ⇒
+          /*Flow.fromMaterializer { (mat, attr) ⇒
+            attr.attributeList.mkString(",")
+            val ec: ExecutionContextExecutor = mat.executionContext
+            val parallelism = mat.system.settings.config.getInt("max-into-parallelism")
+            ???
+          }*/
+
           val flow = Flow
             .fromSinkAndSourceCoupled(reply.sinkRef.sink, reply.sourceRef.source)
             .watchTermination() { (_, c) ⇒
