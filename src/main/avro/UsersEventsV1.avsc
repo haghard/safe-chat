@@ -74,6 +74,15 @@
             "default": []
           },
           "doc": "Registered users and their pub keys"
+        },
+        {
+          "name" : "recentHistory",
+          "type" : {
+            "type" : "array",
+            "items" : "string",
+            "default": []
+          },
+          "doc": "Recent messages"
         }
       ]
   }

@@ -1,9 +1,8 @@
 # End-to-End encrypted chat
 
 # Main idea
-We want to have a MergeHub followed by a BroadcastHub to achieve dynamic fan-in/fan-out (many-to-many) per a chat room in combination with StreamRefs to get long-running streams of data between two entities over the network. 
+We want to have a MergeHub followed by a BroadcastHub to achieve dynamic fan-in/fan-out (many-to-many) per a chat room in combination with StreamRefs to get long-running streams of data between two entities over the network.  
 
-https://github.com/wiringbits/safer.chat 
 
 ws://192.168.77.10:8080/chat/aaa/user/harry?key=...
 
@@ -95,6 +94,8 @@ https://doc.akka.io/docs/akka/2.6/project/migration-guide-2.5.x-2.6.x.html
 https://medium.com/@27.rahul.k/cassandra-ttl-intricacies-and-usage-by-examples-d54248f2853c
 
 https://blog.softwaremill.com/7-mistakes-when-using-apache-cassandra-51d2cf6df519
+
+https://github.com/wiringbits/safer.chat
 
 
 ##  Avro

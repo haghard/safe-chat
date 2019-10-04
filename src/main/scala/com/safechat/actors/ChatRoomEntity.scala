@@ -1,7 +1,9 @@
-// Copyright (c) 2018-19 by Haghard. All rights reserved.
+// Copyright (c) 2018-19 Vadim Bondarev. All rights reserved.
 
 package com.safechat.actors
 
+import java.time.format.DateTimeFormatter
+import java.time.{Instant, ZoneId, ZonedDateTime}
 import java.util.{TimeZone, UUID}
 
 import akka.actor.typed.{ActorRef, ActorSystem, Behavior, PostStop, PreRestart, SupervisorStrategy}
@@ -13,7 +15,7 @@ import akka.persistence.typed.{PersistenceId, RecoveryCompleted, RecoveryFailed,
 import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior}
 import akka.stream.{KillSwitches, StreamRefAttributes}
 import com.safechat.LoggingBehaviorInterceptor
-import com.safechat.domain.{Disconnected, Joined, MsgEnvelope, RingBuffer, TextAdded}
+import com.safechat.domain.{Disconnected, Joined, MsgEnvelope, TextAdded}
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
 import akka.stream.scaladsl.{BroadcastHub, Keep, MergeHub, Source, StreamRefs}
 
@@ -30,6 +32,7 @@ object ChatRoomEntity {
 
   val wakeUpUserName   = "John Doe"
   val wakeUpEntityName = "dungeon"
+  val frmtr            = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss Z")
 
   val settings = StreamRefAttributes
     .subscriptionTimeout(hubInitTimeout)
@@ -43,7 +46,6 @@ object ChatRoomEntity {
   def apply(entId: String): Behavior[UserCmd] =
     Behaviors.setup { ctx ⇒
       //LoggingBehaviorInterceptor(ctx.log) {
-      //https://doc.akka.io/docs/akka/2.6/project/migration-guide-2.5.x-2.6.x.html
       implicit val sys = ctx.system
       implicit val sch = ctx.system.scheduler
       implicit val ec  = ctx.system.executionContext
@@ -51,8 +53,8 @@ object ChatRoomEntity {
       EventSourcedBehavior(
         PersistenceId(entId),
         FullChatState(),
-        ch(ctx.self.path.name, ctx),
-        eh(ctx, ctx.self.path.name)
+        onCommand(ctx),
+        onEvent(ctx, ctx.self.path.name)
       ).receiveSignal {
           case (state, RecoveryCompleted) ⇒
             ctx.log.info(s"Recovered: [${state.regUsers.keySet.mkString(",")}]")
@@ -127,7 +129,7 @@ object ChatRoomEntity {
     ChatRoomHub(sinkHub, sourceHub, ks)
   }
 
-  def ch(persistenceId: String, ctx: ActorContext[UserCmd])(state: FullChatState, cmd: UserCmd)(
+  def onCommand(ctx: ActorContext[UserCmd])(state: FullChatState, cmd: UserCmd)(
     implicit sys: ActorSystem[Nothing]
   ): Effect[MsgEnvelope, FullChatState] =
     cmd match {
@@ -143,8 +145,9 @@ object ChatRoomEntity {
           ) //Note that the new state after applying the event is passed as parameter to the thenRun function
           .thenRun { newState: FullChatState ⇒
             newState.hub.foreach { h ⇒
-              val userKeys = newState.regUsers.filter(_._1 ne m.user).map { case (k, v) ⇒ s"$k:$v" }.mkString("\n")
-              val srcRefF = (Source.single[Message](TextMessage(userKeys)) ++ h.srcHub)
+              val history = state.history.entries.mkString("\n")
+              //val userKeys = newState.regUsers.filter(_._1 != m.user).map { case (k, v) ⇒ s"$k:$v" }.mkString("\n")
+              val srcRefF = (Source.single[Message](TextMessage(history)) ++ h.srcHub)
                 .runWith(StreamRefs.sourceRef[Message].addAttributes(settings))
               val sinkRefF = h.sinkHub.runWith(StreamRefs.sinkRef[Message].addAttributes(settings))
               cmd.replyTo.tell(JoinReply(m.chatId, m.user, sinkRefF, srcRefF))
@@ -188,7 +191,7 @@ object ChatRoomEntity {
           }
     }
 
-  def eh(ctx: ActorContext[UserCmd], persistenceId: String)(state: FullChatState, event: MsgEnvelope)(
+  def onEvent(ctx: ActorContext[UserCmd], persistenceId: String)(state: FullChatState, event: MsgEnvelope)(
     implicit sys: ActorSystem[Nothing]
   ): FullChatState =
     if (event.getPayload.isInstanceOf[Joined]) {
@@ -215,9 +218,13 @@ object ChatRoomEntity {
             .getLogin
             .toString
       )
-    } else if (event.getPayload.isInstanceOf[TextAdded])
+    } else if (event.getPayload.isInstanceOf[TextAdded]) {
+      val ev     = event.getPayload.asInstanceOf[TextAdded]
+      val tz     = ZoneId.of(event.getTz.toString)
+      val zoneDT = ZonedDateTime.ofInstant(Instant.ofEpochMilli(event.getWhen), tz)
+      state.history.add(s"[${frmtr.format(zoneDT)}] - ${ev.getUser}:${ev.getReceiver}:${ev.getText}")
       state
-    else
+    } else
       state
 
   def snapshotPredicate(

@@ -1,4 +1,4 @@
-// Copyright (c) 2018-19 by Haghard. All rights reserved.
+// Copyright (c) 2018-19 Vadim Bondarev. All rights reserved.
 
 package com.safechat
 package domain

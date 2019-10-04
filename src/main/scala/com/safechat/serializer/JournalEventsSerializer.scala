@@ -1,9 +1,10 @@
-// Copyright (c) 2018-19 by Haghard. All rights reserved.
+// Copyright (c) 2018-19 Vadim Bondarev. All rights reserved.
 
 package com.safechat
 package serializer
 
 import java.io.ByteArrayOutputStream
+import java.util
 
 import com.safechat.domain._
 import akka.serialization.SerializerWithStringManifest
@@ -83,8 +84,10 @@ final class JournalEventsSerializer extends SerializerWithStringManifest {
               case (login, pubKey) ⇒
                 users.put(login, pubKey)
             }
+            val history = new util.ArrayList[java.lang.CharSequence]()
+            state.history.entries.foreach(history.add(_))
             new SpecificDatumWriter[ChatState](schema)
-              .write(new ChatState(users), enc)
+              .write(new ChatState(users, history), enc)
           }
           out.toByteArray
         }
@@ -101,11 +104,16 @@ final class JournalEventsSerializer extends SerializerWithStringManifest {
     if (manifest.startsWith(classOf[MsgEnvelope].getName)) {
       deserialize[MsgEnvelope](bytes, writerSchema, readerSchema)
     } else if (manifest.startsWith(classOf[FullChatState].getName)) {
+      val state = deserialize[ChatState](bytes, writerSchema, readerSchema)
+
       var userKeys = Map.empty[String, String]
-      deserialize[ChatState](bytes, writerSchema, readerSchema).getRegisteredUsers.forEach { (login, pubKey) ⇒
+      state.getRegisteredUsers.forEach { (login, pubKey) ⇒
         userKeys = userKeys + (login.toString → pubKey.toString)
       }
-      FullChatState(regUsers = userKeys)
+
+      val s = FullChatState(regUsers = userKeys)
+      state.getRecentHistory.forEach(m ⇒ s.history.add(m.toString))
+      s
     } else
       throw new IllegalStateException(
         s"Deserialization for $manifest not supported. Check fromBinary method in ${this.getClass.getName} class."

@@ -1,4 +1,4 @@
-// Copyright (c) 2018-19 by Haghard. All rights reserved.
+// Copyright (c) 2018-19 Vadim Bondarev. All rights reserved.
 
 package com.safechat.actors
 
@@ -15,7 +15,6 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 import ShardedChatRooms._
 import akka.actor.typed.scaladsl.AskPattern._
-import akka.persistence.AbstractPersistentActorWithAtLeastOnceDelivery
 
 object ShardedChatRooms {
 
