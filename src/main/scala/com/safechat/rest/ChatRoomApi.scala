@@ -1,4 +1,4 @@
-// Copyright (c) 2018-19 Vadim Bondarev. All rights reserved.
+// Copyright (c) 2019 Vadim Bondarev. All rights reserved.
 
 package com.safechat.rest
 
@@ -7,14 +7,16 @@ import spray.json._
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import akka.actor.typed.scaladsl.adapter._
 import akka.NotUsed
-import akka.stream.scaladsl.Flow
+import akka.stream.scaladsl.{Flow, RestartFlow}
 import akka.actor.typed.ActorSystem
+import akka.http.scaladsl.model.ws.Message
 import akka.management.cluster.scaladsl.ClusterHttpManagementRoutes
+import akka.stream.{ActorAttributes, OverflowStrategy, StreamRefAttributes}
 import com.safechat.actors.{ChatRoomEntity, JoinReply, ShardedChatRooms}
 
 import scala.concurrent.duration._
 import scala.util.control.NonFatal
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{Await, ExecutionContextExecutor, Future}
 
 class ChatRoomApi(rooms: ShardedChatRooms)(implicit sys: ActorSystem[Nothing]) extends RestApi {
   implicit val cx  = sys.executionContext
@@ -46,27 +48,38 @@ class ChatRoomApi(rooms: ShardedChatRooms)(implicit sys: ActorSystem[Nothing]) e
           getChatRoomFlow(rooms, chatId, user, pubKey)
       }
 
+  /**
+    * As long as at least one client's connected to the chat room, the associated persistent entity won't be passivated.
+    *
+    * Downsides:
+    *   online users count is currently wrong
+    */
   val routes: Route =
-    (path("chat" / Segment / "user" / Segment) & parameter("key".as[String])) { (chatId, user, pubKey) ⇒
-      /**
-        * As long as at least one client's connected to the chat room, the associated persistent entity won't be passivated.
-        *
-        * Downsides:
-        *   online users count is currently wrong
-        */
-      val flow = akka.stream.scaladsl.RestartFlow.withBackoff(1.second, 5.second, 0.3) { () ⇒
+    (path("chat" / Segment / "user" / Segment) & parameter("pub".as[String])) { (chatId, user, pubKey) ⇒
+      val flow = RestartFlow.withBackoff(1.second, 5.second, 0.3) { () ⇒
         val f = getChatRoomFlow(rooms, chatId, user, pubKey)
           .mapTo[JoinReply]
           .map { reply ⇒
-            Flow
-              .fromSinkAndSourceCoupled(reply.sinkRef.sink, reply.sourceRef.source)
-              .watchTermination() { (_, c) ⇒
-                c.flatMap { _ ⇒
-                  sys.log.info("Flow for {}@{} has been terminated", user, chatId)
-                  rooms.disconnect(chatId, user)
+            Flow.fromMaterializer { (mat, attr) ⇒
+              //val ec: ExecutionContextExecutor = mat.executionContext
+              //val dis                          = attr.get[ActorAttributes.Dispatcher].get
+              val buf = attr.get[akka.stream.Attributes.InputBuffer].get
+              //println(attr.attributeList.mkString(","))
+
+              // Dispatcher(akka.actor.default-dispatcher),SupervisionStrategy(<function1>),
+              // DebugLogging(false), StreamSubscriptionTimeout(5000 milliseconds,CancelTermination),OutputBurstLimit(1000),FuzzingMode(false),
+              // MaxFixedBufferSize(1000000000), SyncProcessingLimit(1000)
+              Flow
+                .fromSinkAndSourceCoupled(reply.sinkRef.sink, reply.sourceRef.source)
+                .buffer(buf.max, OverflowStrategy.backpressure)
+                .watchTermination() { (_, c) ⇒
+                  c.flatMap { _ ⇒
+                    sys.log.info("Flow for {}@{} has been terminated", user, chatId)
+                    rooms.disconnect(chatId, user)
+                  }
+                  NotUsed
                 }
-                NotUsed
-              }
+            }
           }
         //TODO: remove blocking, but how ???
         Await.result(f, Duration.Inf)

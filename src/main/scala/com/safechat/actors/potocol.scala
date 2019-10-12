@@ -1,4 +1,4 @@
-// Copyright (c) 2018-19 Vadim Bondarev. All rights reserved.
+// Copyright (c) 2019 Vadim Bondarev. All rights reserved.
 
 package com.safechat.actors
 
@@ -40,6 +40,6 @@ case class ChatRoomHub(sinkHub: Sink[Message, NotUsed], srcHub: Source[Message, 
 case class FullChatState(
   regUsers: Map[String, String] = Map.empty,
   online: Set[String] = Set.empty,
-  history: RingBuffer[String] = new RingBuffer[String](1 << 4),
+  recentHistory: RingBuffer[String] = new RingBuffer[String](1 << 4),
   hub: Option[ChatRoomHub] = None
 )

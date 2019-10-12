@@ -1,10 +1,10 @@
 # End-to-End encrypted chat
 
 # Main idea
-We want to have a MergeHub followed by a BroadcastHub to achieve dynamic fan-in/fan-out (many-to-many) per a chat room in combination with StreamRefs to get long-running streams of data between two entities over the network.  
+We want to have a MergeHub connected with a BroadcastHub to achieve dynamic fan-in/fan-out (many-to-many) per a chat room in combination with StreamRefs to get long-running streams of data between two entities over the network.  
 
 
-ws://192.168.77.10:8080/chat/aaa/user/harry?key=...
+ws://192.168.77.10:8080/chat/aaa/user/harry?pub=...
 
 
 ### How to build and publish
@@ -33,7 +33,7 @@ ws://85.119.150.35:8080/chat/aaa/user/charley?key=...
 
 http GET 188.68.210.125:8080/cluster/shards/chat-rooms
 
-Executes leave operation in cluster for provided {address}
+Executes leave operation in cluster for provided address
 http DELETE 188.68.210.125:8080/cluster/members/akka://echatter@85.119.150.35:2551
 
 
@@ -76,7 +76,7 @@ https://blog.softwaremill.com/the-best-serialization-strategy-for-event-sourcing
 https://github.com/IainHull/akka-persistence-message-bug
 
 
-## Akka Typed from Classic:
+## Akka
 
 https://doc.akka.io/docs/akka/2.6/index.html
  
@@ -88,6 +88,25 @@ AtLeastOnceDelivery with typed-actors: https://gist.github.com/patriknw/514bae62
 
 https://doc.akka.io/docs/akka/2.6/project/migration-guide-2.5.x-2.6.x.html
 
+https://github.com/hseeberger/welcome-akka-typed/blob/master/src/main/scala/rocks/heikoseeberger/wat/typed/Transfer.scala
+
+https://doc.akka.io/docs/akka/current/typed/routers.html
+
+https://doc.akka.io/docs/akka/current/typed/distributed-data.html
+
+https://github.com/johanandren/akka-typed-samples.git
+
+https://manuel.bernhardt.io/2019/07/11/tour-of-akka-typed-protocols-and-behaviors/
+
+https://manuel.bernhardt.io/2019/08/07/tour-of-akka-typed-message-adapters-ask-pattern-and-actor-discovery/
+
+https://manuel.bernhardt.io/2019/09/05/tour-of-akka-typed-supervision-and-signals/
+
+https://github.com/rkuhn/blog/blob/master/01_my_journey_towards_understanding_distribution.md
+
+https://skillsmatter.com/skillscasts/12671-akka-cluster-up-and-running
+
+https://medium.com/bestmile/domain-driven-event-sourcing-with-akka-typed-5f5b8bbfb823
 
 ## Cassandra
 

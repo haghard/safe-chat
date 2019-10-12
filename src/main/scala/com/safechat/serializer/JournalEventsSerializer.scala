@@ -1,4 +1,4 @@
-// Copyright (c) 2018-19 Vadim Bondarev. All rights reserved.
+// Copyright (c) 2019 Vadim Bondarev. All rights reserved.
 
 package com.safechat
 package serializer
@@ -85,7 +85,7 @@ final class JournalEventsSerializer extends SerializerWithStringManifest {
                 users.put(login, pubKey)
             }
             val history = new util.ArrayList[java.lang.CharSequence]()
-            state.history.entries.foreach(history.add(_))
+            state.recentHistory.entries.foreach(history.add(_))
             new SpecificDatumWriter[ChatState](schema)
               .write(new ChatState(users, history), enc)
           }
@@ -112,7 +112,7 @@ final class JournalEventsSerializer extends SerializerWithStringManifest {
       }
 
       val s = FullChatState(regUsers = userKeys)
-      state.getRecentHistory.forEach(m ⇒ s.history.add(m.toString))
+      state.getRecentHistory.forEach(m ⇒ s.recentHistory.add(m.toString))
       s
     } else
       throw new IllegalStateException(

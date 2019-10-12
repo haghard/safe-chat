@@ -1,4 +1,4 @@
-// Copyright (c) 2018-19 Vadim Bondarev. All rights reserved.
+// Copyright (c) 2019 Vadim Bondarev. All rights reserved.
 
 package com.safechat.actors
 
@@ -42,7 +42,7 @@ class ShardedChatRooms(implicit system: ActorSystem[Nothing]) {
   implicit val sch        = system.scheduler
   implicit val shardingTO = akka.util.Timeout(ChatRoomEntity.hubInitTimeout)
 
-  val passivationTO = 1.minutes
+  val passivationTO = 10.minutes //TODO: make it configurable
   val sharding      = ClusterSharding(system)
   val settings =
     ClusterShardingSettings(system)
@@ -57,8 +57,10 @@ class ShardedChatRooms(implicit system: ActorSystem[Nothing]) {
 
   val chatShardRegion = sharding.init(
     Entity(ChatRoomEntity.entityKey)(entityCtx ⇒ ChatRoomEntity(entityCtx.entityId))
-      .withMessageExtractor(ChatRoomsMsgExtractor[UserCmd](512)) //ShardingMessageExtractor[UserCmd](512)
+    //ShardingMessageExtractor[UserCmd](512)
+      .withMessageExtractor(ChatRoomsMsgExtractor[UserCmd](512)) //TODO: make it configurable
       .withSettings(settings)
+      .withEntityProps(akka.actor.typed.Props.empty.withDispatcherFromConfig("shard-dispatcher"))
   )
 
   //do not use the ChatRoomsMsgExtractor

@@ -1,4 +1,4 @@
-// Copyright (c) 2018-19 Vadim Bondarev. All rights reserved.
+// Copyright (c) 2019 Vadim Bondarev. All rights reserved.
 
 package com.safechat.actors
 
@@ -26,24 +26,20 @@ import com.safechat.rest.WsScaffolding
 
 object ChatRoomEntity {
 
-  val snapshotEveryN = 100
-  val bs             = 1 << 4
-  val hubInitTimeout = 5.seconds
+  //val bs             = 1 << 4
+  val snapshotEveryN = 100       //TODO should be configurable
+  val hubInitTimeout = 5.seconds //TODO should be configurable
 
   val wakeUpUserName   = "John Doe"
   val wakeUpEntityName = "dungeon"
   val frmtr            = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss Z")
 
-  val settings = StreamRefAttributes
-    .subscriptionTimeout(hubInitTimeout)
-    .and(akka.stream.Attributes.inputBuffer(bs, bs))
-
-  implicit val t = akka.util.Timeout(hubInitTimeout)
+  //implicit val t = akka.util.Timeout(hubInitTimeout)
 
   val entityKey: EntityTypeKey[UserCmd] =
     EntityTypeKey[UserCmd]("chat-rooms")
 
-  def apply(entId: String): Behavior[UserCmd] =
+  def apply(entityId: String): Behavior[UserCmd] =
     Behaviors.setup { ctx ⇒
       //LoggingBehaviorInterceptor(ctx.log) {
       implicit val sys = ctx.system
@@ -51,7 +47,7 @@ object ChatRoomEntity {
       implicit val ec  = ctx.system.executionContext
 
       EventSourcedBehavior(
-        PersistenceId(entId),
+        PersistenceId(entityId),
         FullChatState(),
         onCommand(ctx),
         onEvent(ctx, ctx.self.path.name)
@@ -91,7 +87,7 @@ object ChatRoomEntity {
     *
     */
   def createHub(
-    bs: Int,
+    //bs: Int,
     persistenceId: String,
     ctx: ActorRef[PostText]
   )(
@@ -99,10 +95,11 @@ object ChatRoomEntity {
   ): ChatRoomHub = {
     implicit val ec  = sys.executionContext
     implicit val sch = sys.scheduler
+    implicit val t   = akka.util.Timeout(1.second)
     //ctx.log.info("create hub for {}", persistenceId)
     val ((sinkHub, ks), sourceHub) =
       MergeHub
-        .source[Message](bs)
+        .source[Message](sys.settings.config.getInt("akka.stream.materializer.max-input-buffer-size"))
         .via(
           WsScaffolding
             .flowWithHeartbeat()
@@ -145,11 +142,16 @@ object ChatRoomEntity {
           ) //Note that the new state after applying the event is passed as parameter to the thenRun function
           .thenRun { newState: FullChatState ⇒
             newState.hub.foreach { h ⇒
-              val history = state.history.entries.mkString("\n")
+              /*val settings = StreamRefAttributes
+                .subscriptionTimeout(hubInitTimeout)
+                .and(akka.stream.Attributes.inputBuffer(bs, bs))*/
+
+              val history = state.recentHistory.entries.mkString("\n")
+
               //val userKeys = newState.regUsers.filter(_._1 != m.user).map { case (k, v) ⇒ s"$k:$v" }.mkString("\n")
               val srcRefF = (Source.single[Message](TextMessage(history)) ++ h.srcHub)
-                .runWith(StreamRefs.sourceRef[Message].addAttributes(settings))
-              val sinkRefF = h.sinkHub.runWith(StreamRefs.sinkRef[Message].addAttributes(settings))
+                .runWith(StreamRefs.sourceRef[Message] /*.addAttributes(settings)*/ )
+              val sinkRefF = h.sinkHub.runWith(StreamRefs.sinkRef[Message] /*.addAttributes(settings)*/ )
               cmd.replyTo.tell(JoinReply(m.chatId, m.user, sinkRefF, srcRefF))
             }
           }
@@ -166,7 +168,7 @@ object ChatRoomEntity {
             )
           )
           .thenRun { newState: FullChatState ⇒
-            ctx.log.info("users online:[{}]", newState.online.mkString(","))
+            ctx.log.info("[{}]: users online:[{}]", Thread.currentThread().getName, newState.online.mkString(","))
             cmd.replyTo.tell(TextPostedReply(cmd.chatId, num))
           }
 
@@ -186,7 +188,7 @@ object ChatRoomEntity {
             )
           )
           .thenRun { newState: FullChatState ⇒
-            ctx.log.info("{} left - online:[{}]", cmd.user, newState.online.mkString(""))
+            ctx.log.info("{} disconnected - online:[{}]", cmd.user, newState.online.mkString(""))
             cmd.replyTo.tell(DisconnectReply(cmd.chatId, cmd.user))
           }
     }
@@ -202,7 +204,7 @@ object ChatRoomEntity {
         else
           state.copy(
             regUsers = state.regUsers + (ev.getLogin.toString → ev.getPubKey.toString),
-            hub = Some(createHub(bs, persistenceId, ctx.self.narrow[PostText])),
+            hub = Some(createHub(persistenceId, ctx.self.narrow[PostText])),
             online = Set(ev.getLogin.toString)
           )
       else
@@ -222,7 +224,7 @@ object ChatRoomEntity {
       val ev     = event.getPayload.asInstanceOf[TextAdded]
       val tz     = ZoneId.of(event.getTz.toString)
       val zoneDT = ZonedDateTime.ofInstant(Instant.ofEpochMilli(event.getWhen), tz)
-      state.history.add(s"[${frmtr.format(zoneDT)}] - ${ev.getUser}:${ev.getReceiver}:${ev.getText}")
+      state.recentHistory.add(s"[${frmtr.format(zoneDT)}] - ${ev.getUser} -> ${ev.getReceiver}:${ev.getText}")
       state
     } else
       state
