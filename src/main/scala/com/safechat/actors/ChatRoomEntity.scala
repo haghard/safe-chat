@@ -26,15 +26,12 @@ import com.safechat.rest.WsScaffolding
 
 object ChatRoomEntity {
 
-  //val bs             = 1 << 4
   val snapshotEveryN = 100       //TODO should be configurable
   val hubInitTimeout = 5.seconds //TODO should be configurable
 
   val wakeUpUserName   = "John Doe"
   val wakeUpEntityName = "dungeon"
   val frmtr            = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss Z")
-
-  //implicit val t = akka.util.Timeout(hubInitTimeout)
 
   val entityKey: EntityTypeKey[UserCmd] =
     EntityTypeKey[UserCmd]("chat-rooms")

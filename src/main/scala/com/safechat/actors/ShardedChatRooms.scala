@@ -27,13 +27,13 @@ object ShardedChatRooms {
           CassandraHash.hash3_x64_128(ByteBuffer.wrap(bts), 0, bts.length, 512L)(1)
         }
 
-        override def entityId(env: T): String =
-          hash3_128(env.chatId).toHexString
+        override def entityId(cmd: T): String =
+          hash3_128(cmd.chatId).toHexString
 
         override def shardId(entityId: String): String =
           (math.abs(hash3_128(entityId)) % numberOfShards).toString
 
-        override def unwrapMessage(env: T): T = env
+        override def unwrapMessage(cmd: T): T = cmd
       }
   }
 }
