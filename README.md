@@ -58,9 +58,7 @@ https://doc.akka.io/docs/akka/current/typed/cluster-sharding.html
 
 ##  Akka release notes         
 
-https://discuss.lightbend.com/t/akka-2-6-0-m6-released/4857
-
-https://discuss.lightbend.com/t/akka-2-6-0-m7-released/5008
+https://discuss.lightbend.com/t/akka-2-6-0-rc1-released/5253
 
 
 ## message evolution/versioning

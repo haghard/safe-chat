@@ -40,11 +40,10 @@ object ChatRoomEntity {
     Behaviors.setup { ctx ⇒
       //LoggingBehaviorInterceptor(ctx.log) {
       implicit val sys = ctx.system
-      implicit val sch = ctx.system.scheduler
-      implicit val ec  = ctx.system.executionContext
+      implicit val ec = ctx.system.executionContext
 
       EventSourcedBehavior(
-        PersistenceId(entityId),
+        PersistenceId("chat-room", entityId),
         FullChatState(),
         onCommand(ctx),
         onEvent(ctx, ctx.self.path.name)
@@ -84,15 +83,13 @@ object ChatRoomEntity {
     *
     */
   def createHub(
-    //bs: Int,
     persistenceId: String,
     ctx: ActorRef[PostText]
   )(
     implicit sys: ActorSystem[Nothing]
   ): ChatRoomHub = {
-    implicit val ec  = sys.executionContext
-    implicit val sch = sys.scheduler
-    implicit val t   = akka.util.Timeout(1.second)
+    implicit val ec = sys.executionContext
+    implicit val t  = akka.util.Timeout(1.second)
     //ctx.log.info("create hub for {}", persistenceId)
     val ((sinkHub, ks), sourceHub) =
       MergeHub

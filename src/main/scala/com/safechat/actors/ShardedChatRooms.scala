@@ -39,7 +39,6 @@ object ShardedChatRooms {
 }
 
 class ShardedChatRooms(implicit system: ActorSystem[Nothing]) {
-  implicit val sch        = system.scheduler
   implicit val shardingTO = akka.util.Timeout(ChatRoomEntity.hubInitTimeout)
 
   val passivationTO = 10.minutes //TODO: make it configurable
