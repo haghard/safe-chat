@@ -40,7 +40,7 @@ object ChatRoomEntity {
     Behaviors.setup { ctx ⇒
       //LoggingBehaviorInterceptor(ctx.log) {
       implicit val sys = ctx.system
-      implicit val ec = ctx.system.executionContext
+      implicit val ec  = ctx.system.executionContext
 
       EventSourcedBehavior(
         PersistenceId("chat-room", entityId),
