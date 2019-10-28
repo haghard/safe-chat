@@ -113,6 +113,7 @@ https://github.com/Keenworks/akka-avro-evolution.git
 https://softwaremill.com/schema-registry-and-topic-with-multiple-message-types/
 https://blog.softwaremill.com/the-best-serialization-strategy-for-event-sourcing-9321c299632b
 https://github.com/IainHull/akka-persistence-message-bug
+http://martin.kleppmann.com/2012/12/05/schema-evolution-in-avro-protocol-buffers-thrift.html
 
 
 ## Cassandra
