@@ -106,6 +106,15 @@ https://skillsmatter.com/skillscasts/12671-akka-cluster-up-and-running
 
 https://medium.com/bestmile/domain-driven-event-sourcing-with-akka-typed-5f5b8bbfb823
 
+## message evolution/versioning
+
+https://www.scala-exercises.org/shapeless/coproducts
+https://github.com/Keenworks/akka-avro-evolution.git
+https://softwaremill.com/schema-registry-and-topic-with-multiple-message-types/
+https://blog.softwaremill.com/the-best-serialization-strategy-for-event-sourcing-9321c299632b
+https://github.com/IainHull/akka-persistence-message-bug
+
+
 ## Cassandra
 
 https://medium.com/@27.rahul.k/cassandra-ttl-intricacies-and-usage-by-examples-d54248f2853c

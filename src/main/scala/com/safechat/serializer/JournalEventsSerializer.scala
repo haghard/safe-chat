@@ -33,7 +33,7 @@ between micro service instances.
 
 Advice when writing Avro schema
 1) Add field with defaults
-2) Removing only fields with have defaults
+2) Removing only fields which have defaults
 
 If you target full compatibility follows these rules:
   Removing fields with defaults is fully compatible change
