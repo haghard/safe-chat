@@ -79,12 +79,12 @@ final class JournalEventsSerializer extends SerializerWithStringManifest {
       case state: FullChatState ⇒
         Using.resource(new ByteArrayOutputStream()) { out ⇒
           Using.resource(EncoderFactory.get.binaryEncoder(out, null)) { enc ⇒
-            val users = new java.util.HashMap[java.lang.CharSequence, java.lang.CharSequence]()
+            val users = new java.util.HashMap[String, String]()
             state.regUsers.foreach {
               case (login, pubKey) ⇒
                 users.put(login, pubKey)
             }
-            val history = new util.ArrayList[java.lang.CharSequence]()
+            val history = new util.ArrayList[String]()
             state.recentHistory.entries.foreach(history.add(_))
             new SpecificDatumWriter[ChatState](schema)
               .write(new ChatState(users, history), enc)

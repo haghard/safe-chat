@@ -156,6 +156,10 @@ Compile / run / fork := true
 
 scalafmtOnCompile := true
 
+AvroConfig / stringType := "String"
+AvroConfig / fieldVisibility := "private"
+AvroConfig / enableDecimalLogicalType := true
+
 // ammonite repl
 // test:run
 sourceGenerators in Test += Def.task {
