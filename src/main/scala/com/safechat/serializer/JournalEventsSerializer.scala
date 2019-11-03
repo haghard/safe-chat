@@ -108,11 +108,11 @@ final class JournalEventsSerializer extends SerializerWithStringManifest {
 
       var userKeys = Map.empty[String, String]
       state.getRegisteredUsers.forEach { (login, pubKey) ⇒
-        userKeys = userKeys + (login.toString → pubKey.toString)
+        userKeys = userKeys + (login → pubKey)
       }
 
       val s = FullChatState(regUsers = userKeys)
-      state.getRecentHistory.forEach(m ⇒ s.recentHistory.add(m.toString))
+      state.getRecentHistory.forEach(s.recentHistory.add(_))
       s
     } else
       throw new IllegalStateException(

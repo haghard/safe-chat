@@ -12,7 +12,7 @@ import scala.concurrent.duration._
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
 import akka.cluster.sharding.typed.scaladsl.EntityTypeKey
 import akka.persistence.typed.{PersistenceId, RecoveryCompleted, RecoveryFailed, SnapshotCompleted, SnapshotFailed}
-import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior}
+import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior, ReplyEffect, RetentionCriteria}
 import akka.stream.{KillSwitches, StreamRefAttributes}
 import com.safechat.LoggingBehaviorInterceptor
 import com.safechat.domain.{Disconnected, Joined, MsgEnvelope, TextAdded}
@@ -21,7 +21,6 @@ import akka.stream.scaladsl.{BroadcastHub, Keep, MergeHub, Source, StreamRefs}
 
 import scala.concurrent.Future
 import akka.actor.typed.scaladsl.AskPattern._
-import akka.persistence.typed.scaladsl.RetentionCriteria
 import com.safechat.rest.WsScaffolding
 
 object ChatRoomEntity {
@@ -36,18 +35,29 @@ object ChatRoomEntity {
   val entityKey: EntityTypeKey[UserCmd] =
     EntityTypeKey[UserCmd]("chat-rooms")
 
+  def empty = FullChatState()
+
   def apply(entityId: String): Behavior[UserCmd] =
     Behaviors.setup { ctx ⇒
       //LoggingBehaviorInterceptor(ctx.log) {
       implicit val sys = ctx.system
       implicit val ec  = ctx.system.executionContext
 
-      EventSourcedBehavior(
+      /*EventSourcedBehavior.withEnforcedReplies[UserCmd, MsgEnvelope, FullChatState](
         PersistenceId("chat-room", entityId),
-        FullChatState(),
-        onCommand(ctx),
-        onEvent(ctx, ctx.self.path.name)
-      ).receiveSignal {
+        empty,
+        (state, cmd) ⇒ state.applyCmd(cmd),
+        (state, event) ⇒ state.applyEvn(event)
+      )*/
+
+      EventSourcedBehavior
+        .withEnforcedReplies[UserCmd, MsgEnvelope, FullChatState](
+          PersistenceId("chat-room", entityId),
+          FullChatState(),
+          onCommand(ctx),
+          onEvent(ctx, ctx.self.path.name)
+        )
+        .receiveSignal {
           case (state, RecoveryCompleted) ⇒
             ctx.log.info(s"Recovered: [${state.regUsers.keySet.mkString(",")}]")
           case (state, PreRestart) ⇒
@@ -122,7 +132,7 @@ object ChatRoomEntity {
 
   def onCommand(ctx: ActorContext[UserCmd])(state: FullChatState, cmd: UserCmd)(
     implicit sys: ActorSystem[Nothing]
-  ): Effect[MsgEnvelope, FullChatState] =
+  ): ReplyEffect[MsgEnvelope, FullChatState] =
     cmd match {
       case m: JoinUser ⇒
         Effect
@@ -134,20 +144,18 @@ object ChatRoomEntity {
               Joined.newBuilder.setLogin(m.user).setPubKey(m.pubKey).build()
             )
           ) //Note that the new state after applying the event is passed as parameter to the thenRun function
-          .thenRun { newState: FullChatState ⇒
-            newState.hub.foreach { h ⇒
-              /*val settings = StreamRefAttributes
+          .thenReply(m.replyTo) { state: FullChatState ⇒
+            /*val settings = StreamRefAttributes
                 .subscriptionTimeout(hubInitTimeout)
                 .and(akka.stream.Attributes.inputBuffer(bs, bs))*/
 
-              val history = state.recentHistory.entries.mkString("\n")
-
-              //val userKeys = newState.regUsers.filter(_._1 != m.user).map { case (k, v) ⇒ s"$k:$v" }.mkString("\n")
-              val srcRefF = (Source.single[Message](TextMessage(history)) ++ h.srcHub)
-                .runWith(StreamRefs.sourceRef[Message] /*.addAttributes(settings)*/ )
-              val sinkRefF = h.sinkHub.runWith(StreamRefs.sinkRef[Message] /*.addAttributes(settings)*/ )
-              cmd.replyTo.tell(JoinReply(m.chatId, m.user, sinkRefF, srcRefF))
-            }
+            val h       = state.hub.get //
+            val history = state.recentHistory.entries.mkString("\n")
+            //val userKeys = newState.regUsers.filter(_._1 != m.user).map { case (k, v) ⇒ s"$k:$v" }.mkString("\n")
+            val srcRefF = (Source.single[Message](TextMessage(history)) ++ h.srcHub)
+              .runWith(StreamRefs.sourceRef[Message] /*.addAttributes(settings)*/ )
+            val sinkRefF = h.sinkHub.runWith(StreamRefs.sinkRef[Message] /*.addAttributes(settings)*/ )
+            JoinReply(m.chatId, m.user, sinkRefF, srcRefF)
           }
 
       case cmd: PostText ⇒
@@ -161,17 +169,12 @@ object ChatRoomEntity {
               new TextAdded(cmd.sender, cmd.receiver, cmd.text)
             )
           )
-          .thenRun { newState: FullChatState ⇒
-            ctx.log.info("[{}]: users online:[{}]", Thread.currentThread().getName, newState.online.mkString(","))
-            cmd.replyTo.tell(TextPostedReply(cmd.chatId, num))
+          .thenReply(cmd.replyTo) { newState: FullChatState ⇒
+            ctx.log.info("[{}]: users online:[{}]", Thread.currentThread.getName, newState.online.mkString(","))
+            TextPostedReply(cmd.chatId, num)
           }
 
       case cmd: DisconnectUser ⇒
-        /*Effect.none.thenRun { s: FullChatState ⇒
-          ctx.log.info("{} left - online:[{}]", user, s.online.mkString(","))
-          replyTo.tell(LeaveReply(chatId, user))
-        }*/
-
         Effect
           .persist(
             new MsgEnvelope(
@@ -181,9 +184,9 @@ object ChatRoomEntity {
               Disconnected.newBuilder.setLogin(cmd.user).build
             )
           )
-          .thenRun { newState: FullChatState ⇒
+          .thenReply(cmd.replyTo) { newState: FullChatState ⇒
             ctx.log.info("{} disconnected - online:[{}]", cmd.user, newState.online.mkString(""))
-            cmd.replyTo.tell(DisconnectReply(cmd.chatId, cmd.user))
+            DisconnectReply(cmd.chatId, cmd.user)
           }
     }
 
@@ -193,18 +196,18 @@ object ChatRoomEntity {
     if (event.getPayload.isInstanceOf[Joined]) {
       val ev = event.getPayload.asInstanceOf[Joined]
       if (state.online.isEmpty && state.hub.isEmpty)
-        if (ev.getLogin.toString == ChatRoomEntity.wakeUpUserName)
+        if (ev.getLogin == ChatRoomEntity.wakeUpUserName)
           state
         else
           state.copy(
-            regUsers = state.regUsers + (ev.getLogin.toString → ev.getPubKey.toString),
+            regUsers = state.regUsers + (ev.getLogin → ev.getPubKey),
             hub = Some(createHub(persistenceId, ctx.self.narrow[PostText])),
-            online = Set(ev.getLogin.toString)
+            online = Set(ev.getLogin)
           )
       else
         state.copy(
-          regUsers = state.regUsers + (ev.getLogin.toString → ev.getPubKey.toString),
-          online = state.online + ev.getLogin.toString
+          regUsers = state.regUsers + (ev.getLogin → ev.getPubKey),
+          online = state.online + ev.getLogin
         )
 
     } else if (event.getPayload.isInstanceOf[com.safechat.domain.Disconnected]) {
@@ -212,11 +215,10 @@ object ChatRoomEntity {
         online = state.online - event.getPayload
             .asInstanceOf[com.safechat.domain.Disconnected]
             .getLogin
-            .toString
       )
     } else if (event.getPayload.isInstanceOf[TextAdded]) {
       val ev     = event.getPayload.asInstanceOf[TextAdded]
-      val tz     = ZoneId.of(event.getTz.toString)
+      val tz     = ZoneId.of(event.getTz)
       val zoneDT = ZonedDateTime.ofInstant(Instant.ofEpochMilli(event.getWhen), tz)
       state.recentHistory.add(s"[${frmtr.format(zoneDT)}] - ${ev.getUser} -> ${ev.getReceiver}:${ev.getText}")
       state
