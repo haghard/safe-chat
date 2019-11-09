@@ -4,7 +4,7 @@ import sbtdocker.ImageName
 val projectName   = "safe-chat"
 val Version       = "0.1.0"
 
-val akkaVersion = "2.6.0-RC2" //"2.5.25"
+val akkaVersion = "2.6.0" //"2.5.25"
 val akkaHttpVersion = "10.1.10"
 
 promptTheme := ScalapenosTheme
@@ -130,7 +130,7 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-cluster-sharding-typed" % akkaVersion,
 
   "com.typesafe.akka" %% "akka-persistence-query"     % akkaVersion,
-  "com.typesafe.akka" %% "akka-persistence-cassandra" % "0.99",
+  "com.typesafe.akka" %% "akka-persistence-cassandra" % "0.100",
 
   //a module that provides HTTP endpoints for introspecting and managing Akka clusters
   "com.lightbend.akka.management" %% "akka-management-cluster-http" % "1.0.3",

@@ -104,8 +104,7 @@ final class JournalEventsSerializer extends SerializerWithStringManifest {
     if (manifest.startsWith(classOf[MsgEnvelope].getName)) {
       deserialize[MsgEnvelope](bytes, writerSchema, readerSchema)
     } else if (manifest.startsWith(classOf[FullChatState].getName)) {
-      val state = deserialize[ChatState](bytes, writerSchema, readerSchema)
-
+      val state    = deserialize[ChatState](bytes, writerSchema, readerSchema)
       var userKeys = Map.empty[String, String]
       state.getRegisteredUsers.forEach { (login, pubKey) ⇒
         userKeys = userKeys + (login → pubKey)
