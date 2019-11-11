@@ -145,3 +145,8 @@ select persistence_id, partition_nr, sequence_nr, timestamp, ser_id, ser_manifes
  chat-rooms|aaa |            0 |           4 | e048a0d0-e120-11e9-8862-59ab458a602d |   9999 | com.safechat.domain.MsgEnvelope/TextAdded:1fc4afd458d3777ba86644ac39f51b70
 
 ```
+
+
+Link to read
+https://doc.akka.io/docs/akka/current/typed/actors.html#a-more-complex-example
+https://github.com/akka/akka-samples/tree/2.6/akka-sample-sharding-scala
