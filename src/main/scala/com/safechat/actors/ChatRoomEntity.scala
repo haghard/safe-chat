@@ -149,7 +149,7 @@ object ChatRoomEntity {
                 .subscriptionTimeout(hubInitTimeout)
                 .and(akka.stream.Attributes.inputBuffer(bs, bs))*/
 
-            val h       = state.hub.get //
+            val h       = state.hub.get //TODO: fix it
             val history = state.recentHistory.entries.mkString("\n")
             //val userKeys = newState.regUsers.filter(_._1 != m.user).map { case (k, v) ⇒ s"$k:$v" }.mkString("\n")
             val srcRefF = (Source.single[Message](TextMessage(history)) ++ h.srcHub)

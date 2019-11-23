@@ -126,10 +126,10 @@ final class JournalEventsSerializer extends SerializerWithStringManifest {
   }
 
   private def toByteArray[T: ClassTag](ev: T, schema: Schema): Array[Byte] =
-    Using.resource(new ByteArrayOutputStream()) { out ⇒
-      Using.resource(EncoderFactory.get.binaryEncoder(out, null)) { enc ⇒
+    Using.resource(new ByteArrayOutputStream()) { baos ⇒
+      Using.resource(EncoderFactory.get.binaryEncoder(baos, null)) { enc ⇒
         new SpecificDatumWriter[T](schema).write(ev, enc)
       }
-      out.toByteArray
+      baos.toByteArray
     }
 }

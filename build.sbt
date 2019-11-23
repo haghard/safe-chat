@@ -141,6 +141,8 @@ libraryDependencies ++= Seq(
   "ch.qos.logback" % "logback-classic" % "1.2.3",
   "org.apache.avro" % "avro" % "1.9.1",
 
+  "com.twitter" %% "algebird-core" % "0.13.6",
+
   "commons-codec" % "commons-codec" % "1.11",
   "org.scalatest" %% "scalatest" % "3.0.8" % Test,
   "com.typesafe.akka" %% "akka-http-testkit" % akkaHttpVersion % Test,
@@ -152,7 +154,7 @@ libraryDependencies ++= Seq(
 
 //workaround for sbt 1.3.0 https://github.com/sbt/sbt/issues/5075
 //comment out for test:run
-Compile / run / fork := true
+//Compile / run / fork := true
 
 scalafmtOnCompile := true
 
