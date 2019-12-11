@@ -90,7 +90,7 @@ object ChatRoomEntity {
     * different producers are emitted in a First-Comes-First-Served fashion.
     *
     * A BroadcastHub can be used to consume elements from a common producer by a dynamic set of consumers (one-to-many).
-    *
+    * (dynamic number of producers and new consumers can be added on the fly)
     */
   def createHub(
     persistenceId: String,
@@ -152,8 +152,13 @@ object ChatRoomEntity {
             val h       = state.hub.get //TODO: fix it
             val history = state.recentHistory.entries.mkString("\n")
             //val userKeys = newState.regUsers.filter(_._1 != m.user).map { case (k, v) ⇒ s"$k:$v" }.mkString("\n")
+
+            //Add new producer on the fly
             val srcRefF = (Source.single[Message](TextMessage(history)) ++ h.srcHub)
               .runWith(StreamRefs.sourceRef[Message] /*.addAttributes(settings)*/ )
+
+            //Add new consumers on the fly
+            //The producer rate will be automatically adapted to the slowest consumer (downstream) rate
             val sinkRefF = h.sinkHub.runWith(StreamRefs.sinkRef[Message] /*.addAttributes(settings)*/ )
             JoinReply(m.chatId, m.user, sinkRefF, srcRefF)
           }
