@@ -16,7 +16,7 @@ import com.safechat.actors.{ChatRoomEntity, JoinReply, ShardedChatRooms}
 
 import scala.concurrent.duration._
 import scala.util.control.NonFatal
-import scala.concurrent.{Await, ExecutionContextExecutor, Future}
+import scala.concurrent.{Await, Future}
 
 class ChatRoomApi(rooms: ShardedChatRooms)(implicit sys: ActorSystem[Nothing]) extends RestApi {
   implicit val cx  = sys.executionContext
@@ -28,9 +28,7 @@ class ChatRoomApi(rooms: ShardedChatRooms)(implicit sys: ActorSystem[Nothing]) e
       rooms
         .enter(ChatRoomEntity.wakeUpEntityName, ChatRoomEntity.wakeUpUserName, "fake-pub-key")
         .mapTo[JoinReply]
-        .flatMap { _ ⇒
-          rooms.disconnect(ChatRoomEntity.wakeUpEntityName, ChatRoomEntity.wakeUpUserName)
-        }
+        .flatMap { _ ⇒ rooms.disconnect(ChatRoomEntity.wakeUpEntityName, ChatRoomEntity.wakeUpUserName) }
     }
   )
 
@@ -66,9 +64,6 @@ class ChatRoomApi(rooms: ShardedChatRooms)(implicit sys: ActorSystem[Nothing]) e
               val buf = attr.get[akka.stream.Attributes.InputBuffer].get
               //println(attr.attributeList.mkString(","))
 
-              // Dispatcher(akka.actor.default-dispatcher),SupervisionStrategy(<function1>),
-              // DebugLogging(false), StreamSubscriptionTimeout(5000 milliseconds,CancelTermination),OutputBurstLimit(1000),FuzzingMode(false),
-              // MaxFixedBufferSize(1000000000), SyncProcessingLimit(1000)
               Flow
                 .fromSinkAndSourceCoupled(reply.sinkRef.sink, reply.sourceRef.source)
                 .buffer(buf.max, OverflowStrategy.backpressure)
@@ -81,8 +76,8 @@ class ChatRoomApi(rooms: ShardedChatRooms)(implicit sys: ActorSystem[Nothing]) e
                 }
             }
           }
-        //TODO: remove blocking, but how ???
-        Await.result(f, Duration.Inf)
+        //TODO: remove blocking call, but how ???
+        Await.result(f, 10.seconds)
       }
       handleWebSocketMessages(flow)
     } ~ ClusterHttpManagementRoutes(akka.cluster.Cluster(sys.toClassic))
