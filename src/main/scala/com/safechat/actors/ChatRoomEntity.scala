@@ -228,9 +228,6 @@ object ChatRoomEntity {
   def snapshotPredicate(
     ctx: ActorContext[UserCmd]
   )(state: FullChatState, event: MsgEnvelope, id: Long): Boolean = {
-    //Shouldn't be called here
-    //val lastSeqNum = EventSourcedBehavior.lastSequenceNumber(ctx)
-
     val ifSnap = id > 0 && id % snapshotEveryN == 0
 
     if (ifSnap)

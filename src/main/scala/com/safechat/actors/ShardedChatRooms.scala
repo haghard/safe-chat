@@ -21,10 +21,10 @@ object ShardedChatRooms {
   object ChatRoomsMsgExtractor {
     def apply[T <: UserCmd](numberOfShards: Int): ShardingMessageExtractor[T, T] =
       new ShardingMessageExtractor[T, T] {
-
+        val SEED = 512L
         private def hash3_128(entityId: String): Long = {
           val bts = entityId.getBytes(UTF_8)
-          CassandraHash.hash3_x64_128(ByteBuffer.wrap(bts), 0, bts.length, 512L)(1)
+          CassandraHash.hash3_x64_128(ByteBuffer.wrap(bts), 0, bts.length, SEED)(1)
         }
 
         override def entityId(cmd: T): String =

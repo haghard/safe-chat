@@ -13,7 +13,6 @@ addCommandAlias(
     "-Dcassandra.psw=...\n" +
     "-Dcassandra.user=fsa"
 )
-//sudo ifconfig lo0 127.0.0.2 add
 
 addCommandAlias(
   "second",

@@ -3,17 +3,26 @@
 # Main idea
 We want to have a MergeHub connected with a BroadcastHub to achieve dynamic fan-in/fan-out (many-to-many) per a chat room in combination with StreamRefs to get long-running streams of data between two entities over the network.  
 
+ws://192.168.77.10:8080/chat/aaa/user/harry?pub=hjkhkjhjk
 
-ws://192.168.77.10:8080/chat/aaa/user/harry?pub=...
+### How to run locally
+
+```bash
+
+sudo ifconfig lo0 127.0.0.2 add
+
+sbt first
+sbt second
+
+```
 
 
-### How to build and publish
+### How to build and publish with docker
 
 ```bash
   sbt -Denv=development docker && docker push haghard/safe-chat:0.1.0
       
 ```
-
 
 ```bash
 
@@ -55,10 +64,6 @@ https://doc.akka.io/docs/akka/current/typed/persistence.html
 https://doc.akka.io/docs/akka/current/typed/persistence.html#example
 
 https://doc.akka.io/docs/akka/current/typed/cluster-sharding.html
-
-##  Akka release notes         
-
-https://discuss.lightbend.com/t/akka-2-6-0-rc1-released/5253
 
 
 ## message evolution/versioning

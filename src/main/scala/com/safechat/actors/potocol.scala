@@ -2,15 +2,12 @@
 
 package com.safechat.actors
 
-import java.util.{TimeZone, UUID}
-
 import akka.NotUsed
 import akka.actor.typed.ActorRef
-import akka.http.scaladsl.model.ws.Message
-import akka.persistence.typed.scaladsl.{Effect, ReplyEffect}
+import com.safechat.domain.RingBuffer
 import akka.stream.scaladsl.{Sink, Source}
+import akka.http.scaladsl.model.ws.Message
 import akka.stream.{SinkRef, SourceRef, UniqueKillSwitch}
-import com.safechat.domain.{Joined, MsgEnvelope, RingBuffer}
 
 sealed trait ChatRoomReply {
   def chatId: String
@@ -47,7 +44,7 @@ case class FullChatState(
   hub: Option[ChatRoomHub] = None
 ) {
 
-  def applyCmd(cmd: UserCmd): ReplyEffect[MsgEnvelope, FullChatState] =
+  /*def applyCmd(cmd: UserCmd): ReplyEffect[MsgEnvelope, FullChatState] =
     cmd match {
       case m: JoinUser ⇒
         Effect
@@ -65,5 +62,6 @@ case class FullChatState(
     }
 
   def applyEvn(env: MsgEnvelope): FullChatState = ???
+ */
 
 }
