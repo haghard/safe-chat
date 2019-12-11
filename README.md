@@ -121,6 +121,10 @@ https://github.com/IainHull/akka-persistence-message-bug
 http://martin.kleppmann.com/2012/12/05/schema-evolution-in-avro-protocol-buffers-thrift.html
 
 
+## SinkRef serialization/deserialization
+https://blog.softwaremill.com/akka-references-serialization-with-protobufs-up-to-akka-2-5-87890c4b6cb0
+
+
 ## Cassandra
 
 https://medium.com/@27.rahul.k/cassandra-ttl-intricacies-and-usage-by-examples-d54248f2853c
