@@ -20,6 +20,8 @@ case class JoinReply(
   sourceRef: SourceRef[Message]
 ) extends ChatRoomReply
 
+case class JoinReplyFailure(chatId: String, user: String) extends ChatRoomReply
+
 case class TextPostedReply(chatId: String, seqNum: Long) extends ChatRoomReply
 case class DisconnectReply(chatId: String, user: String) extends ChatRoomReply
 

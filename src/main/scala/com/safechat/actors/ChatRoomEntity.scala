@@ -145,23 +145,23 @@ object ChatRoomEntity {
             )
           ) //Note that the new state after applying the event is passed as parameter to the thenRun function
           .thenReply(m.replyTo) { state: FullChatState ⇒
-            /*val settings = StreamRefAttributes
-                .subscriptionTimeout(hubInitTimeout)
-                .and(akka.stream.Attributes.inputBuffer(bs, bs))*/
+            //val settings = StreamRefAttributes.subscriptionTimeout(hubInitTimeout).and(akka.stream.Attributes.inputBuffer(bs, bs))
+            state.hub
+              .map { hub ⇒
+                val history = state.recentHistory.entries.mkString("\n")
+                //val userKeys = newState.regUsers.filter(_._1 != m.user).map { case (k, v) ⇒ s"$k:$v" }.mkString("\n")
 
-            val h       = state.hub.get //TODO: fix it
-            val history = state.recentHistory.entries.mkString("\n")
-            //val userKeys = newState.regUsers.filter(_._1 != m.user).map { case (k, v) ⇒ s"$k:$v" }.mkString("\n")
+                //Add new producer on the fly
+                //If the consumer cannot keep up then all of the producers are backpressured
+                val srcRefF = (Source.single[Message](TextMessage(history)) ++ hub.srcHub)
+                  .runWith(StreamRefs.sourceRef[Message] /*.addAttributes(settings)*/ )
 
-            //Add new producer on the fly
-            //If the consumer cannot keep up then all of the producers are backpressured
-            val srcRefF = (Source.single[Message](TextMessage(history)) ++ h.srcHub)
-              .runWith(StreamRefs.sourceRef[Message] /*.addAttributes(settings)*/ )
-
-            //Add new consumers on the fly
-            //The rate of the producer will be automatically adapted to the slowest consumer
-            val sinkRefF = h.sinkHub.runWith(StreamRefs.sinkRef[Message] /*.addAttributes(settings)*/ )
-            JoinReply(m.chatId, m.user, sinkRefF, srcRefF)
+                //Add new consumers on the fly
+                //The rate of the producer will be automatically adapted to the slowest consumer
+                val sinkRefF = hub.sinkHub.runWith(StreamRefs.sinkRef[Message] /*.addAttributes(settings)*/ )
+                JoinReply(m.chatId, m.user, sinkRefF, srcRefF)
+              }
+              .getOrElse(JoinReplyFailure(m.chatId, m.user))
           }
 
       case cmd: PostText ⇒
