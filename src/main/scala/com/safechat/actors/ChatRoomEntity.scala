@@ -224,8 +224,7 @@ object ChatRoomEntity {
       )
     } else if (event.getPayload.isInstanceOf[TextAdded]) {
       val ev     = event.getPayload.asInstanceOf[TextAdded]
-      val tz     = ZoneId.of(event.getTz)
-      val zoneDT = ZonedDateTime.ofInstant(Instant.ofEpochMilli(event.getWhen), tz)
+      val zoneDT = ZonedDateTime.ofInstant(Instant.ofEpochMilli(event.getWhen), ZoneId.of(event.getTz))
       state.recentHistory.add(s"[${frmtr.format(zoneDT)}] - ${ev.getUser} -> ${ev.getReceiver}:${ev.getText}")
       state
     } else

@@ -130,7 +130,7 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-cluster-sharding-typed" % akkaVersion,
 
   "com.typesafe.akka" %% "akka-persistence-query"     % akkaVersion,
-  "com.typesafe.akka" %% "akka-persistence-cassandra" % "0.100",
+  "com.typesafe.akka" %% "akka-persistence-cassandra" % "0.101",
 
   //a module that provides HTTP endpoints for introspecting and managing Akka clusters
   "com.lightbend.akka.management" %% "akka-management-cluster-http" % "1.0.3",
