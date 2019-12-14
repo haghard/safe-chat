@@ -48,7 +48,7 @@ class ShardedChatRooms(implicit system: ActorSystem[Nothing]) {
     /*
         rememberEntities == false ensures that a shard entity won't be recreates/restarted automatically on
         a different `ShardRegion` due to rebalance, crash or graceful exit. That is exactly what we want, cause we want lazy
-        ChatRoomHub initialization.
+        initialization for each ChatRoomEntity.
        */
       .withRememberEntities(false)
       .withStateStoreMode(StateStoreModeDData)

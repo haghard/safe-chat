@@ -12,7 +12,7 @@ import akka.actor.typed.ActorSystem
 import akka.http.scaladsl.model.ws.Message
 import akka.management.cluster.scaladsl.ClusterHttpManagementRoutes
 import akka.stream.{ActorAttributes, OverflowStrategy, StreamRefAttributes}
-import com.safechat.actors.{ChatRoomEntity, JoinReply, ShardedChatRooms}
+import com.safechat.actors.{ChatRoomEntity, ChatRoomReply, JoinReply, ShardedChatRooms}
 
 import scala.concurrent.duration._
 import scala.util.control.NonFatal
@@ -27,7 +27,7 @@ class ChatRoomApi(rooms: ShardedChatRooms)(implicit sys: ActorSystem[Nothing]) e
     200.millis, { () ⇒
       rooms
         .enter(ChatRoomEntity.wakeUpEntityName, ChatRoomEntity.wakeUpUserName, "fake-pub-key")
-        .mapTo[JoinReply]
+        .mapTo[ChatRoomReply]
         .flatMap { _ ⇒
           rooms.disconnect(ChatRoomEntity.wakeUpEntityName, ChatRoomEntity.wakeUpUserName)
         }
@@ -49,10 +49,10 @@ class ChatRoomApi(rooms: ShardedChatRooms)(implicit sys: ActorSystem[Nothing]) e
       }
 
   /**
-    * As long as at least one client's connected to the chat room, the associated persistent entity won't be passivated.
+    * As long as at least one client's connected to the chat room exists, the associated persistent entity won't be passivated.
     *
     * Downsides:
-    *   online users count is currently wrong
+    *   online users count is wrong ???
     */
   val routes: Route =
     (path("chat" / Segment / "user" / Segment) & parameter("pub".as[String])) { (chatId, user, pubKey) ⇒

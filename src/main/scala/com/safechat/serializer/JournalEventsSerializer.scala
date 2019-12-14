@@ -57,6 +57,20 @@ object JournalEventsSerializer {
     def release(resource: BinaryEncoder): Unit =
       resource.flush
   }
+
+  def fromByteArray[T](bts: Array[Byte], writerSchema: Schema, readerSchema: Schema): T = {
+    val reader  = new SpecificDatumReader[T](writerSchema, readerSchema)
+    val decoder = DecoderFactory.get.binaryDecoder(bts, null)
+    reader.read(null.asInstanceOf[T], decoder)
+  }
+
+  def toByteArray[T: ClassTag](ev: T, schema: Schema): Array[Byte] =
+    Using.resource(new ByteArrayOutputStream()) { baos ⇒
+      Using.resource(EncoderFactory.get.binaryEncoder(baos, null)) { enc ⇒
+        new SpecificDatumWriter[T](schema).write(ev, enc)
+      }
+      baos.toByteArray
+    }
 }
 
 final class JournalEventsSerializer extends SerializerWithStringManifest {
@@ -79,12 +93,12 @@ final class JournalEventsSerializer extends SerializerWithStringManifest {
       case state: FullChatState ⇒
         Using.resource(new ByteArrayOutputStream()) { out ⇒
           Using.resource(EncoderFactory.get.binaryEncoder(out, null)) { enc ⇒
-            val users = new java.util.HashMap[String, String]()
+            val users = new java.util.HashMap[CharSequence, CharSequence]()
             state.regUsers.foreach {
               case (login, pubKey) ⇒
                 users.put(login, pubKey)
             }
-            val history = new util.ArrayList[String]()
+            val history = new util.ArrayList[CharSequence]()
             state.recentHistory.entries.foreach(history.add(_))
             new SpecificDatumWriter[ChatState](schema)
               .write(new ChatState(users, history), enc)
@@ -102,34 +116,20 @@ final class JournalEventsSerializer extends SerializerWithStringManifest {
     val writerSchema = schemaMap(writerSchemaKey)
     val readerSchema = schemaMap(activeSchemaHash)
     if (manifest.startsWith(classOf[MsgEnvelope].getName)) {
-      deserialize[MsgEnvelope](bytes, writerSchema, readerSchema)
+      fromByteArray[MsgEnvelope](bytes, writerSchema, readerSchema)
     } else if (manifest.startsWith(classOf[FullChatState].getName)) {
-      val state    = deserialize[ChatState](bytes, writerSchema, readerSchema)
+      val state    = fromByteArray[ChatState](bytes, writerSchema, readerSchema)
       var userKeys = Map.empty[String, String]
       state.getRegisteredUsers.forEach { (login, pubKey) ⇒
-        userKeys = userKeys + (login → pubKey)
+        userKeys = userKeys + (login.toString → pubKey.toString)
       }
 
       val s = FullChatState(regUsers = userKeys)
-      state.getRecentHistory.forEach(s.recentHistory.add(_))
+      state.getRecentHistory.forEach(e ⇒ s.recentHistory.add(e.toString))
       s
     } else
       throw new IllegalStateException(
         s"Deserialization for $manifest not supported. Check fromBinary method in ${this.getClass.getName} class."
       )
   }
-
-  def deserialize[T](bts: Array[Byte], writerSchema: Schema, readerSchema: Schema): T = {
-    val reader  = new SpecificDatumReader[T](writerSchema, readerSchema)
-    val decoder = DecoderFactory.get.binaryDecoder(bts, null)
-    reader.read(null.asInstanceOf[T], decoder)
-  }
-
-  private def toByteArray[T: ClassTag](ev: T, schema: Schema): Array[Byte] =
-    Using.resource(new ByteArrayOutputStream()) { baos ⇒
-      Using.resource(EncoderFactory.get.binaryEncoder(baos, null)) { enc ⇒
-        new SpecificDatumWriter[T](schema).write(ev, enc)
-      }
-      baos.toByteArray
-    }
 }

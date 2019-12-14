@@ -143,7 +143,7 @@ object ChatRoomEntity {
               TimeZone.getDefault.getID,
               Joined.newBuilder.setLogin(m.user).setPubKey(m.pubKey).build()
             )
-          ) //Note that the new state after applying the event is passed as parameter to the thenRun function
+          ) //Note that the new state after applying the event is passed as parameter to the thenReply function
           .thenReply(m.replyTo) { state: FullChatState ⇒
             //val settings = StreamRefAttributes.subscriptionTimeout(hubInitTimeout).and(akka.stream.Attributes.inputBuffer(bs, bs))
             state.hub
@@ -176,7 +176,7 @@ object ChatRoomEntity {
             )
           )
           .thenReply(cmd.replyTo) { newState: FullChatState ⇒
-            ctx.log.info("[{}]: users online:[{}]", Thread.currentThread.getName, newState.online.mkString(","))
+            ctx.log.info("[{}]: users online:[{}]", newState.online.mkString(","))
             TextPostedReply(cmd.chatId, num)
           }
 
@@ -206,14 +206,14 @@ object ChatRoomEntity {
           state
         else
           state.copy(
-            regUsers = state.regUsers + (ev.getLogin → ev.getPubKey),
+            regUsers = state.regUsers + (ev.getLogin.toString → ev.getPubKey.toString),
             hub = Some(createHub(persistenceId, ctx.self.narrow[PostText])),
-            online = Set(ev.getLogin)
+            online = Set(ev.getLogin.toString)
           )
       else
         state.copy(
-          regUsers = state.regUsers + (ev.getLogin → ev.getPubKey),
-          online = state.online + ev.getLogin
+          regUsers = state.regUsers + (ev.getLogin.toString → ev.getPubKey.toString),
+          online = state.online + ev.getLogin.toString
         )
 
     } else if (event.getPayload.isInstanceOf[com.safechat.domain.Disconnected]) {
@@ -221,10 +221,11 @@ object ChatRoomEntity {
         online = state.online - event.getPayload
             .asInstanceOf[com.safechat.domain.Disconnected]
             .getLogin
+            .toString
       )
     } else if (event.getPayload.isInstanceOf[TextAdded]) {
       val ev     = event.getPayload.asInstanceOf[TextAdded]
-      val zoneDT = ZonedDateTime.ofInstant(Instant.ofEpochMilli(event.getWhen), ZoneId.of(event.getTz))
+      val zoneDT = ZonedDateTime.ofInstant(Instant.ofEpochMilli(event.getWhen), ZoneId.of(event.getTz.toString))
       state.recentHistory.add(s"[${frmtr.format(zoneDT)}] - ${ev.getUser} -> ${ev.getReceiver}:${ev.getText}")
       state
     } else

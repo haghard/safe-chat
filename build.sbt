@@ -158,8 +158,9 @@ Compile / run / fork := true
 
 scalafmtOnCompile := true
 
-AvroConfig / stringType := "String"
+//AvroConfig / stringType := "String"
 AvroConfig / fieldVisibility := "private"
+//AvroConfig / createSetters := true
 AvroConfig / enableDecimalLogicalType := true
 
 // ammonite repl

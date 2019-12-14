@@ -9,7 +9,10 @@
         <!--<pattern>%yellow(%X{akkaTimestamp}) |%highlight(%-5level)| [%green(%X{sourceThread}, %X{sourceActorSystem}, %X{akkaSource})] %cyan(%logger{36}) - %highlight(%msg%n%ex{full})</pattern>-->
         <!--<pattern>%yellow(%X{akkaTimestamp}) |%highlight(%-5level)| [%green(%X{sourceThread}, %X{sourceActorSystem}, %X{akkaSource})] - %highlight(%msg%n%ex{full})</pattern>-->
         <!--<pattern>${defaultPattern}</pattern>-->
-        <pattern>%yellow(%date{&quot;yyyy-MM-dd HH:mm:ss.SSSXXX&quot;, UTC})| %highlight(%-5level)| [%green(%X{sourceThread}, %X{sourceActorSystem}, %X{akkaSource})] - %highlight(%msg%n%ex{full})</pattern>
+
+        <pattern>[%yellow(%date{ISO8601})] [%level] [%logger] [%green(%thread)] [%X{akkaSource}] - %highlight(%msg%n)</pattern>
+        
+        <!--<pattern>%yellow(%date{&quot;yyyy-MM-dd HH:mm:ss.SSSXXX&quot;, UTC})| %highlight(%-5level)| [%green(%X{thread}, %X{akkaSource})] - %highlight(%msg%n%ex{full})</pattern>-->
 
       </encoder>
   </appender>

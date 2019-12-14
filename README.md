@@ -3,8 +3,11 @@
 # Main idea
 We want to have a MergeHub connected with a BroadcastHub to achieve dynamic fan-in/fan-out (many-to-many) per a chat room in combination with StreamRefs to get long-running streams of data between two entities over the network.  
 
-ws://192.168.77.10:8080/chat/aaa/user/harry?pub=hjkhkjhjk
-ws://192.168.77.10:8080/chat/aaa/user/charly?pub=hjkhkjhjk
+# Connect harry
+ws://127.0.0.1:8080/chat/aaa/user/harry?pub=hjkhkjhjk
+
+# Connect charly
+ws://127.0.0.1:8080/chat/aaa/user/charly?pub=hjkhkjhjk
 
 # Message format
  harry:charly:Hello
@@ -149,7 +152,7 @@ git tag -a v0.1.0 -m "v0.1.0" &&  git push --tags
 
 ```bash
 
-select persistence_id, partition_nr, sequence_nr, timestamp, ser_id, ser_manifest from safe_chat_journal where persistence_id='703c1ae555da3cd4' and partition_nr = 0;
+select persistence_id, partition_nr, sequence_nr, timestamp, ser_id, ser_manifest from safe_chat_journal where persistence_id='chat-room|37d2bb43332ffc97' and partition_nr = 0;
 
  persistence_id | partition_nr | sequence_nr | timestamp                            | ser_id | ser_manifest
 ----------------+--------------+-------------+--------------------------------------+--------+----------------------------------------------------------------------------
@@ -157,6 +160,17 @@ select persistence_id, partition_nr, sequence_nr, timestamp, ser_id, ser_manifes
  chat-rooms|aaa |            0 |           2 | df48bd00-e120-11e9-8862-59ab458a602d |   9999 | com.safechat.domain.MsgEnvelope/TextAdded:1fc4afd458d3777ba86644ac39f51b70
  chat-rooms|aaa |            0 |           3 | dfe1c8b0-e120-11e9-8862-59ab458a602d |   9999 | com.safechat.domain.MsgEnvelope/TextAdded:1fc4afd458d3777ba86644ac39f51b70
  chat-rooms|aaa |            0 |           4 | e048a0d0-e120-11e9-8862-59ab458a602d |   9999 | com.safechat.domain.MsgEnvelope/TextAdded:1fc4afd458d3777ba86644ac39f51b70
+
+
+select persistence_id, partition_nr, sequence_nr, timestamp, ser_id, ser_manifest from safe_chat_journal where persistence_id='chat-room|703c1ae555da3cd4' and partition_nr = 0;
+
+ persistence_id             | partition_nr | sequence_nr | timestamp                            | ser_id | ser_manifest
+----------------------------+--------------+-------------+--------------------------------------+--------+----------------------------------------------------------------------------
+ chat-room|703c1ae555da3cd4 |            0 |           1 | e6dbf150-1e8c-11ea-a11b-7508a1320b27 |   9999 |    com.safechat.domain.MsgEnvelope/Joined:b936961c182c4389a3f88ba780575915
+ chat-room|703c1ae555da3cd4 |            0 |           2 | e7db8700-1e8c-11ea-a11b-7508a1320b27 |   9999 | com.safechat.domain.MsgEnvelope/TextAdded:b936961c182c4389a3f88ba780575915
+ chat-room|703c1ae555da3cd4 |            0 |           3 | e86e9f40-1e8c-11ea-a11b-7508a1320b27 |   9999 | com.safechat.domain.MsgEnvelope/TextAdded:b936961c182c4389a3f88ba780575915
+ chat-room|703c1ae555da3cd4 |            0 |           4 | e8ed9340-1e8c-11ea-a11b-7508a1320b27 |   9999 | com.safechat.domain.MsgEnvelope/TextAdded:b936961c182c4389a3f88ba780575915
+ chat-room|703c1ae555da3cd4 |            0 |           5 | e9658260-1e8c-11ea-a11b-7508a1320b27 |   9999 | com.safechat.domain.MsgEnvelope/TextAdded:b936961c182c4389a3f88ba780575915
 
 ```
 
