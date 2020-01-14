@@ -124,14 +124,14 @@ https://medium.com/bestmile/domain-driven-event-sourcing-with-akka-typed-5f5b8bb
 https://www.scala-exercises.org/shapeless/coproducts
 https://github.com/Keenworks/akka-avro-evolution.git
 https://softwaremill.com/schema-registry-and-topic-with-multiple-message-types/
-https://blog.softwaremill.com/the-best-serialization-strategy-for-event-sourcing-9321c299632b
+c
 https://github.com/IainHull/akka-persistence-message-bug
 http://martin.kleppmann.com/2012/12/05/schema-evolution-in-avro-protocol-buffers-thrift.html
+https://www.programcreek.com/java-api-examples/?code=rkluszczynski/avro-cli/avro-cli-master/src/main/java/io/github/rkluszczynski/avro/cli/command/conversion/RawConverterUtil.java
 
 
 ## SinkRef serialization/deserialization
 https://blog.softwaremill.com/akka-references-serialization-with-protobufs-up-to-akka-2-5-87890c4b6cb0
-
 
 ## Cassandra
 
@@ -151,16 +151,6 @@ https://avro.apache.org/docs/1.8.2/spec.html#Maps
 git tag -a v0.1.0 -m "v0.1.0" &&  git push --tags
 
 ```bash
-
-select persistence_id, partition_nr, sequence_nr, timestamp, ser_id, ser_manifest from safe_chat_journal where persistence_id='chat-room|37d2bb43332ffc97' and partition_nr = 0;
-
- persistence_id | partition_nr | sequence_nr | timestamp                            | ser_id | ser_manifest
-----------------+--------------+-------------+--------------------------------------+--------+----------------------------------------------------------------------------
- chat-rooms|aaa |            0 |           1 | db81f100-e120-11e9-8862-59ab458a602d |   9999 |    com.safechat.domain.MsgEnvelope/Joined:1fc4afd458d3777ba86644ac39f51b70
- chat-rooms|aaa |            0 |           2 | df48bd00-e120-11e9-8862-59ab458a602d |   9999 | com.safechat.domain.MsgEnvelope/TextAdded:1fc4afd458d3777ba86644ac39f51b70
- chat-rooms|aaa |            0 |           3 | dfe1c8b0-e120-11e9-8862-59ab458a602d |   9999 | com.safechat.domain.MsgEnvelope/TextAdded:1fc4afd458d3777ba86644ac39f51b70
- chat-rooms|aaa |            0 |           4 | e048a0d0-e120-11e9-8862-59ab458a602d |   9999 | com.safechat.domain.MsgEnvelope/TextAdded:1fc4afd458d3777ba86644ac39f51b70
-
 
 select persistence_id, partition_nr, sequence_nr, timestamp, ser_id, ser_manifest from safe_chat_journal where persistence_id='chat-room|703c1ae555da3cd4' and partition_nr = 0;
 

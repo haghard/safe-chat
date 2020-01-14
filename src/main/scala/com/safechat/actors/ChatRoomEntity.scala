@@ -14,7 +14,6 @@ import akka.cluster.sharding.typed.scaladsl.EntityTypeKey
 import akka.persistence.typed.{PersistenceId, RecoveryCompleted, RecoveryFailed, SnapshotCompleted, SnapshotFailed}
 import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior, ReplyEffect, RetentionCriteria}
 import akka.stream.{KillSwitches, StreamRefAttributes}
-import com.safechat.LoggingBehaviorInterceptor
 import com.safechat.domain.{Disconnected, Joined, MsgEnvelope, TextAdded}
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
 import akka.stream.scaladsl.{BroadcastHub, Keep, MergeHub, Source, StreamRefs}
@@ -39,9 +38,8 @@ object ChatRoomEntity {
 
   def apply(entityId: String): Behavior[UserCmd] =
     Behaviors.setup { ctx ⇒
-      //LoggingBehaviorInterceptor(ctx.log) {
+      //com.safechat.LoggingBehaviorInterceptor(ctx.log) {
       implicit val sys = ctx.system
-      implicit val ec  = ctx.system.executionContext
 
       /*EventSourcedBehavior.withEnforcedReplies[UserCmd, MsgEnvelope, FullChatState](
         PersistenceId("chat-room", entityId),
@@ -154,7 +152,7 @@ object ChatRoomEntity {
                 //Add new producer on the fly
                 //If the consumer cannot keep up then all of the producers are backpressured
                 val srcRefF = (Source.single[Message](TextMessage(history)) ++ hub.srcHub)
-                  .runWith(StreamRefs.sourceRef[Message] /*.addAttributes(settings)*/ )
+                  .runWith(StreamRefs.sourceRef[Message]) /*.addAttributes(settings)*/
 
                 //Add new consumers on the fly
                 //The rate of the producer will be automatically adapted to the slowest consumer

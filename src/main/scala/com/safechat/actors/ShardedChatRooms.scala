@@ -57,7 +57,7 @@ class ShardedChatRooms(implicit system: ActorSystem[Nothing]) {
   val chatShardRegion = sharding.init(
     Entity(ChatRoomEntity.entityKey)(entityCtx ⇒ ChatRoomEntity(entityCtx.entityId))
     //ShardingMessageExtractor[UserCmd](512)
-      .withMessageExtractor(ChatRoomsMsgExtractor[UserCmd](512)) //TODO: make it configurable
+      .withMessageExtractor(ChatRoomsMsgExtractor[UserCmd](1 << 8)) //TODO: make it configurable
       .withSettings(settings)
       .withEntityProps(akka.actor.typed.Props.empty.withDispatcherFromConfig("shard-dispatcher"))
   )

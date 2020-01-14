@@ -21,7 +21,7 @@ import scala.reflect.ClassTag
 
 /*
 
-Avro will provide you full compatibility support.
+Avro provides you full compatibility support.
 Backward compatibility is necessary for reading the old version of events.
 Forward compatibility is required for rolling updates — at the same time old and new version of events can be exchanged
 between micro service instances.
@@ -33,7 +33,7 @@ between micro service instances.
 
 Advice when writing Avro schema
 1) Add field with defaults
-2) Removing only fields which have defaults
+2) Remove only fields which have defaults
 
 If you target full compatibility follows these rules:
   Removing fields with defaults is fully compatible change
@@ -48,7 +48,6 @@ If you target full compatibility follows these rules:
   Remove required fields
 
  */
-
 object JournalEventsSerializer {
   val SEP         = ":"
   val subEventSEP = "/"
@@ -100,8 +99,7 @@ final class JournalEventsSerializer extends SerializerWithStringManifest {
             }
             val history = new util.ArrayList[CharSequence]()
             state.recentHistory.entries.foreach(history.add(_))
-            new SpecificDatumWriter[ChatState](schema)
-              .write(new ChatState(users, history), enc)
+            new SpecificDatumWriter[ChatState](schema).write(new ChatState(users, history), enc)
           }
           out.toByteArray
         }

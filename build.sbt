@@ -130,7 +130,7 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-cluster-sharding-typed" % akkaVersion,
 
   "com.typesafe.akka" %% "akka-persistence-query"     % akkaVersion,
-  "com.typesafe.akka" %% "akka-persistence-cassandra" % "0.101",
+  "com.typesafe.akka" %% "akka-persistence-cassandra" % "0.102",
 
   //a module that provides HTTP endpoints for introspecting and managing Akka clusters
   "com.lightbend.akka.management" %% "akka-management-cluster-http" % "1.0.3",
@@ -141,7 +141,7 @@ libraryDependencies ++= Seq(
   "ch.qos.logback" % "logback-classic" % "1.2.3",
   "org.apache.avro" % "avro" % "1.9.1",
 
-  "com.twitter" %% "algebird-core" % "0.13.6",
+  //"com.twitter" %% "algebird-core" % "0.13.6",
 
   "commons-codec" % "commons-codec" % "1.11",
   "org.scalatest" %% "scalatest" % "3.0.8" % Test,
@@ -149,12 +149,12 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-testkit" % akkaVersion % Test,
 
   // li haoyi ammonite repl embed
-  ("com.lihaoyi" % "ammonite" % "1.7.4" % "test").cross(CrossVersion.full)
+  ("com.lihaoyi" % "ammonite" % "1.9.2" % "test").cross(CrossVersion.full)
 )
 
 //workaround for sbt 1.3.0 https://github.com/sbt/sbt/issues/5075
 //comment out for test:run
-Compile / run / fork := true
+//Compile / run / fork := true
 
 scalafmtOnCompile := true
 
