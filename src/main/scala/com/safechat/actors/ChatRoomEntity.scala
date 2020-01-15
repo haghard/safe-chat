@@ -98,6 +98,41 @@ object ChatRoomEntity {
   ): ChatRoomHub = {
     implicit val ec = sys.executionContext
     implicit val t  = akka.util.Timeout(1.second)
+    /*
+      Try it out
+      case class Persisted(num: Long)
+      case class PersistElement(num: Long, srcSender: akka.actor.typed.ActorRef[Persisted])
+
+      def typeAsk: Source[Persisted, akka.NotUsed] = {
+        import akka.actor.typed.scaladsl.adapter._
+        import akka.actor.typed.scaladsl.Behaviors
+
+        implicit val t = akka.util.Timeout(1.second)
+
+        val dbRef: akka.actor.typed.ActorRef[PersistElement] =
+          sys.spawn(
+            Behaviors.receiveMessage[PersistElement] {
+              case PersistElement(num, srcSender) ⇒
+                println(num)
+                Thread.sleep(500) //write operation
+                //confirm the element
+                srcSender.tell(Persisted(num))
+                Behaviors.same
+            },
+            "actor-in-the-middle"
+          )
+
+        Source
+          .repeat(42L)
+          .via(
+            akka.stream.typed.scaladsl.ActorFlow.ask[Long, PersistElement, Persisted](dbRef)(
+              (elem: Long, srcSender: akka.actor.typed.ActorRef[Persisted]) ⇒ PersistElement(elem, srcSender)
+            )
+          )
+          .take(100)
+      }
+    */
+
     //ctx.log.info("create hub for {}", persistenceId)
     val ((sinkHub, ks), sourceHub) =
       MergeHub
@@ -123,7 +158,7 @@ object ChatRoomEntity {
             }
         )
         .viaMat(KillSwitches.single)(Keep.both)
-        .toMat(BroadcastHub.sink[Message](1))(Keep.both)
+        .toMat(BroadcastHub.sink[Message](1))(Keep.both) //??? sys.settings.config.getInt("akka.stream.materializer.max-input-buffer-size")
         .run()
     ChatRoomHub(sinkHub, sourceHub, ks)
   }
