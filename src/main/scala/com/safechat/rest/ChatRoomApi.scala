@@ -49,10 +49,9 @@ class ChatRoomApi(rooms: ShardedChatRooms)(implicit sys: ActorSystem[Nothing]) e
       }
 
   /**
-    * As long as at least one client's connected to the chat room exists, the associated persistent entity won't be passivated.
+    * As long as at least one connection is opened to the chat room, the associated persistent entity won't be passivated.
     *
-    * Downsides:
-    *   online users count is wrong ???
+    * Downsides: online users count is wrong ???
     */
   val routes: Route =
     (path("chat" / Segment / "user" / Segment) & parameter("pub".as[String])) { (chatId, user, pubKey) ⇒

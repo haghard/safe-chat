@@ -13,13 +13,11 @@ import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
 import akka.cluster.sharding.typed.scaladsl.EntityTypeKey
 import akka.persistence.typed.{PersistenceId, RecoveryCompleted, RecoveryFailed, SnapshotCompleted, SnapshotFailed}
 import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior, ReplyEffect, RetentionCriteria}
-import akka.stream.{KillSwitches, StreamRefAttributes}
+import akka.stream.{ActorMaterializer, KillSwitches, Materializer, StreamRefAttributes}
 import com.safechat.domain.{Disconnected, Joined, MsgEnvelope, TextAdded}
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
-import akka.stream.scaladsl.{BroadcastHub, Keep, MergeHub, Source, StreamRefs}
-
-import scala.concurrent.Future
-import akka.actor.typed.scaladsl.AskPattern._
+import akka.stream.scaladsl.{BroadcastHub, Flow, Keep, MergeHub, Source, StreamRefs}
+import akka.util.Timeout
 import com.safechat.rest.WsScaffolding
 
 object ChatRoomEntity {
@@ -35,6 +33,24 @@ object ChatRoomEntity {
     EntityTypeKey[UserCmd]("chat-rooms")
 
   def empty = FullChatState()
+
+  def persistFlow(persistenceId: String, entity: ActorRef[PostText])(
+    implicit to: Timeout
+  ): Flow[Message, ChatRoomReply, akka.NotUsed] =
+    akka.stream.typed.scaladsl.ActorFlow.ask[Message, PostText, ChatRoomReply](1)(entity) {
+      (msg: Message, src: akka.actor.typed.ActorRef[ChatRoomReply]) ⇒
+        msg match {
+          case TextMessage.Strict(text) ⇒
+            val segments = text.split(":")
+            if (text.split(":").size == 3)
+              PostText(persistenceId, segments(0).trim, segments(1).trim, segments(2).trim, src)
+            else if (text eq WsScaffolding.hbMessage)
+              PostText(persistenceId, text, text, text, src)
+            else throw new Exception(s"Unexpected text message $text")
+          case other ⇒
+            throw new Exception(s"Unexpected message type ${other.getClass.getName}")
+        }
+    }
 
   def apply(entityId: String): Behavior[UserCmd] =
     Behaviors.setup { ctx ⇒
@@ -82,61 +98,45 @@ object ChatRoomEntity {
 
   /**
     *
-    * Dynamic fan-in and fan-out with MergeHub and BroadcastHub
+    * Each chat root contains MergeHub-BroadcastHub connected together to form a runnable graph.
+    * Once we materialize this stream, we get back a pair of Source and Sink that together define the publish and subscribe sides of our channel.
+    *
+    * Dynamic fan-in and fan-out with MergeHub and BroadcastHub (//https://doc.akka.io/docs/akka/current/stream/stream-dynamic.html#combining-dynamic-operators-to-build-a-simple-publish-subscribe-service)
     *
     * A MergeHub allows to implement a dynamic fan-in junction point(many-to-one) in a graph where elements coming from
-    * different producers are emitted in a First-Comes-First-Served fashion.
+    * different producers are emitted in a First-Comes-First-Served fashion. If the consumer cannot keep up then all of the producers are backpressured.
     *
     * A BroadcastHub can be used to consume elements from a common producer by a dynamic set of consumers (one-to-many).
     * (dynamic number of producers and new consumers can be added on the fly)
+    * The rate of the producer will be automatically adapted to the slowest consumer. In this case, the hub is a Sink to
+    * which the single producer must be attached first
+    *
     */
   def createHub(
     persistenceId: String,
-    ctx: ActorRef[PostText]
+    entity: ActorRef[PostText],
+    ctx: ActorContext[UserCmd]
   )(
     implicit sys: ActorSystem[Nothing]
   ): ChatRoomHub = {
     implicit val ec = sys.executionContext
     implicit val t  = akka.util.Timeout(1.second)
-    /*
-      Try it out
-      case class Persisted(num: Long)
-      case class PersistElement(num: Long, srcSender: akka.actor.typed.ActorRef[Persisted])
-
-      def typeAsk: Source[Persisted, akka.NotUsed] = {
-        import akka.actor.typed.scaladsl.adapter._
-        import akka.actor.typed.scaladsl.Behaviors
-
-        implicit val t = akka.util.Timeout(1.second)
-
-        val dbRef: akka.actor.typed.ActorRef[PersistElement] =
-          sys.spawn(
-            Behaviors.receiveMessage[PersistElement] {
-              case PersistElement(num, srcSender) ⇒
-                println(num)
-                Thread.sleep(500) //write operation
-                //confirm the element
-                srcSender.tell(Persisted(num))
-                Behaviors.same
-            },
-            "actor-in-the-middle"
-          )
-
-        Source
-          .repeat(42L)
-          .via(
-            akka.stream.typed.scaladsl.ActorFlow.ask[Long, PersistElement, Persisted](dbRef)(
-              (elem: Long, srcSender: akka.actor.typed.ActorRef[Persisted]) ⇒ PersistElement(elem, srcSender)
-            )
-          )
-          .take(100)
-      }
-    */
 
     //ctx.log.info("create hub for {}", persistenceId)
+
     val ((sinkHub, ks), sourceHub) =
       MergeHub
         .source[Message](sys.settings.config.getInt("akka.stream.materializer.max-input-buffer-size"))
+        .via(
+          WsScaffolding
+            .flowWithHeartbeat()
+            .via(persistFlow(persistenceId, entity))
+            .collect {
+              case r: PingReply       ⇒ TextMessage.Strict(s"${r.chatId}:${r.msg}")
+              case r: TextPostedReply ⇒ TextMessage.Strict(s"${r.chatId}:${r.seqNum}")
+            }
+        )
+        /*
         .via(
           WsScaffolding
             .flowWithHeartbeat()
@@ -145,7 +145,7 @@ object ChatRoomEntity {
                 //message pattern alice:bob:......message body....
                 val segments = text.split(":")
                 if (segments.size == 3) {
-                  ctx
+                  entity
                     .ask[ChatRoomReply](
                       PostText(persistenceId, segments(0).trim, segments(1).trim, segments(2).trim, _)
                     )
@@ -156,10 +156,10 @@ object ChatRoomEntity {
               case other ⇒
                 throw new Exception(s"Unexpected message type ${other.getClass.getName}")
             }
-        )
+        )*/
         .viaMat(KillSwitches.single)(Keep.both)
-        .toMat(BroadcastHub.sink[Message](1))(Keep.both) //??? sys.settings.config.getInt("akka.stream.materializer.max-input-buffer-size")
-        .run()
+        .toMat(BroadcastHub.sink[Message](1 << 3))(Keep.both)
+        .run()(Materializer(ctx)) //
     ChatRoomHub(sinkHub, sourceHub, ks)
   }
 
@@ -199,19 +199,23 @@ object ChatRoomEntity {
 
       case cmd: PostText ⇒
         val num = EventSourcedBehavior.lastSequenceNumber(ctx)
-        Effect
-          .persist(
-            new MsgEnvelope(
-              UUID.randomUUID.toString,
-              System.currentTimeMillis,
-              TimeZone.getDefault.getID,
-              new TextAdded(cmd.sender, cmd.receiver, cmd.text)
+        if (cmd.text eq WsScaffolding.hbMessage)
+          Effect.none.thenReply(cmd.replyTo) { _ ⇒
+            PingReply(cmd.chatId, cmd.text)
+          } else
+          Effect
+            .persist(
+              new MsgEnvelope(
+                UUID.randomUUID.toString,
+                System.currentTimeMillis,
+                TimeZone.getDefault.getID,
+                new TextAdded(cmd.sender, cmd.receiver, cmd.text)
+              )
             )
-          )
-          .thenReply(cmd.replyTo) { newState: FullChatState ⇒
-            ctx.log.info("[{}]: users online:[{}]", newState.online.mkString(","))
-            TextPostedReply(cmd.chatId, num)
-          }
+            .thenReply(cmd.replyTo) { newState: FullChatState ⇒
+              ctx.log.info("[{}]: users online:[{}]", newState.online.mkString(","))
+              TextPostedReply(cmd.chatId, num)
+            }
 
       case cmd: DisconnectUser ⇒
         Effect
@@ -240,7 +244,7 @@ object ChatRoomEntity {
         else
           state.copy(
             regUsers = state.regUsers + (ev.getLogin.toString → ev.getPubKey.toString),
-            hub = Some(createHub(persistenceId, ctx.self.narrow[PostText])),
+            hub = Some(createHub(persistenceId, ctx.self.narrow[PostText], ctx)),
             online = Set(ev.getLogin.toString)
           )
       else
