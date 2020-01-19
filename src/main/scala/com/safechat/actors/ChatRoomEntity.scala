@@ -35,7 +35,7 @@ object ChatRoomEntity {
   def empty = FullChatState()
 
   def persistFlow(persistenceId: String, entity: ActorRef[PostText])(
-    implicit to: Timeout
+    implicit writeTo: Timeout
   ): Flow[Message, ChatRoomReply, akka.NotUsed] =
     akka.stream.typed.scaladsl.ActorFlow.ask[Message, PostText, ChatRoomReply](1)(entity) {
       (msg: Message, src: akka.actor.typed.ActorRef[ChatRoomReply]) ⇒
@@ -56,6 +56,7 @@ object ChatRoomEntity {
     Behaviors.setup { ctx ⇒
       //com.safechat.LoggingBehaviorInterceptor(ctx.log) {
       implicit val sys = ctx.system
+      implicit val c   = ctx
 
       /*EventSourcedBehavior.withEnforcedReplies[UserCmd, MsgEnvelope, FullChatState](
         PersistenceId("chat-room", entityId),
@@ -69,7 +70,7 @@ object ChatRoomEntity {
           PersistenceId("chat-room", entityId),
           FullChatState(),
           onCommand(ctx),
-          onEvent(ctx, ctx.self.path.name)
+          onEvent(ctx.self.path.name)
         )
         .receiveSignal {
           case (state, RecoveryCompleted) ⇒
@@ -114,8 +115,7 @@ object ChatRoomEntity {
     */
   def createHub(
     persistenceId: String,
-    entity: ActorRef[PostText],
-    ctx: ActorContext[UserCmd]
+    entity: ActorRef[PostText]
   )(
     implicit sys: ActorSystem[Nothing]
   ): ChatRoomHub = {
@@ -159,7 +159,7 @@ object ChatRoomEntity {
         )*/
         .viaMat(KillSwitches.single)(Keep.both)
         .toMat(BroadcastHub.sink[Message](1 << 3))(Keep.both)
-        .run()(Materializer(ctx)) //
+        .run()
     ChatRoomHub(sinkHub, sourceHub, ks)
   }
 
@@ -233,8 +233,9 @@ object ChatRoomEntity {
           }
     }
 
-  def onEvent(ctx: ActorContext[UserCmd], persistenceId: String)(state: FullChatState, event: MsgEnvelope)(
-    implicit sys: ActorSystem[Nothing]
+  def onEvent(persistenceId: String)(state: FullChatState, event: MsgEnvelope)(
+    implicit sys: ActorSystem[Nothing],
+    ctx: ActorContext[UserCmd]
   ): FullChatState =
     if (event.getPayload.isInstanceOf[Joined]) {
       val ev = event.getPayload.asInstanceOf[Joined]
@@ -244,7 +245,7 @@ object ChatRoomEntity {
         else
           state.copy(
             regUsers = state.regUsers + (ev.getLogin.toString → ev.getPubKey.toString),
-            hub = Some(createHub(persistenceId, ctx.self.narrow[PostText], ctx)),
+            hub = Some(createHub(persistenceId, ctx.self.narrow[PostText])),
             online = Set(ev.getLogin.toString)
           )
       else
