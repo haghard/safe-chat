@@ -89,7 +89,14 @@ object LRUCache {
     var next: Node[T, U] = null,
     val key: T = null.asInstanceOf[T],
     val value: U = null.asInstanceOf[U]
-  )
+  ) {
+
+    override def toString = {
+      val prevK = if (previous != null) s"<-: ${previous.key}" else "<-: null"
+      val nextK = if (next != null) s"->: ${next.key}" else "->: null"
+      s"[$prevK:$nextK] - $key"
+    }
+  }
 
   class LRUCache[K, V](
     capacity: Int,
@@ -149,6 +156,14 @@ object LRUCache {
       }
 
     def size: Int = currentSize
+
+    def show: Unit = {
+      def loop(n: Node[K, V]): Unit = {
+        println(n)
+        if (n.next ne null) loop(n.next) else ()
+      }
+      loop(leastRU)
+    }
 
     override def toString: String = {
       def loopMap(it: java.util.Iterator[K], sb: mutable.StringBuilder, first: Boolean = false): String =

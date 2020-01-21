@@ -62,12 +62,12 @@ class ChatRoomApi(rooms: ShardedChatRooms)(implicit sys: ActorSystem[Nothing]) e
             Flow.fromMaterializer { (mat, attr) ⇒
               //val ec: ExecutionContextExecutor = mat.executionContext
               //val dis                          = attr.get[ActorAttributes.Dispatcher].get
-              //val buf = attr.get[akka.stream.Attributes.InputBuffer].get
+              val buf = attr.get[akka.stream.Attributes.InputBuffer].get
               //println(attr.attributeList.mkString(","))
 
               Flow
                 .fromSinkAndSourceCoupled(reply.sinkRef.sink, reply.sourceRef.source)
-                //.buffer(buf.max, OverflowStrategy.backpressure)
+                .buffer(buf.max, OverflowStrategy.backpressure)
                 .watchTermination() { (_, c) ⇒
                   c.flatMap { _ ⇒
                     sys.log.info("ws-con for {}@{} has been terminated", user, chatId)
