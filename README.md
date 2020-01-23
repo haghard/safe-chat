@@ -124,10 +124,14 @@ https://medium.com/bestmile/domain-driven-event-sourcing-with-akka-typed-5f5b8bb
 https://www.scala-exercises.org/shapeless/coproducts
 https://github.com/Keenworks/akka-avro-evolution.git
 https://softwaremill.com/schema-registry-and-topic-with-multiple-message-types/
-c
+
 https://github.com/IainHull/akka-persistence-message-bug
 http://martin.kleppmann.com/2012/12/05/schema-evolution-in-avro-protocol-buffers-thrift.html
 https://www.programcreek.com/java-api-examples/?code=rkluszczynski/avro-cli/avro-cli-master/src/main/java/io/github/rkluszczynski/avro/cli/command/conversion/RawConverterUtil.java
+
+
+## Snapshotting
+https://doc.akka.io/docs/akka/current/typed/persistence-snapshot.html
 
 
 ## SinkRef serialization/deserialization

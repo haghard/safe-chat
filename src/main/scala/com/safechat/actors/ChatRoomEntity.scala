@@ -67,6 +67,7 @@ object ChatRoomEntity {
 
       EventSourcedBehavior
         .withEnforcedReplies[UserCmd, MsgEnvelope, FullChatState](
+          //PersistenceId.ofUniqueId(entityId),
           PersistenceId("chat-room", entityId),
           FullChatState(),
           onCommand(ctx),
