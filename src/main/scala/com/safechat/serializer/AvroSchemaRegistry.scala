@@ -19,13 +19,11 @@ object AvroSchemaRegistry {
 
   private val schemaMap: Map[String, Schema] = Map(
       activeSchemaHash → getSchemaFromUrl(activeSchema)
-    ) ++ schemaHistory.map(
-      schemaVersion ⇒ {
-        //val oldSchema = new FileInputStream(schemaVersion)
-        //getClass.getResource(schemaVersion)
-        (getMD5FromUrl(schemaVersion), getSchemaFromUrl(schemaVersion))
-      }
-    )
+    ) ++ schemaHistory.map { schemaVersion ⇒
+      //val oldSchema = new FileInputStream(schemaVersion)
+      //getClass.getResource(schemaVersion)
+      (getMD5FromUrl(schemaVersion), getSchemaFromUrl(schemaVersion))
+    }
 
   def getMD5FromUrl(in: File): String = DigestUtils.md5Hex(new FileInputStream(in))
 
