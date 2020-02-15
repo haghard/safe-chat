@@ -118,9 +118,7 @@ final class JournalEventsSerializer extends SerializerWithStringManifest {
     } else if (manifest.startsWith(classOf[FullChatState].getName)) {
       val state    = fromByteArray[ChatState](bytes, writerSchema, readerSchema)
       var userKeys = Map.empty[String, String]
-      state.getRegisteredUsers.forEach { (login, pubKey) ⇒
-        userKeys = userKeys + (login.toString → pubKey.toString)
-      }
+      state.getRegisteredUsers.forEach((login, pubKey) ⇒ userKeys = userKeys + (login.toString → pubKey.toString))
 
       val s = FullChatState(regUsers = userKeys)
       state.getRecentHistory.forEach(e ⇒ s.recentHistory.add(e.toString))

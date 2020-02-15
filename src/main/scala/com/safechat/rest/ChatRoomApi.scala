@@ -24,14 +24,12 @@ class ChatRoomApi(rooms: ShardedChatRooms)(implicit sys: ActorSystem[Nothing]) e
 
   //wake up ChatRoom shard region using a fake user
   sch.scheduleOnce(
-    200.millis, { () ⇒
+    200.millis,
+    () ⇒
       rooms
         .enter(ChatRoomEntity.wakeUpEntityName, ChatRoomEntity.wakeUpUserName, "fake-pub-key")
         .mapTo[ChatRoomReply]
-        .flatMap { _ ⇒
-          rooms.disconnect(ChatRoomEntity.wakeUpEntityName, ChatRoomEntity.wakeUpUserName)
-        }
-    }
+        .flatMap(_ ⇒ rooms.disconnect(ChatRoomEntity.wakeUpEntityName, ChatRoomEntity.wakeUpUserName))
   )
 
   private def getChatRoomFlow(

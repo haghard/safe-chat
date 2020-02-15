@@ -95,7 +95,9 @@ object ChatRoomEntity {
             ctx.log.info(s"Signal $signal")
         }
         .snapshotWhen(snapshotPredicate(ctx))
-        .withRetention(RetentionCriteria.snapshotEvery(numberOfEvents = snapshotEveryN, keepNSnapshots = 2)) //.withDeleteEventsOnSnapshot
+        .withRetention(
+          RetentionCriteria.snapshotEvery(numberOfEvents = snapshotEveryN, keepNSnapshots = 2)
+        ) //.withDeleteEventsOnSnapshot
         .onPersistFailure(
           SupervisorStrategy.restartWithBackoff(minBackoff = 2.seconds, maxBackoff = 20.seconds, randomFactor = 0.3)
         )
@@ -205,9 +207,8 @@ object ChatRoomEntity {
       case cmd: PostText ⇒
         val num = EventSourcedBehavior.lastSequenceNumber(ctx)
         if (cmd.text eq WsScaffolding.hbMessage)
-          Effect.none.thenReply(cmd.replyTo) { _ ⇒
-            PingReply(cmd.chatId, cmd.text)
-          } else
+          Effect.none.thenReply(cmd.replyTo)(_ ⇒ PingReply(cmd.chatId, cmd.text))
+        else
           Effect
             .persist(
               new MsgEnvelope(
