@@ -143,11 +143,8 @@ libraryDependencies ++= Seq(
 
   //"com.twitter" %% "algebird-core" % "0.13.6",
 
-  //https://github.com/moia-dev/streamee
-  "io.moia" %% "streamee" % "5.0.0",
-
   "commons-codec" % "commons-codec" % "1.11",
-  "org.scalatest" %% "scalatest" % "3.0.8" % Test,
+  "org.scalatest" %% "scalatest" % "3.1.1" % Test,
   "com.typesafe.akka" %% "akka-http-testkit" % akkaHttpVersion % Test,
   "com.typesafe.akka" %% "akka-testkit" % akkaVersion % Test,
 
