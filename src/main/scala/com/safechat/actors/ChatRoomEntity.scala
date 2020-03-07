@@ -21,9 +21,6 @@ import akka.stream.scaladsl.{BroadcastHub, Flow, FlowWithContext, Keep, MergeHub
 import akka.util.Timeout
 import com.safechat.rest.WsScaffolding
 
-import scala.concurrent.{Future, Promise}
-import scala.util.{Failure, Success}
-
 object ChatRoomEntity {
 
   val snapshotEveryN = 100       //TODO should be configurable
@@ -130,7 +127,6 @@ object ChatRoomEntity {
     implicit val t  = akka.util.Timeout(1.second)
 
     //ctx.log.info("create hub for {}", persistenceId)
-
     val ((sinkHub, ks), sourceHub) =
       MergeHub
         .source[Message](sys.settings.config.getInt("akka.stream.materializer.max-input-buffer-size"))

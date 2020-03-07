@@ -53,6 +53,7 @@ class ChatRoomApi(rooms: ShardedChatRooms)(implicit sys: ActorSystem[Nothing]) e
     */
   val routes: Route =
     (path("chat" / Segment / "user" / Segment) & parameter("pub".as[String])) { (chatId, user, pubKey) ⇒
+      //Maybe smth like Retry form https://www.infoq.com/presentations/squbs/
       val flow = RestartFlow.withBackoff(1.second, 5.second, 0.3) { () ⇒
         val f = getChatRoomFlow(rooms, chatId, user, pubKey)
           .mapTo[JoinReply]
