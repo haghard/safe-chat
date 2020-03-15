@@ -149,6 +149,7 @@ https://github.com/wiringbits/safer.chat
 ##  Avro
 
 https://avro.apache.org/docs/1.8.2/spec.html#Maps
+https://www.confluent.io/blog/learn-stream-processing-with-kafka-tutorials/
 
 ## Git
 
