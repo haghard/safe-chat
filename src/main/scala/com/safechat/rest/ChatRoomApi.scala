@@ -32,6 +32,14 @@ class ChatRoomApi(rooms: ShardedChatRooms)(implicit sys: ActorSystem[Nothing]) e
         .flatMap(_ ⇒ rooms.disconnect(ChatRoomEntity.wakeUpEntityName, ChatRoomEntity.wakeUpUserName))
   )
 
+  //web socket flow
+  /*
+  Flow[Message]
+    .flatMapConcat(_.asTextMessage.getStreamedText.fold("")(_+_)) //the websocket spec says that a single msg over web socket can be streamed (multiple chunks)
+    .groupedWithin(1000, 1.second)
+    .mapAsync(1) { msg => Future { /*bulk insert*/ 1 }  }
+   */
+
   private def getChatRoomFlow(
     rooms: ShardedChatRooms,
     chatId: String,
