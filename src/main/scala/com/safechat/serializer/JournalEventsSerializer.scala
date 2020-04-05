@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Vadim Bondarev. All rights reserved.
+// Copyright (c) 2019-2020 Vadim Bondarev. All rights reserved.
 
 package com.safechat
 package serializer
@@ -77,7 +77,7 @@ final class JournalEventsSerializer extends SerializerWithStringManifest {
 
   val (activeSchemaHash, schemaMap) = AvroSchemaRegistry()
 
-  // Serializer always *writes* the most recent version of the schema
+  // Serializer always *writes* using the most recent version of the schema
   override def manifest(o: AnyRef): String =
     o match {
       case uEnv: MsgEnvelope ⇒
@@ -113,9 +113,9 @@ final class JournalEventsSerializer extends SerializerWithStringManifest {
     //println(s"fromBinary Schemas:[writer:$writerSchemaKey reader:$activeSchemaHash]")
     val writerSchema = schemaMap(writerSchemaKey)
     val readerSchema = schemaMap(activeSchemaHash)
-    if (manifest.startsWith(classOf[MsgEnvelope].getName)) {
+    if (manifest.startsWith(classOf[MsgEnvelope].getName))
       fromByteArray[MsgEnvelope](bytes, writerSchema, readerSchema)
-    } else if (manifest.startsWith(classOf[FullChatState].getName)) {
+    else if (manifest.startsWith(classOf[FullChatState].getName)) {
       val state    = fromByteArray[ChatState](bytes, writerSchema, readerSchema)
       var userKeys = Map.empty[String, String]
       state.getRegisteredUsers.forEach((login, pubKey) ⇒ userKeys = userKeys + (login.toString → pubKey.toString))

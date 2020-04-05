@@ -1,9 +1,9 @@
+// Copyright (c) 2019-2020 Vadim Bondarev. All rights reserved.
+
 package com.safechat
 package domain
 
 import scala.collection.mutable
-import scala.concurrent.Future
-import scala.concurrent.duration.{Deadline, FiniteDuration}
 
 object LRUCache {
 

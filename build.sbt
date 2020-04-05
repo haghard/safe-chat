@@ -18,7 +18,7 @@ lazy val commonSettings = Seq(
   licenses += ("Apache-2.0", new URL("https://www.apache.org/licenses/LICENSE-2.0.txt")),
   scalaVersion := "2.13.1",
   headerMappings := headerMappings.value + (HeaderFileType.scala -> HeaderCommentStyle.cppStyleLineComment),
-  headerLicense  := Some(HeaderLicense.Custom("Copyright (c) 2019 Vadim Bondarev. All rights reserved."))
+  headerLicense  := Some(HeaderLicense.Custom("Copyright (c) 2019-2020 Vadim Bondarev. All rights reserved."))
 )
 
 lazy val root = project

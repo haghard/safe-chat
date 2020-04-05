@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Vadim Bondarev. All rights reserved.
+// Copyright (c) 2019-2020 Vadim Bondarev. All rights reserved.
 
 package com.safechat.actors
 
