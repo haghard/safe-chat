@@ -3,6 +3,11 @@
 set -e
 set -x
 
+#-XX:MaxRAMFraction=1 \
+#-XX:+HeapDumpOnOutOfMemoryError \
+#-XX:HeapDumpPath=/data/logs/    \
+
+
 APP_OPTS="-server \
           -XX:MaxGCPauseMillis=400 \
           -XX:+UseStringDeduplication \
@@ -10,7 +15,10 @@ APP_OPTS="-server \
           -XX:ConcGCThreads=4 -XX:ParallelGCThreads=4 \
           -XX:+UseContainerSupport \
           -XX:+PreferContainerQuotaForCPUCount \
-          -XX:MaxRAMFraction=1 \
+          -XX:+UnlockExperimentalVMOptions \
+          -XX:InitialRAMPercentage=60 \
+          -XX:MaxRAMPercentage=75 \
+          -XX:MinRAMPercentage=50 \
           -XshowSettings \
           -DENV=${ENV} \
           -DHTTP_PORT=${HTTP_PORT} \
