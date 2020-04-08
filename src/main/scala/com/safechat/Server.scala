@@ -49,7 +49,7 @@ object Server extends Ops {
     val confPath = sys.props.get("CONFIG").getOrElse(throw new Exception("CONFIG env var is expected"))
     val env      = sys.props.get("ENV").getOrElse(throw new Exception("ENV env var is expected"))
 
-    val akkaExternalHostName = Option(System.getProperty("akka.remote.artery.canonical.hostname"))
+    val akkaExternalHostName = sys.props.get("akka.remote.artery.canonical.hostname")
       .getOrElse(throw new Exception("akka.remote.artery.canonical.hostname is expected"))
 
     //Inside the Docker container we bind to all available network interfaces
