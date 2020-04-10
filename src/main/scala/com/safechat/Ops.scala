@@ -8,7 +8,8 @@ import scala.collection.{Map, Seq}
 import scala.jdk.CollectionConverters._
 
 trait Ops {
-  val Opt          = """(\S+)=(\S+)""".r
+  val Opt = """(\S+)=(\S+)""".r
+
   val ethName      = "eth0"
   val ipExpression = """\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3}"""
 
@@ -22,7 +23,17 @@ trait Ops {
 
   def applySystemProperties(options: Map[String, String]): Unit =
     for ((key, value) ← options if key startsWith "-D") {
-      println(s"Set $key: $value")
+      println(s"Config override: $key = $value")
       System.setProperty(key.substring(2), value)
     }
+
+  def applyProperties(args: Array[String]) = {
+    val Opt = """-D(\S+)=(\S+)""".r
+    args.toList.foreach {
+      case Opt(key, value) ⇒
+        println(s"Config override: $key = $value")
+        System.setProperty(key, value)
+    }
+  }
+
 }
