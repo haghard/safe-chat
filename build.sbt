@@ -5,7 +5,7 @@ val projectName   = "safe-chat"
 val Version       = "0.1.0"
 
 val akkaVersion = "2.6.4"
-val akkaHttpVersion = "10.1.10"
+val akkaHttpVersion = "10.1.11"
 
 promptTheme := ScalapenosTheme
 
@@ -122,7 +122,8 @@ libraryDependencies ++= Seq(
 
   //local build for 2.13 /Users/haghard/.ivy2/local/com.github.TanUkkii007/akka-cluster-custom-downing_2.13/0.0.13-SNAPSHOT/jars/akka-cluster-custom-downing_2.13.jar
   //"com.github.TanUkkii007" %% "akka-cluster-custom-downing" % "0.0.12",
-  "com.github.TanUkkii007" %% "akka-cluster-custom-downing" % "0.0.13-SNAPSHOT", //local build that uses CoordinatedShutdown to down self
+  //"com.github.TanUkkii007" %% "akka-cluster-custom-downing" % "0.0.13-SNAPSHOT", //local build that uses CoordinatedShutdown to down self
+  "org.sisioh"        %% "akka-cluster-custom-downing" % "0.1.0",
 
   "com.typesafe.akka" %% "akka-slf4j" % akkaVersion,
 

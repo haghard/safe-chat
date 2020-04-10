@@ -63,6 +63,10 @@ class ShardedChatRooms(implicit system: ActorSystem[Nothing]) {
     //ShardingMessageExtractor[UserCmd](512)
       .withMessageExtractor(ChatRoomsMsgExtractor[UserCmd](numberOfShards))
       .withSettings(settings)
+      //TODO: try it out
+      //https://doc.akka.io/docs/akka/current/typed/cluster-sharding.html
+      //For any shardId that has not been allocated it will be allocated to the requesting node (like a sticky session)
+      //.withAllocationStrategy(new ExternalShardAllocationStrategy(system, ChatRoomEntity.entityKey.name))
       .withEntityProps(akka.actor.typed.Props.empty.withDispatcherFromConfig("shard-dispatcher"))
   )
 
