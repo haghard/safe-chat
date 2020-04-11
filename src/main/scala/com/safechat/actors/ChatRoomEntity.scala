@@ -11,13 +11,12 @@ import akka.actor.typed.{ActorRef, ActorSystem, Behavior, PostStop, PreRestart, 
 import scala.concurrent.duration._
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
 import akka.cluster.sharding.typed.scaladsl.EntityTypeKey
-import akka.http.scaladsl.model.{HttpRequest, HttpResponse}
 import akka.persistence.typed.{PersistenceId, RecoveryCompleted, RecoveryFailed, SnapshotCompleted, SnapshotFailed}
 import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior, ReplyEffect, RetentionCriteria}
 import akka.stream.{ActorMaterializer, Attributes, KillSwitches, Materializer, StreamRefAttributes}
 import com.safechat.domain.{Disconnected, Joined, MsgEnvelope, TextAdded}
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
-import akka.stream.scaladsl.{BroadcastHub, Flow, FlowWithContext, Keep, MergeHub, Sink, Source, StreamRefs}
+import akka.stream.scaladsl.{BroadcastHub, Flow, Keep, MergeHub, Source, StreamRefs}
 import akka.util.Timeout
 import com.safechat.rest.WsScaffolding
 
@@ -39,15 +38,16 @@ object ChatRoomEntity {
     implicit writeTo: Timeout
   ): Flow[Message, ChatRoomReply, akka.NotUsed] =
     akka.stream.typed.scaladsl.ActorFlow.ask[Message, PostText, ChatRoomReply](1)(entity) {
-      (msg: Message, src: akka.actor.typed.ActorRef[ChatRoomReply]) ⇒
+      (msg: Message, replyTo: akka.actor.typed.ActorRef[ChatRoomReply]) ⇒
         msg match {
           case TextMessage.Strict(text) ⇒
             val segments = text.split(":")
             if (text.split(":").size == 3)
-              PostText(persistenceId, segments(0).trim, segments(1).trim, segments(2).trim, src)
+              PostText(persistenceId, segments(0).trim, segments(1).trim, segments(2).trim, replyTo)
             else if (text eq WsScaffolding.hbMessage)
-              PostText(persistenceId, text, text, text, src)
-            else throw new Exception(s"Unexpected text message $text")
+              PostText(persistenceId, text, text, text, replyTo)
+            else PostText(persistenceId, "null", "null", s"Message error. Wrong format $text", replyTo)
+          //throw new Exception(s"Unexpected text message $text")
           case other ⇒
             throw new Exception(s"Unexpected message type ${other.getClass.getName}")
         }
@@ -68,20 +68,19 @@ object ChatRoomEntity {
 
       EventSourcedBehavior
         .withEnforcedReplies[UserCmd, MsgEnvelope, FullChatState](
-          //PersistenceId.ofUniqueId(entityId),
-          PersistenceId("chat-room", entityId),
+          PersistenceId.ofUniqueId(entityId),
           FullChatState(),
           onCommand(ctx),
           onEvent(ctx.self.path.name)
         )
         .receiveSignal {
           case (state, RecoveryCompleted) ⇒
-            ctx.log.info(s"Recovered: [${state.regUsers.keySet.mkString(",")}]")
+            ctx.log.info(s"★ ★ ★ Recovered: [${state.regUsers.keySet.mkString(",")}] ★ ★ ★")
           case (state, PreRestart) ⇒
-            ctx.log.info(s"Pre-restart ${state.regUsers.keySet.mkString(",")}")
+            ctx.log.info(s"★ ★ ★ Pre-restart ${state.regUsers.keySet.mkString(",")} ★ ★ ★")
           case (state, PostStop) ⇒
             state.hub.foreach(_.ks.shutdown)
-            ctx.log.info("PostStop. Clean up chat resources")
+            ctx.log.info("★ ★ ★ PostStop(Passivation). Clean up chat resources ★ ★ ★")
           case (state, SnapshotCompleted(_)) ⇒
             ctx.log.info(s"SnapshotCompleted [${state.regUsers.keySet.mkString(",")}]")
           case (state, SnapshotFailed(_, ex)) ⇒
@@ -89,7 +88,7 @@ object ChatRoomEntity {
           case (_, RecoveryFailed(cause)) ⇒
             ctx.log.error(s"RecoveryFailed $cause", cause)
           case (_, signal) ⇒
-            ctx.log.info(s"Signal $signal")
+            ctx.log.info(s"★ ★ ★ Signal $signal ★ ★ ★")
         }
         .snapshotWhen(snapshotPredicate(ctx))
         .withRetention(
@@ -136,7 +135,7 @@ object ChatRoomEntity {
             .via(persistFlow(persistenceId, entity))
             .collect {
               case r: PingReply       ⇒ TextMessage.Strict(s"${r.chatId}:${r.msg}")
-              case r: TextPostedReply ⇒ TextMessage.Strict(s"${r.chatId}:${r.seqNum}")
+              case r: TextPostedReply ⇒ TextMessage.Strict(s"chat-room:${r.chatId} msgId:${r.seqNum}  ${r.content}")
             }
         )
         /*
@@ -215,8 +214,8 @@ object ChatRoomEntity {
               )
             )
             .thenReply(cmd.replyTo) { newState: FullChatState ⇒
-              ctx.log.info("[{}]: users online:[{}]", newState.online.mkString(","))
-              TextPostedReply(cmd.chatId, num)
+              ctx.log.info("users online:[{}]", newState.online.mkString(","))
+              TextPostedReply(cmd.chatId, num, s"[from:${cmd.sender} -> to:${cmd.receiver}] - ${cmd.text}")
             }
 
       case cmd: DisconnectUser ⇒

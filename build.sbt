@@ -36,11 +36,45 @@ lazy val root = project
     assemblyJarName in assembly := s"$projectName-${version.value}.jar",
 
     // Resolve duplicates for Sbt Assembly
+    /*
     assemblyMergeStrategy in assembly := {
       case PathList(xs @ _*) if xs.last == "io.netty.versions.properties" =>
         MergeStrategy.rename
+      //case PathList("io.netty", "netty-common", "4.1.39.Final") => MergeStrategy.discard
       case other => (assemblyMergeStrategy in assembly).value(other)
+    },*/
+
+    // Resolve duplicates for Sbt Assembly
+    assemblyMergeStrategy in assembly := {
+      case PathList("META-INF", xs @ _*) =>
+        MergeStrategy.discard
+      case PathList(xs@_*) if xs.last == "module-info.class" =>
+        MergeStrategy.discard
+      case PathList(xs@_*) if xs.last == "io.netty.versions.properties" =>
+        MergeStrategy.rename
+      case other =>
+        //MergeStrategy.first
+        (assemblyMergeStrategy in assembly).value(other)
     },
+
+    /*assemblyExcludedJars in assembly := {
+      val cp = (fullClasspath in assembly).value
+        //netty-all:4.1.39.Final:jar
+      cp filter { n => n.data.getName == "netty-all-4.1.39.Final.jar" /*|| n.data.getName == "jersey-core-1.9.jar"*/ }
+    },*/
+
+    /*assemblyMergeStrategy in assembly := {
+     case PathList("META-INF", xs @ _*) =>
+       MergeStrategy.discard
+     case PathList("io.netty", xs @ _*) =>
+       //pick oldest netty version
+       ///io/netty/netty-all/4.1.39.Final/netty-all-4.1.39.Final.jar:io/netty/util/internal/shaded/org/jctools/util/UnsafeAccess.class
+       //io/netty/netty-common/4.1.45.Final/netty-common-4.1.45.Final.jar:io/netty/util/internal/shaded/org/jctools/util/UnsafeAccess.class
+       MergeStrategy.last
+     case other =>
+       //MergeStrategy.last
+       (assemblyMergeStrategy in assembly).value(other)
+    },*/
 
     imageNames in docker := Seq(
       ImageName(
@@ -76,7 +110,9 @@ lazy val root = project
       val appDevConfTarget  = s"$imageAppBaseDir/$configDir/development.conf"
 
       new sbtdocker.mutable.Dockerfile {
-        from("adoptopenjdk/openjdk12")
+        from("adoptopenjdk:11.0.6_10-jdk-hotspot")
+
+        //from("adoptopenjdk/openjdk12")
         //from("adoptopenjdk/openjdk11:jdk-11.0.2.9")
         //from("hseeberger/openjdk-iptables:8u181-slim")
         //adoptopenjdk/openjdk11:latest adoptopenjdk/openjdk11:jdk-11.0.1.13 openjdk:jre-alpine, openjdk:8-jre-alpine, openjdk:10-jre
@@ -123,18 +159,26 @@ libraryDependencies ++= Seq(
   //local build for 2.13 /Users/haghard/.ivy2/local/com.github.TanUkkii007/akka-cluster-custom-downing_2.13/0.0.13-SNAPSHOT/jars/akka-cluster-custom-downing_2.13.jar
   //"com.github.TanUkkii007" %% "akka-cluster-custom-downing" % "0.0.12",
   //"com.github.TanUkkii007" %% "akka-cluster-custom-downing" % "0.0.13-SNAPSHOT", //local build that uses CoordinatedShutdown to down self
-  "org.sisioh"        %% "akka-cluster-custom-downing" % "0.1.0",
+  ("org.sisioh"        %% "akka-cluster-custom-downing" % "0.1.0"),
+    //.excludeAll(ExclusionRule.apply(organization = "io.netty", name="netty-all")),
+
+  //.exclude("io.netty", "netty-all").exclude("io.netty", "netty-common"),
+
+  //"com.swissborg"    %% "lithium" % "0.11.1", brings cats
 
   "com.typesafe.akka" %% "akka-slf4j" % akkaVersion,
 
-  "com.typesafe.akka" %% "akka-persistence-typed" % akkaVersion,
-  "com.typesafe.akka" %% "akka-cluster-sharding-typed" % akkaVersion,
+  ("com.typesafe.akka" %% "akka-persistence-typed" % akkaVersion),
 
-  "com.typesafe.akka" %% "akka-persistence-query"     % akkaVersion,
-  "com.typesafe.akka" %% "akka-persistence-cassandra" % "1.0.0-RC1",
+  ("com.typesafe.akka" %% "akka-cluster-sharding-typed" % akkaVersion),
+
+  ("com.typesafe.akka" %% "akka-persistence-query"     % akkaVersion),
+
+  ("com.typesafe.akka" %% "akka-persistence-cassandra" % "1.0.0-RC1")
+    .excludeAll(ExclusionRule(organization = "io.netty", name="netty-all")), //netty-all-4.1.39.Final.jar
 
   //a module that provides HTTP endpoints for introspecting and managing Akka clusters
-  "com.lightbend.akka.management" %% "akka-management-cluster-http" % "1.0.6",
+  ("com.lightbend.akka.management" %% "akka-management-cluster-http" % "1.0.6"),
 
   "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
   "com.typesafe.akka" %% "akka-http-spray-json" % akkaHttpVersion,
@@ -142,15 +186,13 @@ libraryDependencies ++= Seq(
   "ch.qos.logback" % "logback-classic" % "1.2.3",
   "org.apache.avro" % "avro" % "1.9.1",
 
-  //"com.twitter" %% "algebird-core" % "0.13.6",
-
   "commons-codec" % "commons-codec" % "1.11",
   "org.scalatest" %% "scalatest" % "3.1.1" % Test,
   "com.typesafe.akka" %% "akka-http-testkit" % akkaHttpVersion % Test,
   "com.typesafe.akka" %% "akka-testkit" % akkaVersion % Test,
 
   // li haoyi ammonite repl embed
-  ("com.lihaoyi" % "ammonite" % "1.9.2" % "test").cross(CrossVersion.full)
+  ("com.lihaoyi" % "ammonite" % "2.0.4" % "test").cross(CrossVersion.full)
 )
 
 //workaround for sbt 1.3.0 https://github.com/sbt/sbt/issues/5075

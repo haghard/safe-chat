@@ -25,7 +25,7 @@ object Server extends Ops {
   val Dispatcher     = "akka.actor.default-dispatcher"
   val AkkaSystemName = "safe-chat"
 
-  def guardian(config: Config, hostName: String, httpPort: Int): Behavior[Nothing] =
+  def guardian(hostName: String, httpPort: Int): Behavior[Nothing] =
     Behaviors
       .setup[SelfUp] { ctx ⇒
         implicit val sys = ctx.system
@@ -49,17 +49,22 @@ object Server extends Ops {
     val confPath = sys.props.get("CONFIG").getOrElse(throw new Exception("CONFIG env var is expected"))
     val env      = sys.props.get("ENV").getOrElse(throw new Exception("ENV env var is expected"))
 
-    val akkaExternalHostName = sys.props.get("akka.remote.artery.canonical.hostname")
+    val akkaExternalHostName = sys.props
+      .get("akka.remote.artery.canonical.hostname")
       .getOrElse(throw new Exception("akka.remote.artery.canonical.hostname is expected"))
 
     //Inside the Docker container we bind to all available network interfaces
     val dockerAddr = internalAddr.map(_.getHostAddress).getOrElse("0.0.0.0")
 
-    val akkaPort = sys.props.get("akka.remote.artery.canonical.port").flatMap(r=> Try(r.toInt).toOption)
+    val akkaPort = sys.props
+      .get("akka.remote.artery.canonical.port")
+      .flatMap(r ⇒ Try(r.toInt).toOption)
       .getOrElse(throw new Exception("akka.remote.artery.canonical.port is expected"))
 
-    val httpPort = sys.props.get("HTTP_PORT").flatMap(r=> Try(r.toInt).toOption)
-        .getOrElse(throw new Exception("HTTP_PORT is expected"))
+    val httpPort = sys.props
+      .get("HTTP_PORT")
+      .flatMap(r ⇒ Try(r.toInt).toOption)
+      .getOrElse(throw new Exception("HTTP_PORT is expected"))
 
     val akkaSeeds = sys.props.get("SEEDS").map { seeds ⇒
       val seedNodesString = seeds
@@ -74,24 +79,20 @@ object Server extends Ops {
 
     val configFile = new File(s"${new File(confPath).getAbsolutePath}/" + env + ".conf")
 
-    val dbPsw = sys.props.get("cassandra.psw").getOrElse(throw new Exception("cassandra.psw env var is expected"))
+    val dbPsw  = sys.props.get("cassandra.psw").getOrElse(throw new Exception("cassandra.psw env var is expected"))
     val dbUser = sys.props.get("cassandra.user").getOrElse(throw new Exception("cassandra.user env var is expected"))
 
-    val dbConf = sys.props.get("cassandra.hosts").map { hs ⇒
-      val contactPoints = hs.split(",").map(h ⇒ s""" "$h" """).mkString(",").dropRight(1)
-      ConfigFactory.parseString(
-        s"""
-           |cassandra-journal.contact-points = [ $contactPoints ]
-           |cassandra-snapshot-store.contact-points = [ $contactPoints ]
-           |
-           |cassandra-journal.authentication.username = $dbUser
-           |cassandra-snapshot-store.authentication.username = $dbUser
-           |
-           |cassandra-journal.authentication.password = $dbPsw
-           |cassandra-snapshot-store.authentication.password = $dbPsw
-           |
-          """.stripMargin
-      )
+    val dbConf = sys.props.get("cassandra.hosts").map { hosts ⇒
+      val contactPointsString = hosts
+        .split(",")
+        .map { hostPort ⇒
+          val ap = hostPort.split(":")
+          s"""datastax-java-driver.basic.contact-points += "${ap(0)}:${ap(1)}""""
+        }
+        .mkString("\n")
+      (ConfigFactory parseString contactPointsString).resolve
+        .withFallback(ConfigFactory.parseString(s"datastax-java-driver.advanced.auth-provider.username=$dbUser"))
+        .withFallback(ConfigFactory.parseString(s"datastax-java-driver.advanced.auth-provider.password=$dbPsw"))
     }
 
     val cfg: Config = {
@@ -111,7 +112,7 @@ object Server extends Ops {
     cfg.getObject(Dispatcher)
 
     val system =
-      akka.actor.typed.ActorSystem[Nothing](guardian(cfg, akkaExternalHostName, httpPort), AkkaSystemName, cfg)
+      akka.actor.typed.ActorSystem[Nothing](guardian(akkaExternalHostName, httpPort), AkkaSystemName, cfg)
 
     val greeting = showGreeting(
       cfg,
@@ -136,9 +137,12 @@ object Server extends Ops {
       .append('\n')
       .append(s"★ ★ ★   Seed nodes: [$seedNodes]  ★ ★ ★")
       .append('\n')
-      .append(s"★ ★ ★   Cassandra: ${cfg.getStringList("cassandra-journal.contact-points").asScala.mkString(",")} ")
-      .append('\n')
-      .append(s"Partition size: ${cfg.getInt("cassandra-journal.target-partition-size")} ★ ★ ★")
+      .append(
+        s"★ ★ ★   Cassandra: ${cfg.getStringList("datastax-java-driver.basic.contact-points").asScala.mkString(",")} "
+      )
+      .append(
+        s"  Journal partition size: ${cfg.getInt("akka.persistence.cassandra.journal.target-partition-size")} ★ ★ ★"
+      )
       .append('\n')
       .append(s"★ ★ ★   Environment: [TZ:${TimeZone.getDefault.getID}. Start time:${LocalDateTime.now}]  ★ ★ ★")
       .append('\n')

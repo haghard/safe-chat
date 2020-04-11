@@ -26,16 +26,20 @@ object ShardedChatRooms {
     def apply[T <: UserCmd](numberOfShards: Int): ShardingMessageExtractor[T, T] =
       new ShardingMessageExtractor[T, T] {
         val SEED = 512L
+
+        //
         private def hash3_128(entityId: String): Long = {
           val bts = entityId.getBytes(UTF_8)
           CassandraHash.hash3_x64_128(ByteBuffer.wrap(bts), 0, bts.length, SEED)(1)
         }
 
         override def entityId(cmd: T): String =
-          hash3_128(cmd.chatId).toHexString
+          cmd.chatId
+        //hash3_128(cmd.chatId).toHexString
 
         override def shardId(entityId: String): String =
-          (math.abs(hash3_128(entityId)) % numberOfShards).toString
+          (math.abs(entityId.hashCode) % numberOfShards).toString
+        //(math.abs(hash3_128(entityId)) % numberOfShards).toString
 
         override def unwrapMessage(cmd: T): T = cmd
       }
@@ -44,9 +48,10 @@ object ShardedChatRooms {
 
 class ShardedChatRooms(implicit system: ActorSystem[Nothing]) {
   implicit val shardingTO = akka.util.Timeout(ChatRoomEntity.hubInitTimeout)
-  val numberOfShards      = 1 << 8 //TODO: make it configurable
-  val passivationTO       = 10.minutes //TODO: make it configurable
-  val sharding            = ClusterSharding(system)
+
+  val numberOfShards = 1 << 8 //TODO: make it configurable
+  val passivationTO  = 1.minutes //TODO: make it configurable
+  val sharding       = ClusterSharding(system)
   val settings =
     ClusterShardingSettings(system)
     /*
@@ -63,10 +68,9 @@ class ShardedChatRooms(implicit system: ActorSystem[Nothing]) {
     //ShardingMessageExtractor[UserCmd](512)
       .withMessageExtractor(ChatRoomsMsgExtractor[UserCmd](numberOfShards))
       .withSettings(settings)
-      //TODO: try it out
       //https://doc.akka.io/docs/akka/current/typed/cluster-sharding.html
       //For any shardId that has not been allocated it will be allocated to the requesting node (like a sticky session)
-      //.withAllocationStrategy(new ExternalShardAllocationStrategy(system, ChatRoomEntity.entityKey.name))
+      .withAllocationStrategy(new ExternalShardAllocationStrategy(system, ChatRoomEntity.entityKey.name))
       .withEntityProps(akka.actor.typed.Props.empty.withDispatcherFromConfig("shard-dispatcher"))
   )
 

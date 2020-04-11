@@ -34,19 +34,31 @@ sbt second
 
 ```bash
 
-docker run --net="host" -d -p 2551:2551 -p 8080:8080 -e HOSTNAME=188.68.210.125 -e HTTP_PORT=8080 -e AKKA_PORT=2551 -e CASSANDRA=84.201.150.26 -e SEEDS=188.68.210.125:2551,85.119.150.35:2551 -e CAS_USER=fsa -e CAS_PWS= -m 700MB haghard/safe-chat:0.1.0
+docker run --net="host" -d -p 2551:2551 -p 8080:8080 -e HOSTNAME=10.130.0.22 -e HTTP_PORT=8080 -e AKKA_PORT=2551 -e CASSANDRA=84.201.150.26:9042,84.201.146.112:9042 -e SEEDS=10.130.0.22:2551, -e CAS_USER=... -e CAS_PWS=... -m 700MB haghard/safe-chat:0.1.0
 
-docker run --net="host" -d -p 2551:2551 -p 8080:8080 -e HOSTNAME=85.119.150.35 -e HTTP_PORT=8080 -e AKKA_PORT=2551 -e CASSANDRA=84.201.150.26 -e SEEDS=188.68.210.125:2551,85.119.150.35:2551 -e CAS_USER=fsa -e CAS_PWS= -m 700MB haghard/safe-chat:0.1.0
+
+```
+
+### Management
+
+```bash
+
+http 127.0.0.1:8080/cluster/members
+
+http 127.0.0.1:8080/cluster/shards/chat-rooms //shards on this node (local shards)
+http 127.0.0.2:8080/cluster/shards/chat-rooms //shards on this node (local shards)
+
+http DELETE 127.0.0.1:8080/cluster/members/akka://safe-chat@127.0.0.2:2550
 
 ```
 
 
 ```bash
 
-http GET 188.68.210.125:8080/cluster/members
 
-ws://188.68.210.125:8080/chat/aaa/user/charley?key=...
-ws://85.119.150.35:8080/chat/aaa/user/charley?key=...
+
+ws://188.68.210.125:8080/chat/aaa/user/charley?key=sdfgsdf
+ws://85.119.150.35:8080/chat/aaa/user/charley?key=sdfgsdf
 
 http GET 188.68.210.125:8080/cluster/shards/chat-rooms
 
@@ -157,15 +169,17 @@ git tag -a v0.1.0 -m "v0.1.0" &&  git push --tags
 
 ```bash
 
-select persistence_id, partition_nr, sequence_nr, timestamp, ser_id, ser_manifest from safe_chat_journal where persistence_id='chat-room|703c1ae555da3cd4' and partition_nr = 0;
+select persistence_id, partition_nr, sequence_nr, timestamp, ser_id, ser_manifest from chat_journal where persistence_id='chat-room|703c1ae555da3cd4' and partition_nr = 0;
 
- persistence_id             | partition_nr | sequence_nr | timestamp                            | ser_id | ser_manifest
-----------------------------+--------------+-------------+--------------------------------------+--------+----------------------------------------------------------------------------
- chat-room|703c1ae555da3cd4 |            0 |           1 | e6dbf150-1e8c-11ea-a11b-7508a1320b27 |   9999 |    com.safechat.domain.MsgEnvelope/Joined:b936961c182c4389a3f88ba780575915
- chat-room|703c1ae555da3cd4 |            0 |           2 | e7db8700-1e8c-11ea-a11b-7508a1320b27 |   9999 | com.safechat.domain.MsgEnvelope/TextAdded:b936961c182c4389a3f88ba780575915
- chat-room|703c1ae555da3cd4 |            0 |           3 | e86e9f40-1e8c-11ea-a11b-7508a1320b27 |   9999 | com.safechat.domain.MsgEnvelope/TextAdded:b936961c182c4389a3f88ba780575915
- chat-room|703c1ae555da3cd4 |            0 |           4 | e8ed9340-1e8c-11ea-a11b-7508a1320b27 |   9999 | com.safechat.domain.MsgEnvelope/TextAdded:b936961c182c4389a3f88ba780575915
- chat-room|703c1ae555da3cd4 |            0 |           5 | e9658260-1e8c-11ea-a11b-7508a1320b27 |   9999 | com.safechat.domain.MsgEnvelope/TextAdded:b936961c182c4389a3f88ba780575915
+ chat-room|703c1ae555da3cd4 |            0 |           1 | 6a8b6c60-7be9-11ea-96e6-9f6061501887 |   9999 |       com.safechat.domain.MsgEnvelope/Joined:b936961c182c4389a3f88ba780575915
+ chat-room|703c1ae555da3cd4 |            0 |           2 | 7ac552d0-7be9-11ea-96e6-9f6061501887 |   9999 | com.safechat.domain.MsgEnvelope/Disconnected:b936961c182c4389a3f88ba780575915
+ chat-room|703c1ae555da3cd4 |            0 |           3 | 7b848420-7be9-11ea-96e6-9f6061501887 |   9999 |       com.safechat.domain.MsgEnvelope/Joined:b936961c182c4389a3f88ba780575915
+ chat-room|703c1ae555da3cd4 |            0 |           4 | 7cfa8250-7be9-11ea-96e6-9f6061501887 |   9999 |       com.safechat.domain.MsgEnvelope/Joined:b936961c182c4389a3f88ba780575915
+ chat-room|703c1ae555da3cd4 |            0 |           5 | 7fdfc7f0-7be9-11ea-96e6-9f6061501887 |   9999 |       com.safechat.domain.MsgEnvelope/Joined:b936961c182c4389a3f88ba780575915
+ chat-room|703c1ae555da3cd4 |            0 |           6 | 8345af40-7be9-11ea-96e6-9f6061501887 |   9999 |       com.safechat.domain.MsgEnvelope/Joined:b936961c182c4389a3f88ba780575915
+ chat-room|703c1ae555da3cd4 |            0 |           7 | 86575c10-7be9-11ea-96e6-9f6061501887 |   9999 |       com.safechat.domain.MsgEnvelope/Joined:b936961c182c4389a3f88ba780575915
+ chat-room|703c1ae555da3cd4 |            0 |           8 | 89d11980-7be9-11ea-96e6-9f6061501887 |   9999 |       com.safechat.domain.MsgEnvelope/Joined:b936961c182c4389a3f88ba780575915
+ chat-room|703c1ae555da3cd4 |            0 |           9 | 8d6a93f0-7be9-11ea-96e6-9f6061501887 |   9999 |       com.safechat.domain.MsgEnvelope/Joined:b936961c182c4389a3f88ba780575915
 
 ```
 
