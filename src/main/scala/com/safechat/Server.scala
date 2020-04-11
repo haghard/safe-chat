@@ -46,20 +46,20 @@ object Server extends Ops {
     val opts: Map[String, String] = argsToOpts(args.toList)
     applySystemProperties(opts)
 
-    val confPath = sys.props.get("CONFIG").getOrElse(throw new Exception("CONFIG env var is expected"))
-    val env      = sys.props.get("ENV").getOrElse(throw new Exception("ENV env var is expected"))
+    val confPath = sys.props.get("CONFIG").getOrElse(throw new Exception("Env var CONFIG is expected"))
+    val env      = sys.props.get("ENV").getOrElse(throw new Exception("Env var ENV is expected"))
 
     val akkaExternalHostName = sys.props
-      .get("akka.remote.artery.canonical.hostname")
-      .getOrElse(throw new Exception("akka.remote.artery.canonical.hostname is expected"))
+      .get("HOSTNAME")
+      .getOrElse(throw new Exception("Env var HOSTNAME is expected"))
 
     //Inside the Docker container we bind to all available network interfaces
     val dockerAddr = internalAddr.map(_.getHostAddress).getOrElse("0.0.0.0")
 
     val akkaPort = sys.props
-      .get("akka.remote.artery.canonical.port")
+      .get("AKKA_PORT")
       .flatMap(r ⇒ Try(r.toInt).toOption)
-      .getOrElse(throw new Exception("akka.remote.artery.canonical.port is expected"))
+      .getOrElse(throw new Exception("Env var AKKA_PORT is expected"))
 
     val httpPort = sys.props
       .get("HTTP_PORT")
@@ -98,10 +98,13 @@ object Server extends Ops {
     val cfg: Config = {
       val general = ConfigFactory.empty()
       val local   = dbConf.fold(general)(c ⇒ general.withFallback(c))
+
       akkaSeeds
         .fold(local)(c ⇒ local.withFallback(c))
-        .withFallback(ConfigFactory.parseString(s"akka.remote.netty.tcp.bind-hostname=$dockerAddr"))
-        .withFallback(ConfigFactory.parseString(s"akka.remote.netty.tcp.bind-port=$akkaPort"))
+        .withFallback(ConfigFactory.parseString(s"akka.remote.artery.canonical.bind.hostname=$dockerAddr"))
+        .withFallback(ConfigFactory.parseString(s"akka.remote.artery.canonical.bind.port=$akkaPort"))
+        .withFallback(ConfigFactory.parseString(s"akka.remote.artery.canonical.hostname=$akkaExternalHostName"))
+        .withFallback(ConfigFactory.parseString(s"akka.remote.artery.canonical.port=$akkaPort"))
         .withFallback(ConfigFactory.parseString(s"akka.management.cluster.http.host=$akkaExternalHostName"))
         .withFallback(ConfigFactory.parseString(s"akka.management.cluster.http.port=$akkaPort"))
         .withFallback(ConfigFactory.parseFile(configFile).resolve())

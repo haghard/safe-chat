@@ -160,25 +160,22 @@ libraryDependencies ++= Seq(
   //"com.github.TanUkkii007" %% "akka-cluster-custom-downing" % "0.0.12",
   //"com.github.TanUkkii007" %% "akka-cluster-custom-downing" % "0.0.13-SNAPSHOT", //local build that uses CoordinatedShutdown to down self
   ("org.sisioh"        %% "akka-cluster-custom-downing" % "0.1.0"),
-    //.excludeAll(ExclusionRule.apply(organization = "io.netty", name="netty-all")),
-
-  //.exclude("io.netty", "netty-all").exclude("io.netty", "netty-common"),
 
   //"com.swissborg"    %% "lithium" % "0.11.1", brings cats
 
   "com.typesafe.akka" %% "akka-slf4j" % akkaVersion,
 
-  ("com.typesafe.akka" %% "akka-persistence-typed" % akkaVersion),
+  "com.typesafe.akka" %% "akka-persistence-typed" % akkaVersion,
 
-  ("com.typesafe.akka" %% "akka-cluster-sharding-typed" % akkaVersion),
+  "com.typesafe.akka" %% "akka-cluster-sharding-typed" % akkaVersion,
 
-  ("com.typesafe.akka" %% "akka-persistence-query"     % akkaVersion),
+  "com.typesafe.akka" %% "akka-persistence-query"     % akkaVersion,
 
   ("com.typesafe.akka" %% "akka-persistence-cassandra" % "1.0.0-RC1")
-    .excludeAll(ExclusionRule(organization = "io.netty", name="netty-all")), //netty-all-4.1.39.Final.jar
+    .excludeAll(ExclusionRule(organization = "io.netty", name="netty-all")), //to exclude netty-all-4.1.39.Final.jar
 
   //a module that provides HTTP endpoints for introspecting and managing Akka clusters
-  ("com.lightbend.akka.management" %% "akka-management-cluster-http" % "1.0.6"),
+  "com.lightbend.akka.management" %% "akka-management-cluster-http" % "1.0.6",
 
   "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
   "com.typesafe.akka" %% "akka-http-spray-json" % akkaHttpVersion,
