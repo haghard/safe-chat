@@ -4,7 +4,7 @@ import sbtdocker.ImageName
 val projectName   = "safe-chat"
 val Version       = "0.1.0"
 
-val akkaVersion = "2.6.4"
+val akkaVersion = "2.6.5"
 val akkaHttpVersion = "10.1.11"
 
 promptTheme := ScalapenosTheme
@@ -16,7 +16,7 @@ lazy val commonSettings = Seq(
   startYear := Some(2019),
   //sbt headerCreate
   licenses += ("Apache-2.0", new URL("https://www.apache.org/licenses/LICENSE-2.0.txt")),
-  scalaVersion := "2.13.1",
+  scalaVersion := "2.13.2",
   headerMappings := headerMappings.value + (HeaderFileType.scala -> HeaderCommentStyle.cppStyleLineComment),
   headerLicense  := Some(HeaderLicense.Custom("Copyright (c) 2019-2020 Vadim Bondarev. All rights reserved."))
 )
@@ -171,7 +171,7 @@ libraryDependencies ++= Seq(
 
   "com.typesafe.akka" %% "akka-persistence-query"     % akkaVersion,
 
-  ("com.typesafe.akka" %% "akka-persistence-cassandra" % "1.0.0-RC1")
+  ("com.typesafe.akka" %% "akka-persistence-cassandra" % "1.0.0") //-RC1
     .excludeAll(ExclusionRule(organization = "io.netty", name="netty-all")), //to exclude netty-all-4.1.39.Final.jar
 
   //a module that provides HTTP endpoints for introspecting and managing Akka clusters
@@ -189,7 +189,7 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-testkit" % akkaVersion % Test,
 
   // li haoyi ammonite repl embed
-  ("com.lihaoyi" % "ammonite" % "2.0.4" % "test").cross(CrossVersion.full)
+  ("com.lihaoyi" % "ammonite" % "2.1.0" % "test").cross(CrossVersion.full)
 )
 
 //workaround for sbt 1.3.0 https://github.com/sbt/sbt/issues/5075

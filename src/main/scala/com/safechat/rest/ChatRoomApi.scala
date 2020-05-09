@@ -84,8 +84,8 @@ class ChatRoomApi(rooms: ShardedChatRooms)(implicit sys: ActorSystem[Nothing]) e
                 }
             }
           }
-        //TODO: remove blocking call, but how ???
-        Await.result(f, 10.seconds)
+
+        Flow.futureFlow(f)
       }
       handleWebSocketMessages(flow)
     } ~ ClusterHttpManagementRoutes(akka.cluster.Cluster(sys.toClassic))
