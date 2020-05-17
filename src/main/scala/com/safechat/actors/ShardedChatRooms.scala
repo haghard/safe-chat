@@ -23,7 +23,7 @@ import akka.cluster.sharding.external.{ExternalShardAllocation, ExternalShardAll
 object ShardedChatRooms {
 
   object ChatRoomsMsgExtractor {
-    def apply[T <: UserCmd](numberOfShards: Int): ShardingMessageExtractor[T, T] =
+    def apply[T <: UserCmdWithReply](numberOfShards: Int): ShardingMessageExtractor[T, T] =
       new ShardingMessageExtractor[T, T] {
         val SEED = 512L
 
@@ -66,13 +66,15 @@ class ShardedChatRooms(implicit system: ActorSystem[Nothing]) {
   val chatShardRegion = sharding.init(
     Entity(ChatRoomEntity.entityKey)(entityCtx ⇒ ChatRoomEntity(entityCtx.entityId))
     //ShardingMessageExtractor[UserCmd](512)
-      .withMessageExtractor(ChatRoomsMsgExtractor[UserCmd](numberOfShards))
+      .withMessageExtractor(ChatRoomsMsgExtractor[UserCmdWithReply](numberOfShards))
       .withSettings(settings)
       //https://doc.akka.io/docs/akka/current/typed/cluster-sharding.html
       //For any shardId that has not been allocated it will be allocated to the requesting node (like a sticky session)
       .withAllocationStrategy(new ExternalShardAllocationStrategy(system, ChatRoomEntity.entityKey.name))
       .withEntityProps(akka.actor.typed.Props.empty.withDispatcherFromConfig("shard-dispatcher"))
   )
+
+  //system.systemActorOf(KeepAlive(chatShardRegion.narrow[UserCmd]), "keep-alive")
 
   //To make explicit allocations
   //val client = ExternalShardAllocation(system).clientFor(ChatRoomEntity.entityKey.name)

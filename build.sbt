@@ -5,7 +5,7 @@ val projectName   = "safe-chat"
 val Version       = "0.1.0"
 
 val akkaVersion = "2.6.5"
-val akkaHttpVersion = "10.1.11"
+val akkaHttpVersion = "10.1.12"
 
 promptTheme := ScalapenosTheme
 
@@ -159,7 +159,7 @@ libraryDependencies ++= Seq(
   //local build for 2.13 /Users/haghard/.ivy2/local/com.github.TanUkkii007/akka-cluster-custom-downing_2.13/0.0.13-SNAPSHOT/jars/akka-cluster-custom-downing_2.13.jar
   //"com.github.TanUkkii007" %% "akka-cluster-custom-downing" % "0.0.12",
   //"com.github.TanUkkii007" %% "akka-cluster-custom-downing" % "0.0.13-SNAPSHOT", //local build that uses CoordinatedShutdown to down self
-  ("org.sisioh"        %% "akka-cluster-custom-downing" % "0.1.0"),
+  "org.sisioh"        %% "akka-cluster-custom-downing" % "0.1.0",
 
   //"com.swissborg"    %% "lithium" % "0.11.1", brings cats
 
@@ -189,7 +189,7 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-testkit" % akkaVersion % Test,
 
   // li haoyi ammonite repl embed
-  ("com.lihaoyi" % "ammonite" % "2.1.0" % "test").cross(CrossVersion.full)
+  ("com.lihaoyi" % "ammonite" % "2.1.1" % "test").cross(CrossVersion.full)
 )
 
 //workaround for sbt 1.3.0 https://github.com/sbt/sbt/issues/5075

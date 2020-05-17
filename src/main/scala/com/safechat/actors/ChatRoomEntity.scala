@@ -29,8 +29,8 @@ object ChatRoomEntity {
   val wakeUpEntityName = "dungeon"
   val frmtr            = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss Z")
 
-  val entityKey: EntityTypeKey[UserCmd] =
-    EntityTypeKey[UserCmd]("chat-rooms")
+  val entityKey: EntityTypeKey[UserCmdWithReply] =
+    EntityTypeKey[UserCmdWithReply]("chat-rooms")
 
   def empty = FullChatState()
 
@@ -53,7 +53,7 @@ object ChatRoomEntity {
         }
     }
 
-  def apply(entityId: String): Behavior[UserCmd] =
+  def apply(entityId: String): Behavior[UserCmdWithReply] =
     Behaviors.setup { ctx ⇒
       //com.safechat.LoggingBehaviorInterceptor(ctx.log) {
       implicit val sys = ctx.system
@@ -67,7 +67,7 @@ object ChatRoomEntity {
       )*/
 
       EventSourcedBehavior
-        .withEnforcedReplies[UserCmd, MsgEnvelope, FullChatState](
+        .withEnforcedReplies[UserCmdWithReply, MsgEnvelope, FullChatState](
           PersistenceId.ofUniqueId(entityId),
           FullChatState(),
           onCommand(ctx),
@@ -91,9 +91,7 @@ object ChatRoomEntity {
             ctx.log.info(s"★ ★ ★ Signal $signal ★ ★ ★")
         }
         .snapshotWhen(snapshotPredicate(ctx))
-        .withRetention(
-          RetentionCriteria.snapshotEvery(numberOfEvents = snapshotEveryN, keepNSnapshots = 2)
-        ) //.withDeleteEventsOnSnapshot
+        //.withRetention(RetentionCriteria.snapshotEvery(numberOfEvents = snapshotEveryN, keepNSnapshots = 2))
         .onPersistFailure(
           SupervisorStrategy.restartWithBackoff(minBackoff = 2.seconds, maxBackoff = 20.seconds, randomFactor = 0.3)
         )
@@ -165,7 +163,7 @@ object ChatRoomEntity {
     ChatRoomHub(sinkHub, sourceHub, ks)
   }
 
-  def onCommand(ctx: ActorContext[UserCmd])(state: FullChatState, cmd: UserCmd)(
+  def onCommand(ctx: ActorContext[UserCmdWithReply])(state: FullChatState, cmd: UserCmdWithReply)(
     implicit sys: ActorSystem[Nothing]
   ): ReplyEffect[MsgEnvelope, FullChatState] =
     cmd match {
@@ -236,7 +234,7 @@ object ChatRoomEntity {
 
   def onEvent(persistenceId: String)(state: FullChatState, event: MsgEnvelope)(
     implicit sys: ActorSystem[Nothing],
-    ctx: ActorContext[UserCmd]
+    ctx: ActorContext[UserCmdWithReply]
   ): FullChatState =
     if (event.getPayload.isInstanceOf[Joined]) {
       val ev = event.getPayload.asInstanceOf[Joined]
@@ -271,7 +269,7 @@ object ChatRoomEntity {
       state
 
   def snapshotPredicate(
-    ctx: ActorContext[UserCmd]
+    ctx: ActorContext[UserCmdWithReply]
   )(state: FullChatState, event: MsgEnvelope, id: Long): Boolean = {
     val ifSnap = id > 0 && id % snapshotEveryN == 0
 
