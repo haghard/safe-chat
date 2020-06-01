@@ -7,7 +7,7 @@ import spray.json._
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import akka.actor.typed.scaladsl.adapter._
 import akka.NotUsed
-import akka.stream.scaladsl.{Flow, RestartFlow}
+import akka.stream.scaladsl.{Flow, RestartFlow, Sink, Source}
 import akka.actor.typed.ActorSystem
 import akka.http.scaladsl.model.ws.Message
 import akka.management.cluster.scaladsl.ClusterHttpManagementRoutes
@@ -64,7 +64,6 @@ class ChatRoomApi(rooms: ShardedChatRooms)(implicit sys: ActorSystem[Nothing]) e
       //Maybe smth like Retry form https://www.infoq.com/presentations/squbs/
       val flow = RestartFlow.withBackoff(1.second, 5.second, 0.3) { () ⇒
         val f = getChatRoomFlow(rooms, chatId, user, pubKey)
-          .mapTo[JoinReply]
           .map { reply ⇒
             Flow.fromMaterializer { (mat, attr) ⇒
               //val ec: ExecutionContextExecutor = mat.executionContext
@@ -85,6 +84,9 @@ class ChatRoomApi(rooms: ShardedChatRooms)(implicit sys: ActorSystem[Nothing]) e
             }
           }
 
+        //TODO: check if it works. If not, then replace it using
+        //Source.futureSource(???)
+        //Sink.futureSink(???)
         Flow.futureFlow(f)
       }
       handleWebSocketMessages(flow)
