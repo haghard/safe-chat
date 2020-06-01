@@ -34,7 +34,7 @@ object ChatRoomEntity {
 
   def empty = FullChatState()
 
-  def persistFlow(persistenceId: String, entity: ActorRef[PostText])(
+  def persist(persistenceId: String, entity: ActorRef[PostText])(
     implicit writeTo: Timeout
   ): Flow[Message, ChatRoomReply, akka.NotUsed] =
     akka.stream.typed.scaladsl.ActorFlow.ask[Message, PostText, ChatRoomReply](1)(entity) {
@@ -130,7 +130,7 @@ object ChatRoomEntity {
         .via(
           WsScaffolding
             .flowWithHeartbeat()
-            .via(persistFlow(persistenceId, entity))
+            .via(persist(persistenceId, entity))
             .collect {
               case r: PingReply       ⇒ TextMessage.Strict(s"${r.chatId}:${r.msg}")
               case r: TextPostedReply ⇒ TextMessage.Strict(s"chat-room:${r.chatId} msgId:${r.seqNum}  ${r.content}")
