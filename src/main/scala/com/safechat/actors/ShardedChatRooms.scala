@@ -76,6 +76,16 @@ class ShardedChatRooms(implicit system: ActorSystem[Nothing]) {
 
   //system.systemActorOf(KeepAlive(chatShardRegion.narrow[UserCmd]), "keep-alive")
 
+  /*
+  https://doc.akka.io/docs/akka-projection/current/running.html#initializing-the-sharded-daemon
+  akka.cluster.sharding.typed.scaladsl.ShardedDaemonProcess(system)
+    .init[KeepAlive.Probe.type](
+      name = "keep-alive",
+      numberOfInstances = 3,  //numberOfInstances = Int,
+      behaviorFactory = { _ => KeepAlive(chatShardRegion.narrow[UserCmd]) }
+    )
+  */
+
   //To make explicit allocations
   //val client = ExternalShardAllocation(system).clientFor(ChatRoomEntity.entityKey.name)
   //val done: Future[Done] = client.updateShardLocation("chat0", Address("akka", "system", "127.0.0.1", 2552))

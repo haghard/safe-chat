@@ -131,6 +131,13 @@ https://skillsmatter.com/skillscasts/12671-akka-cluster-up-and-running
 
 https://medium.com/bestmile/domain-driven-event-sourcing-with-akka-typed-5f5b8bbfb823
 
+https://blog.softwaremill.com/3-reasons-to-adopt-event-sourcing-89cb855453f6
+
+## Akka cluster split brain
+
+https://blog.softwaremill.com/akka-cluster-split-brain-failures-are-you-ready-for-it-d9406b97e099
+
+
 ## message evolution/versioning
 
 https://www.scala-exercises.org/shapeless/coproducts

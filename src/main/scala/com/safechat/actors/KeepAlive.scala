@@ -12,7 +12,7 @@ object KeepAlive {
   def apply(chatShardRegion: ActorRef[UserCmd]): Behavior[Probe.type] =
     Behaviors.setup { ctx ⇒
       Behaviors.withTimers { timers ⇒
-        timers.startTimerWithFixedDelay(ChatRoomEntity.wakeUpEntityName + "_timer", Probe, 5.seconds)
+        timers.startTimerWithFixedDelay(ChatRoomEntity.wakeUpEntityName + "_timer", Probe, 15.seconds)
         Behaviors.receiveMessage {
           case Probe ⇒
             chatShardRegion.tell(PingShard(ChatRoomEntity.wakeUpEntityName, ctx.self))

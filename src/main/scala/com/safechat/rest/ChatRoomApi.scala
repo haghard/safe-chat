@@ -11,7 +11,7 @@ import akka.stream.scaladsl.{Flow, RestartFlow}
 import akka.actor.typed.ActorSystem
 import akka.management.cluster.scaladsl.ClusterHttpManagementRoutes
 import akka.stream.{ActorAttributes, OverflowStrategy, StreamRefAttributes}
-import com.safechat.actors.{ChatRoomEntity, ChatRoomReply, JoinReply, ShardedChatRooms}
+import com.safechat.actors.{ChatRoomEntity, ChatRoomReply, JoinReply, JoinUser, KeepAlive, ShardedChatRooms}
 
 import scala.concurrent.duration._
 import scala.util.control.NonFatal
