@@ -94,6 +94,7 @@ object ChatRoomEntity {
         //.withRetention(RetentionCriteria.snapshotEvery(numberOfEvents = snapshotEveryN, keepNSnapshots = 2))
         .onPersistFailure(
           SupervisorStrategy.restartWithBackoff(minBackoff = 2.seconds, maxBackoff = 20.seconds, randomFactor = 0.3)
+            .withMaxRestarts(100)
         )
       //}
     }
