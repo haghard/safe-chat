@@ -194,7 +194,16 @@ https://medium.com/jeroen-rosenberg/building-and-deploying-your-first-cloudflow-
 ## K8s
 
 https://github.com/akka/akka-sample-cluster-kubernetes-scala.git
+ 
+https://developer.lightbend.com/guides/openshift-deployment/lagom/forming-a-cluster.html
+
+https://doc.akka.io/docs/akka-management/current/bootstrap/details.html
+
+https://doc.akka.io/docs/akka-management/current/bootstrap/kubernetes-api.html  (akka.management.cluster.bootstrap.LowestAddressJoinDecider)
+
 https://www.youtube.com/watch?v=2jKu_E1TZPM
+
+Managing an Akka Cluster on Kubernetes - Markus Jura: https://www.youtube.com/watch?v=Sz-SE1FyhJE&list=PLLMLOC3WM2r5KDwkSRrLJ1_O6kZqlhhFt&index=22
 
 
 ## Videos
