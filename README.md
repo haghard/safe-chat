@@ -188,8 +188,6 @@ https://medium.com/jeroen-rosenberg/building-and-deploying-your-first-cloudflow-
 
 https://github.com/akka/akka-sample-cluster-kubernetes-scala.git
 
-
-
 https://blog.knoldus.com/akka-cluster-formation-fundamentals/
 https://blog.knoldus.com/akka-cluster-in-use-part-4-managing-a-cluster/
 
@@ -197,15 +195,13 @@ https://blog.knoldus.com/akka-cluster-in-use-part-4-managing-a-cluster/
 ## Videos
 How to use CQRS in Akka 2.6:  https://www.youtube.com/watch?v=6ECsFlNNIAM
 Introduction To Akka Cluster Sharding: https://youtu.be/SrPubnOKJcQ
-https://blog.knoldus.com/scale-out-with-cluster-sharding/
+How to do distributed, stateful processing with #Akka Cluster Sharding and Kafka: https://akka.io/blog/news/2020/03/18/akka-sharding-kafka-video
+Stateful OR Stateless Applications: To Akka Cluster, Or Not: https://www.youtube.com/watch?v=CiVsKjZV-Ys
 
-A video that shows how to do distributed, stateful processing with #Akka Cluster Sharding and Kafka:
-https://akka.io/blog/news/2020/03/18/akka-sharding-kafka-video
-
-https://github.com/akka/akka-samples/tree/2.6/akka-sample-kafka-to-sharding-scala
-
-ExternalShardAllocationStrategy: https://doc.akka.io/docs/akka/current/typed/cluster-sharding.html
-
+### Examples  
+Killrweather:             https://github.com/akka/akka-samples/tree/2.6/akka-sample-sharding-scala
+Persistent shopping cart: https://github.com/akka/akka-samples/tree/2.6/akka-sample-persistence-scala
+DData example:            https://github.com/akka/akka-samples/tree/2.6/akka-sample-distributed-data-scala
 
 ## Git
 
