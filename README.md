@@ -137,7 +137,8 @@ https://blog.knoldus.com/akka-cluster-formation-fundamentals/
 
 https://blog.knoldus.com/akka-cluster-in-use-part-4-managing-a-cluster/
 
-### Sharding:  
+### Sharding: 
+ 
 https://manuel.bernhardt.io/2018/02/26/tour-akka-cluster-cluster-sharding/
 
 ## Akka cluster split brain
