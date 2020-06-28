@@ -133,6 +133,13 @@ https://medium.com/bestmile/domain-driven-event-sourcing-with-akka-typed-5f5b8bb
 
 https://blog.softwaremill.com/3-reasons-to-adopt-event-sourcing-89cb855453f6
 
+https://blog.knoldus.com/akka-cluster-formation-fundamentals/
+
+https://blog.knoldus.com/akka-cluster-in-use-part-4-managing-a-cluster/
+
+### Sharding:  
+https://manuel.bernhardt.io/2018/02/26/tour-akka-cluster-cluster-sharding/
+
 ## Akka cluster split brain
 
 https://blog.softwaremill.com/akka-cluster-split-brain-failures-are-you-ready-for-it-d9406b97e099
@@ -187,21 +194,30 @@ https://medium.com/jeroen-rosenberg/building-and-deploying-your-first-cloudflow-
 ## K8s
 
 https://github.com/akka/akka-sample-cluster-kubernetes-scala.git
-
-https://blog.knoldus.com/akka-cluster-formation-fundamentals/
-https://blog.knoldus.com/akka-cluster-in-use-part-4-managing-a-cluster/
+https://www.youtube.com/watch?v=2jKu_E1TZPM
 
 
 ## Videos
-How to use CQRS in Akka 2.6:  https://www.youtube.com/watch?v=6ECsFlNNIAM
-Introduction To Akka Cluster Sharding: https://youtu.be/SrPubnOKJcQ
-How to do distributed, stateful processing with #Akka Cluster Sharding and Kafka: https://akka.io/blog/news/2020/03/18/akka-sharding-kafka-video
-Stateful OR Stateless Applications: To Akka Cluster, Or Not: https://www.youtube.com/watch?v=CiVsKjZV-Ys
 
-### Examples  
+How to use CQRS in Akka 2.6 https://www.youtube.com/watch?v=6ECsFlNNIAM
+
+Introduction To Akka Cluster Sharding https://youtu.be/SrPubnOKJcQ
+
+How to do distributed, stateful processing with #Akka Cluster Sharding and Kafka https://akka.io/blog/news/2020/03/18/akka-sharding-kafka-video
+
+Stateful OR Stateless Applications: To Akka Cluster, Or Not https://www.youtube.com/watch?v=CiVsKjZV-Ys
+
+Split Brain Resolver in Akka Cluster https://www.youtube.com/watch?v=vc6eTolxGbM
+
+### Examples
+  
 Killrweather:             https://github.com/akka/akka-samples/tree/2.6/akka-sample-sharding-scala
+
 Persistent shopping cart: https://github.com/akka/akka-samples/tree/2.6/akka-sample-persistence-scala
+
 DData example:            https://github.com/akka/akka-samples/tree/2.6/akka-sample-distributed-data-scala
+
+CQRS ShoppingCart example: read-side is implemented using Akka Projections: https://github.com/akka/akka-samples/tree/2.6/akka-sample-cqrs-scala
 
 ## Git
 

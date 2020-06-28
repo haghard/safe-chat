@@ -104,13 +104,14 @@ object ChatRoomEntity {
     }
 
   /**
-    * Each chat root contains MergeHub-BroadcastHub connected together to form a runnable graph.
-    * Once we materialize this stream, we get back a pair of Source and Sink that together define the publish and subscribe sides of our channel.
+    * Each chat root contains MergeHub and BroadcastHub connected together to form a runnable graph.
+    * Once we materialize this stream, we get back a pair of Source and Sink that together define the publish and subscribe sides of our chat room.
     *
     * Dynamic fan-in and fan-out with MergeHub and BroadcastHub (//https://doc.akka.io/docs/akka/current/stream/stream-dynamic.html#combining-dynamic-operators-to-build-a-simple-publish-subscribe-service)
     *
     * A MergeHub allows to implement a dynamic fan-in junction point(many-to-one) in a graph where elements coming from
-    * different producers are emitted in a First-Comes-First-Served fashion. If the consumer cannot keep up then all of the producers are backpressured.
+    * different producers are emitted in a First-Comes-First-Served fashion.
+    * If the consumer cannot keep up then all of the producers are backpressured.
     *
     * A BroadcastHub can be used to consume elements from a common producer by a dynamic set of consumers (one-to-many).
     * (dynamic number of producers and new consumers can be added on the fly)
