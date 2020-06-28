@@ -5,7 +5,7 @@ package com.safechat.actors
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets.UTF_8
 
-import akka.actor.typed.ActorSystem
+import akka.actor.typed.{ActorSystem, PostStop}
 import com.safechat.domain.CassandraHash
 import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, Entity}
 import akka.cluster.sharding.typed.ClusterShardingSettings.StateStoreModeDData
@@ -17,6 +17,7 @@ import ShardedChatRooms._
 import akka.Done
 import akka.actor.Address
 import akka.actor.typed.scaladsl.AskPattern._
+import akka.actor.typed.scaladsl.Behaviors
 import akka.cluster.sharding.external.scaladsl.ExternalShardAllocationClient
 import akka.cluster.sharding.external.{ExternalShardAllocation, ExternalShardAllocationStrategy}
 
@@ -49,7 +50,7 @@ object ShardedChatRooms {
 class ShardedChatRooms(implicit system: ActorSystem[Nothing]) {
   implicit val shardingTO = akka.util.Timeout(ChatRoomEntity.hubInitTimeout)
 
-  val numberOfShards = 1 << 8 //TODO: make it configurable
+  val numberOfShards = 1 << 8    //TODO: make it configurable
   val passivationTO  = 1.minutes //TODO: make it configurable
   val sharding       = ClusterSharding(system)
   val settings =
@@ -58,10 +59,38 @@ class ShardedChatRooms(implicit system: ActorSystem[Nothing]) {
         rememberEntities == false ensures that a shard entity won't be recreates/restarted automatically on
         a different `ShardRegion` due to rebalance, crash or graceful exit. That is exactly what we want, because we want lazy
         start for each ChatRoomEntity.
-       */
+     */
       .withRememberEntities(false)
       .withStateStoreMode(StateStoreModeDData)
       .withPassivateIdleEntityAfter(passivationTO)
+
+  /**
+    * Aa a example of non persistent but sharded `Entity`.
+    * Note that since this station is not storing its state anywhere else than in JVM memory, if Akka Cluster Sharding
+    * rebalances it - moves it to another node because of cluster nodes added removed etc - it will lose all its state.
+    * For a sharded entity to have state that survives being stopped and started again it needs to be persistent,
+    * for example by being an EventSourcedBehavior.
+    */
+  /*ClusterSharding(system).init(
+    Entity(ChatRoomEntity.entityKey)(entityCtx ⇒
+      Behaviors.setup { ctx ⇒
+        ctx.log.info(s"Start sharded entity: ${entityCtx.entityId}")
+        Behaviors
+          .receiveMessage[UserCmdWithReply] {
+            case _: JoinUser       ⇒ Behaviors.same
+            case _: PostText       ⇒ Behaviors.same
+            case _: DisconnectUser ⇒ Behaviors.same
+          }
+          .receiveSignal {
+            case (_, PostStop) ⇒
+              ctx.log.info("Stopping, losing all recorded state for chat room {}", entityCtx.entityId)
+              Behaviors.same
+          }
+      }
+    ).withMessageExtractor(ChatRoomsMsgExtractor[UserCmdWithReply](numberOfShards))
+      .withEntityProps(akka.actor.typed.Props.empty.withDispatcherFromConfig("shard-dispatcher"))
+      .withAllocationStrategy(new ExternalShardAllocationStrategy(system, ChatRoomEntity.entityKey.name))
+  )*/
 
   val chatShardRegion = sharding.init(
     Entity(ChatRoomEntity.entityKey)(entityCtx ⇒ ChatRoomEntity(entityCtx.entityId))
@@ -76,19 +105,21 @@ class ShardedChatRooms(implicit system: ActorSystem[Nothing]) {
 
   //system.systemActorOf(KeepAlive(chatShardRegion.narrow[UserCmd]), "keep-alive")
 
-  /*
-  https://doc.akka.io/docs/akka-projection/current/running.html#initializing-the-sharded-daemon
-  akka.cluster.sharding.typed.scaladsl.ShardedDaemonProcess(system)
-    .init[KeepAlive.Probe.type](
+  //https://doc.akka.io/docs/akka-projection/current/running.html#initializing-the-sharded-daemon
+  /*akka.cluster.sharding.typed.scaladsl
+    .ShardedDaemonProcess(system)
+    .init[KeepAlive.Probe](
       name = "keep-alive",
-      numberOfInstances = 3,  //numberOfInstances = Int,
-      behaviorFactory = { _ => KeepAlive(chatShardRegion.narrow[UserCmd]) }
-    )
-  */
+      numberOfInstances = 3, //numberOfInstances = Int,
+      behaviorFactory = { (n: Int) ⇒ KeepAlive(chatShardRegion.narrow[UserCmd]) },
+      stopMessage = KeepAlive.Probe.Stop
+    )*/
 
   //To make explicit allocations
-  //val client = ExternalShardAllocation(system).clientFor(ChatRoomEntity.entityKey.name)
-  //val done: Future[Done] = client.updateShardLocation("chat0", Address("akka", "system", "127.0.0.1", 2552))
+  //Make use of it in docker-cluster project !!!!
+  //
+  val client             = ExternalShardAllocation(system).clientFor(ChatRoomEntity.entityKey.name)
+  val done: Future[Done] = client.updateShardLocation("chat0", Address("akka", "system", "127.0.0.1", 2552))
 
   //do not use the ChatRoomsMsgExtractor
   //use akka.cluster.sharding.typed.ShardingEnvelope(chatId, JoinUser(chatId, login, pubKey, replyTo))

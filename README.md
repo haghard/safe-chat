@@ -136,6 +136,8 @@ https://blog.softwaremill.com/3-reasons-to-adopt-event-sourcing-89cb855453f6
 ## Akka cluster split brain
 
 https://blog.softwaremill.com/akka-cluster-split-brain-failures-are-you-ready-for-it-d9406b97e099
+https://doc.akka.io/docs/akka-enhancements/current/split-brain-resolver.html#using-the-split-brain-resolver
+https://www.youtube.com/watch?v=vc6eTolxGbM
 
 
 ## message evolution/versioning
@@ -164,11 +166,46 @@ https://blog.softwaremill.com/7-mistakes-when-using-apache-cassandra-51d2cf6df51
 
 https://github.com/wiringbits/safer.chat
 
+https://doc.akka.io/docs/akka-persistence-cassandra/1.0/migrations.html
+
+
+Distributed processing with Akka Cluster & Kafka(for how to integrate Kafka with Cluster Sharding)
+https://akka.io/blog/news/2020/03/18/akka-sharding-kafka-video 
+
+
+## CQRS
+How to use CQRS in Akka 2.6 https://www.youtube.com/watch?v=6ECsFlNNIAM
+
 
 ##  Avro
 
 https://avro.apache.org/docs/1.8.2/spec.html#Maps
 https://www.confluent.io/blog/learn-stream-processing-with-kafka-tutorials/
+https://medium.com/jeroen-rosenberg/building-and-deploying-your-first-cloudflow-application-6ea4b7157e6d
+
+
+## K8s
+
+https://github.com/akka/akka-sample-cluster-kubernetes-scala.git
+
+
+
+https://blog.knoldus.com/akka-cluster-formation-fundamentals/
+https://blog.knoldus.com/akka-cluster-in-use-part-4-managing-a-cluster/
+
+
+## Videos
+How to use CQRS in Akka 2.6:  https://www.youtube.com/watch?v=6ECsFlNNIAM
+Introduction To Akka Cluster Sharding: https://youtu.be/SrPubnOKJcQ
+https://blog.knoldus.com/scale-out-with-cluster-sharding/
+
+A video that shows how to do distributed, stateful processing with #Akka Cluster Sharding and Kafka:
+https://akka.io/blog/news/2020/03/18/akka-sharding-kafka-video
+
+https://github.com/akka/akka-samples/tree/2.6/akka-sample-kafka-to-sharding-scala
+
+ExternalShardAllocationStrategy: https://doc.akka.io/docs/akka/current/typed/cluster-sharding.html
+
 
 ## Git
 
@@ -194,3 +231,5 @@ select persistence_id, partition_nr, sequence_nr, timestamp, ser_id, ser_manifes
 Link to read
 https://doc.akka.io/docs/akka/current/typed/actors.html#a-more-complex-example
 https://github.com/akka/akka-samples/tree/2.6/akka-sample-sharding-scala
+
+https://github.com/apache/cassandra/blob/trunk/src/java/org/apache/cassandra/dht/IPartitioner.java

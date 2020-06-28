@@ -20,28 +20,29 @@ case class AccountSnapshot(e: BigInt, n: BigInt, d: BigInt, p: BigInt, q: BigInt
 object AccountSnapshot extends DefaultJsonProtocol {
 
   implicit object AccountBackupJsonFormat extends JsonFormat[AccountSnapshot] {
-    override def write(c: AccountSnapshot) = JsObject(
-      "e"  → JsNumber(c.e.toString),
-      "n"  → JsNumber(c.n.toString),
-      "d"  → JsNumber(c.d.toString),
-      "p"  → JsNumber(c.p.toString),
-      "q"  → JsNumber(c.q.toString),
-      "dp" → JsNumber(c.dp.toString),
-      "dq" → JsNumber(c.dq.toString),
-      "qi" → JsNumber(c.qi.toString)
-    )
+    override def write(c: AccountSnapshot) =
+      JsObject(
+        "e"  → JsNumber(c.e.toString),
+        "n"  → JsNumber(c.n.toString),
+        "d"  → JsNumber(c.d.toString),
+        "p"  → JsNumber(c.p.toString),
+        "q"  → JsNumber(c.q.toString),
+        "dp" → JsNumber(c.dp.toString),
+        "dq" → JsNumber(c.dq.toString),
+        "qi" → JsNumber(c.qi.toString)
+      )
 
     override def read(json: JsValue): AccountSnapshot =
       json.asJsObject.getFields("e", "n", "d", "p", "q", "dp", "dq", "qi") match {
         case Seq(
-            JsNumber(e),
-            JsNumber(n),
-            JsNumber(d),
-            JsNumber(p),
-            JsNumber(q),
-            JsNumber(dp),
-            JsNumber(dq),
-            JsNumber(qi)
+              JsNumber(e),
+              JsNumber(n),
+              JsNumber(d),
+              JsNumber(p),
+              JsNumber(q),
+              JsNumber(dp),
+              JsNumber(dq),
+              JsNumber(qi)
             ) ⇒
           AccountSnapshot(
             e.toBigInt,
@@ -93,11 +94,12 @@ object Account {
     Account(kp.getPublic.asInstanceOf[RSAPublicKey], kp.getPrivate.asInstanceOf[RSAPrivateCrtKey])
   }
 
-  private def parse(a: AccountSnapshot): Try[Account] = Try {
-    val kf = KeyFactory.getInstance(ALG)
-    Account(
-      kf.generatePublic(new RSAPublicKeySpec(a.n.bigInteger, a.e.bigInteger)).asInstanceOf[RSAPublicKey],
-      kf.generatePrivate(
+  private def parse(a: AccountSnapshot): Try[Account] =
+    Try {
+      val kf = KeyFactory.getInstance(ALG)
+      Account(
+        kf.generatePublic(new RSAPublicKeySpec(a.n.bigInteger, a.e.bigInteger)).asInstanceOf[RSAPublicKey],
+        kf.generatePrivate(
           new RSAPrivateCrtKeySpec(
             a.n.bigInteger,
             a.e.bigInteger,
@@ -108,10 +110,9 @@ object Account {
             a.dq.bigInteger,
             a.qi.bigInteger
           )
-        )
-        .asInstanceOf[RSAPrivateCrtKey]
-    )
-  }
+        ).asInstanceOf[RSAPrivateCrtKey]
+      )
+    }
 
   private def load(s: Source): Option[Account] =
     for {

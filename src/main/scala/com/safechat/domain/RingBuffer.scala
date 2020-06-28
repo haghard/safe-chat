@@ -19,9 +19,8 @@ class RingBuffer[T: ClassTag] private (capacity: Int, buffer: Array[T]) {
 
   def add(e: T): Unit = {
     val wrapPoint = tail - capacity
-    if (head <= wrapPoint) {
+    if (head <= wrapPoint)
       head = head + 1
-    }
 
     val ind = (tail % capacity).toInt
     buffer(ind) = e

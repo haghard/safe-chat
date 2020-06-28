@@ -72,6 +72,7 @@ object JournalEventsSerializer {
     }
 }
 
+//Try out import eu.timepit.refined._
 final class JournalEventsSerializer extends SerializerWithStringManifest {
   override val identifier: Int = 9999
 

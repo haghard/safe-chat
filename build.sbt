@@ -16,7 +16,7 @@ lazy val commonSettings = Seq(
   startYear := Some(2019),
   //sbt headerCreate
   licenses += ("Apache-2.0", new URL("https://www.apache.org/licenses/LICENSE-2.0.txt")),
-  scalaVersion := "2.13.2",
+  scalaVersion := "2.13.3",
   headerMappings := headerMappings.value + (HeaderFileType.scala -> HeaderCommentStyle.cppStyleLineComment),
   headerLicense  := Some(HeaderLicense.Custom("Copyright (c) 2019-2020 Vadim Bondarev. All rights reserved."))
 )
@@ -185,12 +185,12 @@ libraryDependencies ++= Seq(
   "org.apache.avro" % "avro" % "1.9.1",
 
   "commons-codec" % "commons-codec" % "1.11",
-  "org.scalatest" %% "scalatest" % "3.1.1" % Test,
+  "org.scalatest" %% "scalatest" % "3.2.0" % Test,
   "com.typesafe.akka" %% "akka-http-testkit" % akkaHttpVersion % Test,
   "com.typesafe.akka" %% "akka-testkit" % akkaVersion % Test,
 
   // li haoyi ammonite repl embed
-  ("com.lihaoyi" % "ammonite" % "2.1.4" % "test").cross(CrossVersion.full)
+  //("com.lihaoyi" % "ammonite" % "2.1.4" % "test").cross(CrossVersion.full)
 )
 
 //workaround for sbt 1.3.0 https://github.com/sbt/sbt/issues/5075

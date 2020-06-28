@@ -148,9 +148,8 @@ object LRUCache {
           leastRU.previous = null
         } // Update cache size, for the first added entry update the LRU pointer
         else if (currentSize < capacity) {
-          if (currentSize == 0) {
+          if (currentSize == 0)
             leastRU = newNode
-          }
           currentSize += 1
         }
       }

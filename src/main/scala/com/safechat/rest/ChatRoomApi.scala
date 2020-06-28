@@ -22,6 +22,7 @@ class ChatRoomApi(rooms: ShardedChatRooms)(implicit sys: ActorSystem[Nothing]) e
   implicit val sch = sys.scheduler
 
   //wake up ChatRoom shard region using a fake user
+  //sharding would start a new entity on first message sent to it.
   sch.scheduleOnce(
     200.millis,
     () ⇒
@@ -64,7 +65,6 @@ class ChatRoomApi(rooms: ShardedChatRooms)(implicit sys: ActorSystem[Nothing]) e
       val flow = RestartFlow.withBackoff(1.second, 5.second, 0.3) { () ⇒
         val f = getChatRoomFlow(rooms, chatId, user, pubKey)
           .map { reply ⇒
-
             Flow.fromMaterializer { (mat, attr) ⇒
               //val ec: ExecutionContextExecutor = mat.executionContext
               //val dis                          = attr.get[ActorAttributes.Dispatcher].get
@@ -90,10 +90,10 @@ class ChatRoomApi(rooms: ShardedChatRooms)(implicit sys: ActorSystem[Nothing]) e
             Source.futureSource(master.ask[SourceRef[String]](Master.ConnectIntoWs(_)).map(_.source.map(TextMessage.Strict)))
           }
         )
-        */
-        
+         */
+
         //TODO: check if it works. If not, then replace it with Source.futureSource(???) and Sink.futureSink(???)
-        RestartFlow.withBackoff(2.second, 5.second, 0.3) { () => Flow.futureFlow(f) }
+        RestartFlow.withBackoff(2.second, 5.second, 0.3)(() ⇒ Flow.futureFlow(f))
       }
 
       handleWebSocketMessages(flow)
