@@ -39,7 +39,7 @@ object ShardedChatRooms {
         //hash3_128(cmd.chatId).toHexString
 
         override def shardId(entityId: String): String =
-          (math.abs(entityId.hashCode) % numberOfShards).toString
+          (math.abs(akka.util.Unsafe.fastHash(entityId)) % numberOfShards).toString
         //(math.abs(hash3_128(entityId)) % numberOfShards).toString
 
         override def unwrapMessage(cmd: T): T = cmd
