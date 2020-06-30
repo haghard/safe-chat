@@ -64,7 +64,6 @@ class ChatRoomApi(rooms: ShardedChatRooms)(implicit sys: ActorSystem[Nothing]) e
       //Maybe smth like Retry form https://www.infoq.com/presentations/squbs/
       val flow = RestartFlow.withBackoff(1.second, 5.second, 0.3) { () ⇒
         val f = getChatRoomFlow(rooms, chatId, user, pubKey)
-          .mapTo[JoinReply]
           .map { reply ⇒
             Flow.fromMaterializer { (mat, attr) ⇒
               //val ec: ExecutionContextExecutor = mat.executionContext

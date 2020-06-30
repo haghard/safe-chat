@@ -3,7 +3,7 @@
 package com.safechat
 package serializer
 
-import java.io.ByteArrayOutputStream
+import java.io.{ByteArrayOutputStream, NotSerializableException}
 import java.util
 
 import com.safechat.domain._
@@ -70,6 +70,10 @@ object JournalEventsSerializer {
       }
       baos.toByteArray
     }
+
+  def notSerializable(msg: String) = throw new NotSerializableException(msg)
+
+  def illegalArgument(msg: String) = throw new IllegalArgumentException(msg)
 }
 
 final class JournalEventsSerializer extends SerializerWithStringManifest {
@@ -124,7 +128,7 @@ final class JournalEventsSerializer extends SerializerWithStringManifest {
       state.getRecentHistory.forEach(e ⇒ s.recentHistory.add(e.toString))
       s
     } else
-      throw new IllegalStateException(
+      notSerializable(
         s"Deserialization for $manifest not supported. Check fromBinary method in ${this.getClass.getName} class."
       )
   }
