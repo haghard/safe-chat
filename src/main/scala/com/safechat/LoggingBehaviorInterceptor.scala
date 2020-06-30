@@ -22,9 +22,8 @@ final class LoggingBehaviorInterceptor[T: ClassTag] private (logger: Logger) ext
   override def aroundReceive(ctx: TypedActorContext[T], msg: T, target: ReceiveTarget[T]): Behavior[T] = {
     logger.info(s"Intercepted msg: $msg")
     val ret = target(ctx, msg)
-    if (Behavior.isUnhandled(ret)) {
+    if (Behavior.isUnhandled(ret))
       logger.warn(s"Intercepted unhandled message: $msg")
-    }
     ret
   }
 

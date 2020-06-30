@@ -34,8 +34,8 @@ object ChatRoomEntity {
 
   def empty = FullChatState()
 
-  def persistFlow(persistenceId: String, entity: ActorRef[PostText])(
-    implicit writeTo: Timeout
+  def persist(persistenceId: String, entity: ActorRef[PostText])(implicit
+    writeTo: Timeout
   ): Flow[Message, ChatRoomReply, akka.NotUsed] =
     akka.stream.typed.scaladsl.ActorFlow.ask[Message, PostText, ChatRoomReply](1)(entity) {
       (msg: Message, replyTo: akka.actor.typed.ActorRef[ChatRoomReply]) ⇒
@@ -53,6 +53,9 @@ object ChatRoomEntity {
         }
     }
 
+  /**
+    * Each `ChatRoomEntity` actor is a single source of true, acting as a consistency boundary for the data that is manages.
+    */
   def apply(entityId: String): Behavior[UserCmdWithReply] =
     Behaviors.setup { ctx ⇒
       //com.safechat.LoggingBehaviorInterceptor(ctx.log) {
@@ -93,32 +96,33 @@ object ChatRoomEntity {
         .snapshotWhen(snapshotPredicate(ctx))
         //.withRetention(RetentionCriteria.snapshotEvery(numberOfEvents = snapshotEveryN, keepNSnapshots = 2))
         .onPersistFailure(
-          SupervisorStrategy.restartWithBackoff(minBackoff = 2.seconds, maxBackoff = 20.seconds, randomFactor = 0.3)
+          SupervisorStrategy
+            .restartWithBackoff(minBackoff = 2.seconds, maxBackoff = 20.seconds, randomFactor = 0.3)
+            .withMaxRestarts(100)
         )
       //}
     }
 
   /**
-    *
-    * Each chat root contains MergeHub-BroadcastHub connected together to form a runnable graph.
-    * Once we materialize this stream, we get back a pair of Source and Sink that together define the publish and subscribe sides of our channel.
+    * Each chat root contains MergeHub and BroadcastHub connected together to form a runnable graph.
+    * Once we materialize this stream, we get back a pair of Source and Sink that together define the publish and subscribe sides of our chat room.
     *
     * Dynamic fan-in and fan-out with MergeHub and BroadcastHub (//https://doc.akka.io/docs/akka/current/stream/stream-dynamic.html#combining-dynamic-operators-to-build-a-simple-publish-subscribe-service)
     *
     * A MergeHub allows to implement a dynamic fan-in junction point(many-to-one) in a graph where elements coming from
-    * different producers are emitted in a First-Comes-First-Served fashion. If the consumer cannot keep up then all of the producers are backpressured.
+    * different producers are emitted in a First-Comes-First-Served fashion.
+    * If the consumer cannot keep up then all of the producers are backpressured.
     *
     * A BroadcastHub can be used to consume elements from a common producer by a dynamic set of consumers (one-to-many).
     * (dynamic number of producers and new consumers can be added on the fly)
     * The rate of the producer will be automatically adapted to the slowest consumer. In this case, the hub is a Sink to
     * which the single producer must be attached first
-    *
     */
   def createHub(
     persistenceId: String,
     entity: ActorRef[PostText]
-  )(
-    implicit sys: ActorSystem[Nothing]
+  )(implicit
+    sys: ActorSystem[Nothing]
   ): ChatRoomHub = {
     implicit val ec = sys.executionContext
     implicit val t  = akka.util.Timeout(1.second)
@@ -130,7 +134,7 @@ object ChatRoomEntity {
         .via(
           WsScaffolding
             .flowWithHeartbeat()
-            .via(persistFlow(persistenceId, entity))
+            .via(persist(persistenceId, entity))
             .collect {
               case r: PingReply       ⇒ TextMessage.Strict(s"${r.chatId}:${r.msg}")
               case r: TextPostedReply ⇒ TextMessage.Strict(s"chat-room:${r.chatId} msgId:${r.seqNum}  ${r.content}")
@@ -163,8 +167,8 @@ object ChatRoomEntity {
     ChatRoomHub(sinkHub, sourceHub, ks)
   }
 
-  def onCommand(ctx: ActorContext[UserCmdWithReply])(state: FullChatState, cmd: UserCmdWithReply)(
-    implicit sys: ActorSystem[Nothing]
+  def onCommand(ctx: ActorContext[UserCmdWithReply])(state: FullChatState, cmd: UserCmdWithReply)(implicit
+    sys: ActorSystem[Nothing]
   ): ReplyEffect[MsgEnvelope, FullChatState] =
     cmd match {
       case m: JoinUser ⇒
@@ -232,8 +236,8 @@ object ChatRoomEntity {
           }
     }
 
-  def onEvent(persistenceId: String)(state: FullChatState, event: MsgEnvelope)(
-    implicit sys: ActorSystem[Nothing],
+  def onEvent(persistenceId: String)(state: FullChatState, event: MsgEnvelope)(implicit
+    sys: ActorSystem[Nothing],
     ctx: ActorContext[UserCmdWithReply]
   ): FullChatState =
     if (event.getPayload.isInstanceOf[Joined]) {
@@ -253,14 +257,14 @@ object ChatRoomEntity {
           online = state.online + ev.getLogin.toString
         )
 
-    } else if (event.getPayload.isInstanceOf[com.safechat.domain.Disconnected]) {
+    } else if (event.getPayload.isInstanceOf[com.safechat.domain.Disconnected])
       state.copy(
         online = state.online - event.getPayload
             .asInstanceOf[com.safechat.domain.Disconnected]
             .getLogin
             .toString
       )
-    } else if (event.getPayload.isInstanceOf[TextAdded]) {
+    else if (event.getPayload.isInstanceOf[TextAdded]) {
       val ev     = event.getPayload.asInstanceOf[TextAdded]
       val zoneDT = ZonedDateTime.ofInstant(Instant.ofEpochMilli(event.getWhen), ZoneId.of(event.getTz.toString))
       state.recentHistory.add(s"[${frmtr.format(zoneDT)}] - ${ev.getUser} -> ${ev.getReceiver}:${ev.getText}")

@@ -9,20 +9,20 @@ import akka.actor.typed.scaladsl.adapter._
 import akka.NotUsed
 import akka.stream.scaladsl.{Flow, RestartFlow}
 import akka.actor.typed.ActorSystem
-import akka.http.scaladsl.model.ws.Message
 import akka.management.cluster.scaladsl.ClusterHttpManagementRoutes
 import akka.stream.{ActorAttributes, OverflowStrategy, StreamRefAttributes}
-import com.safechat.actors.{ChatRoomEntity, ChatRoomReply, JoinReply, ShardedChatRooms}
+import com.safechat.actors.{ChatRoomEntity, ChatRoomReply, JoinReply, JoinUser, KeepAlive, ShardedChatRooms}
 
 import scala.concurrent.duration._
 import scala.util.control.NonFatal
-import scala.concurrent.{Await, Future}
+import scala.concurrent.Future
 
 class ChatRoomApi(rooms: ShardedChatRooms)(implicit sys: ActorSystem[Nothing]) extends RestApi {
   implicit val cx  = sys.executionContext
   implicit val sch = sys.scheduler
 
   //wake up ChatRoom shard region using a fake user
+  //sharding would start a new entity on first message sent to it.
   sch.scheduleOnce(
     200.millis,
     () ⇒
@@ -83,9 +83,19 @@ class ChatRoomApi(rooms: ShardedChatRooms)(implicit sys: ActorSystem[Nothing]) e
                 }
             }
           }
+        /*
+        Flow.fromSinkAndSourceCoupled(
+          drainInput,
+          RestartSource.withBackoff(2.second, 5.second, 0.3) { () =>
+            Source.futureSource(master.ask[SourceRef[String]](Master.ConnectIntoWs(_)).map(_.source.map(TextMessage.Strict)))
+          }
+        )
+         */
 
-        Flow.futureFlow(f)
+        //TODO: check if it works. If not, then replace it with Source.futureSource(???) and Sink.futureSink(???)
+        RestartFlow.withBackoff(2.second, 5.second, 0.3)(() ⇒ Flow.futureFlow(f))
       }
+
       handleWebSocketMessages(flow)
     } ~ ClusterHttpManagementRoutes(akka.cluster.Cluster(sys.toClassic))
 

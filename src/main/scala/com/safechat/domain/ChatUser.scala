@@ -15,28 +15,29 @@ case class ChatUserSnapshot(e: BigInt, n: BigInt, d: BigInt, p: BigInt, q: BigIn
 object ChatUserSnapshot extends DefaultJsonProtocol {
 
   implicit object UserSnapshotJsonFormat extends JsonFormat[ChatUserSnapshot] {
-    override def write(c: ChatUserSnapshot) = JsObject(
-      "e"  → JsNumber(c.e.toString),
-      "n"  → JsNumber(c.n.toString),
-      "d"  → JsNumber(c.d.toString),
-      "p"  → JsNumber(c.p.toString),
-      "q"  → JsNumber(c.q.toString),
-      "dp" → JsNumber(c.dp.toString),
-      "dq" → JsNumber(c.dq.toString),
-      "qi" → JsNumber(c.qi.toString)
-    )
+    override def write(c: ChatUserSnapshot) =
+      JsObject(
+        "e"  → JsNumber(c.e.toString),
+        "n"  → JsNumber(c.n.toString),
+        "d"  → JsNumber(c.d.toString),
+        "p"  → JsNumber(c.p.toString),
+        "q"  → JsNumber(c.q.toString),
+        "dp" → JsNumber(c.dp.toString),
+        "dq" → JsNumber(c.dq.toString),
+        "qi" → JsNumber(c.qi.toString)
+      )
 
     override def read(json: JsValue): ChatUserSnapshot =
       json.asJsObject.getFields("e", "n", "d", "p", "q", "dp", "dq", "qi") match {
         case Seq(
-            JsNumber(e),
-            JsNumber(n),
-            JsNumber(d),
-            JsNumber(p),
-            JsNumber(q),
-            JsNumber(dp),
-            JsNumber(dq),
-            JsNumber(qi)
+              JsNumber(e),
+              JsNumber(n),
+              JsNumber(d),
+              JsNumber(p),
+              JsNumber(q),
+              JsNumber(dp),
+              JsNumber(dq),
+              JsNumber(qi)
             ) ⇒
           ChatUserSnapshot(
             e.toBigInt,

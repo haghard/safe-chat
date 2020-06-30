@@ -4,7 +4,7 @@ import sbtdocker.ImageName
 val projectName   = "safe-chat"
 val Version       = "0.1.0"
 
-val akkaVersion = "2.6.5"
+val akkaVersion = "2.6.6"
 val akkaHttpVersion = "10.1.12"
 
 promptTheme := ScalapenosTheme
@@ -16,7 +16,7 @@ lazy val commonSettings = Seq(
   startYear := Some(2019),
   //sbt headerCreate
   licenses += ("Apache-2.0", new URL("https://www.apache.org/licenses/LICENSE-2.0.txt")),
-  scalaVersion := "2.13.2",
+  scalaVersion := "2.13.3",
   headerMappings := headerMappings.value + (HeaderFileType.scala -> HeaderCommentStyle.cppStyleLineComment),
   headerLicense  := Some(HeaderLicense.Custom("Copyright (c) 2019-2020 Vadim Bondarev. All rights reserved."))
 )
@@ -159,7 +159,8 @@ libraryDependencies ++= Seq(
   //local build for 2.13 /Users/haghard/.ivy2/local/com.github.TanUkkii007/akka-cluster-custom-downing_2.13/0.0.13-SNAPSHOT/jars/akka-cluster-custom-downing_2.13.jar
   //"com.github.TanUkkii007" %% "akka-cluster-custom-downing" % "0.0.12",
   //"com.github.TanUkkii007" %% "akka-cluster-custom-downing" % "0.0.13-SNAPSHOT", //local build that uses CoordinatedShutdown to down self
-  "org.sisioh"        %% "akka-cluster-custom-downing" % "0.1.0",
+  //"org.sisioh"        %% "akka-cluster-custom-downing" % "0.1.0",
+  
 
   //"com.swissborg"    %% "lithium" % "0.11.1", brings cats
 
@@ -171,11 +172,11 @@ libraryDependencies ++= Seq(
 
   "com.typesafe.akka" %% "akka-persistence-query"     % akkaVersion,
 
-  ("com.typesafe.akka" %% "akka-persistence-cassandra" % "1.0.0") //-RC1
+  ("com.typesafe.akka" %% "akka-persistence-cassandra" % "1.0.1") //-RC1
     .excludeAll(ExclusionRule(organization = "io.netty", name="netty-all")), //to exclude netty-all-4.1.39.Final.jar
 
   //a module that provides HTTP endpoints for introspecting and managing Akka clusters
-  "com.lightbend.akka.management" %% "akka-management-cluster-http" % "1.0.7",
+  "com.lightbend.akka.management" %% "akka-management-cluster-http" % "1.0.8",
 
   "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
   "com.typesafe.akka" %% "akka-http-spray-json" % akkaHttpVersion,
@@ -184,12 +185,12 @@ libraryDependencies ++= Seq(
   "org.apache.avro" % "avro" % "1.9.1",
 
   "commons-codec" % "commons-codec" % "1.11",
-  "org.scalatest" %% "scalatest" % "3.1.1" % Test,
+  "org.scalatest" %% "scalatest" % "3.2.0" % Test,
   "com.typesafe.akka" %% "akka-http-testkit" % akkaHttpVersion % Test,
   "com.typesafe.akka" %% "akka-testkit" % akkaVersion % Test,
 
   // li haoyi ammonite repl embed
-  ("com.lihaoyi" % "ammonite" % "2.1.1" % "test").cross(CrossVersion.full)
+  //("com.lihaoyi" % "ammonite" % "2.1.4" % "test").cross(CrossVersion.full)
 )
 
 //workaround for sbt 1.3.0 https://github.com/sbt/sbt/issues/5075

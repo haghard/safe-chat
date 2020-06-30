@@ -131,6 +131,23 @@ https://skillsmatter.com/skillscasts/12671-akka-cluster-up-and-running
 
 https://medium.com/bestmile/domain-driven-event-sourcing-with-akka-typed-5f5b8bbfb823
 
+https://blog.softwaremill.com/3-reasons-to-adopt-event-sourcing-89cb855453f6
+
+https://blog.knoldus.com/akka-cluster-formation-fundamentals/
+
+https://blog.knoldus.com/akka-cluster-in-use-part-4-managing-a-cluster/
+
+### Sharding: 
+ 
+https://manuel.bernhardt.io/2018/02/26/tour-akka-cluster-cluster-sharding/
+
+## Akka cluster split brain
+
+https://blog.softwaremill.com/akka-cluster-split-brain-failures-are-you-ready-for-it-d9406b97e099
+https://doc.akka.io/docs/akka-enhancements/current/split-brain-resolver.html#using-the-split-brain-resolver
+https://www.youtube.com/watch?v=vc6eTolxGbM
+
+
 ## message evolution/versioning
 
 https://www.scala-exercises.org/shapeless/coproducts
@@ -157,11 +174,60 @@ https://blog.softwaremill.com/7-mistakes-when-using-apache-cassandra-51d2cf6df51
 
 https://github.com/wiringbits/safer.chat
 
+https://doc.akka.io/docs/akka-persistence-cassandra/1.0/migrations.html
+
+
+Distributed processing with Akka Cluster & Kafka(for how to integrate Kafka with Cluster Sharding)
+https://akka.io/blog/news/2020/03/18/akka-sharding-kafka-video 
+
+
+## CQRS
+How to use CQRS in Akka 2.6 https://www.youtube.com/watch?v=6ECsFlNNIAM
+
 
 ##  Avro
 
 https://avro.apache.org/docs/1.8.2/spec.html#Maps
 https://www.confluent.io/blog/learn-stream-processing-with-kafka-tutorials/
+https://medium.com/jeroen-rosenberg/building-and-deploying-your-first-cloudflow-application-6ea4b7157e6d
+
+
+## K8s
+
+https://github.com/akka/akka-sample-cluster-kubernetes-scala.git
+ 
+https://developer.lightbend.com/guides/openshift-deployment/lagom/forming-a-cluster.html
+
+https://doc.akka.io/docs/akka-management/current/bootstrap/details.html
+
+https://doc.akka.io/docs/akka-management/current/bootstrap/kubernetes-api.html  (akka.management.cluster.bootstrap.LowestAddressJoinDecider)
+
+https://www.youtube.com/watch?v=2jKu_E1TZPM
+
+Managing an Akka Cluster on Kubernetes - Markus Jura: https://www.youtube.com/watch?v=Sz-SE1FyhJE&list=PLLMLOC3WM2r5KDwkSRrLJ1_O6kZqlhhFt&index=22
+
+
+## Videos
+
+How to use CQRS in Akka 2.6 https://www.youtube.com/watch?v=6ECsFlNNIAM
+
+Introduction To Akka Cluster Sharding https://youtu.be/SrPubnOKJcQ
+
+How to do distributed, stateful processing with #Akka Cluster Sharding and Kafka https://akka.io/blog/news/2020/03/18/akka-sharding-kafka-video
+
+Stateful OR Stateless Applications: To Akka Cluster, Or Not https://www.youtube.com/watch?v=CiVsKjZV-Ys
+
+Split Brain Resolver in Akka Cluster https://www.youtube.com/watch?v=vc6eTolxGbM
+
+### Examples
+  
+Killrweather:             https://github.com/akka/akka-samples/tree/2.6/akka-sample-sharding-scala
+
+Persistent shopping cart: https://github.com/akka/akka-samples/tree/2.6/akka-sample-persistence-scala
+
+DData example:            https://github.com/akka/akka-samples/tree/2.6/akka-sample-distributed-data-scala
+
+CQRS ShoppingCart example: read-side is implemented using Akka Projections: https://github.com/akka/akka-samples/tree/2.6/akka-sample-cqrs-scala
 
 ## Git
 
@@ -187,3 +253,5 @@ select persistence_id, partition_nr, sequence_nr, timestamp, ser_id, ser_manifes
 Link to read
 https://doc.akka.io/docs/akka/current/typed/actors.html#a-more-complex-example
 https://github.com/akka/akka-samples/tree/2.6/akka-sample-sharding-scala
+
+https://github.com/apache/cassandra/blob/trunk/src/java/org/apache/cassandra/dht/IPartitioner.java

@@ -30,7 +30,7 @@ sealed trait UserCmd {
   def chatId: String
 }
 
-case class PingShard(chatId: String, replyTo: ActorRef[KeepAlive.Probe.type]) extends UserCmd
+case class PingShard(chatId: String, replyTo: ActorRef[KeepAlive.Probe]) extends UserCmd
 
 sealed trait UserCmdWithReply extends UserCmd {
   def replyTo: ActorRef[ChatRoomReply]
@@ -71,6 +71,6 @@ case class FullChatState(
     }
 
   def applyEvn(env: MsgEnvelope): FullChatState = ???
- */
+   */
 
 }

@@ -76,6 +76,7 @@ object JournalEventsSerializer {
   def illegalArgument(msg: String) = throw new IllegalArgumentException(msg)
 }
 
+//Try out import eu.timepit.refined._
 final class JournalEventsSerializer extends SerializerWithStringManifest {
   override val identifier: Int = 9999
 

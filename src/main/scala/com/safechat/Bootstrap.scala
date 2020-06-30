@@ -18,8 +18,8 @@ object Bootstrap {
   final private case object BindFailure extends Reason
 }
 
-class Bootstrap(routes: Route, host: String, port: Int)(
-  implicit system: akka.actor.ActorSystem
+class Bootstrap(routes: Route, host: String, port: Int)(implicit
+  system: akka.actor.ActorSystem
 ) {
 
   implicit val ex = system.dispatcher

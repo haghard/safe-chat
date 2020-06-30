@@ -16,10 +16,11 @@ abstract class Base64EncodedBytes {
   final override def toString: String =
     crypto.base64Encode(bytes)
 
-  override def equals(that: Any): Boolean = that match {
-    case bs: Base64EncodedBytes ⇒ bs.bytes.sameElements(bytes)
-    case _                      ⇒ false
-  }
+  override def equals(that: Any): Boolean =
+    that match {
+      case bs: Base64EncodedBytes ⇒ bs.bytes.sameElements(bytes)
+      case _                      ⇒ false
+    }
 
   override def hashCode(): Int =
     java.util.Arrays.hashCode(bytes)
