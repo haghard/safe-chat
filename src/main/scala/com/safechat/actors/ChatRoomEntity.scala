@@ -62,14 +62,13 @@ object ChatRoomEntity {
       implicit val sys = ctx.system
       implicit val c   = ctx
 
-      /*
-      fp style
+      //fp style
       EventSourcedBehavior.withEnforcedReplies[UserCmd, MsgEnvelope, FullChatState](
-        PersistenceId.ofUniqueId(entityId),
+        PersistenceId(entityCtx.entityTypeKey.name, entityCtx.entityId),
         empty,
         (state, cmd) ⇒ state.applyCmd(cmd),
         (state, event) ⇒ state.applyEvn(event)
-      )*/
+      )
 
       EventSourcedBehavior
         .withEnforcedReplies[UserCmdWithReply, MsgEnvelope, FullChatState](
@@ -78,7 +77,8 @@ object ChatRoomEntity {
           FullChatState(),
           onCommand(ctx),
           onEvent(ctx.self.path.name)
-        ).withTagger {
+        )
+        .withTagger {
           //tagged events are useful for querying  by tag
           case m: MsgEnvelope if m.getPayload.isInstanceOf[Joined] ⇒ Set("user")
         }
@@ -135,8 +135,8 @@ object ChatRoomEntity {
   )(implicit
     sys: ActorSystem[Nothing]
   ): ChatRoomHub = {
-    implicit val ec = sys.executionContext
-    implicit val askTo  = akka.util.Timeout(2.second)
+    implicit val ec    = sys.executionContext
+    implicit val askTo = akka.util.Timeout(2.second)
 
     //ctx.log.info("create hub for {}", persistenceId)
     val ((sinkHub, ks), sourceHub) =
