@@ -10,7 +10,7 @@ import akka.actor.typed.{ActorRef, ActorSystem, Behavior, PostStop, PreRestart, 
 
 import scala.concurrent.duration._
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
-import akka.cluster.sharding.typed.scaladsl.EntityTypeKey
+import akka.cluster.sharding.typed.scaladsl.{EntityContext, EntityTypeKey}
 import akka.persistence.typed.{PersistenceId, RecoveryCompleted, RecoveryFailed, SnapshotCompleted, SnapshotFailed}
 import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior, ReplyEffect, RetentionCriteria}
 import akka.stream.{ActorMaterializer, Attributes, KillSwitches, Materializer, StreamRefAttributes}
@@ -56,7 +56,7 @@ object ChatRoomEntity {
   /**
     * Each `ChatRoomEntity` actor is a single source of true, acting as a consistency boundary for the data that is manages.
     */
-  def apply(entityId: String): Behavior[UserCmdWithReply] =
+  def apply(entityCtx: EntityContext[UserCmdWithReply]): Behavior[UserCmdWithReply] =
     Behaviors.setup { ctx ⇒
       //com.safechat.LoggingBehaviorInterceptor(ctx.log) {
       implicit val sys = ctx.system
@@ -73,11 +73,15 @@ object ChatRoomEntity {
 
       EventSourcedBehavior
         .withEnforcedReplies[UserCmdWithReply, MsgEnvelope, FullChatState](
-          PersistenceId.ofUniqueId(entityId),
+          PersistenceId(entityCtx.entityTypeKey.name, entityCtx.entityId),
+          //PersistenceId.ofUniqueId(entityId),
           FullChatState(),
           onCommand(ctx),
           onEvent(ctx.self.path.name)
-        )
+        ).withTagger {
+          //tagged events are useful for querying  by tag
+          case m: MsgEnvelope if m.getPayload.isInstanceOf[Joined] ⇒ Set("user")
+        }
         .receiveSignal {
           case (state, RecoveryCompleted) ⇒
             ctx.log.info(s"★ ★ ★ Recovered: [${state.regUsers.keySet.mkString(",")}] ★ ★ ★")

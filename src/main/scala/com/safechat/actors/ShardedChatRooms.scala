@@ -47,6 +47,7 @@ object ShardedChatRooms {
   }
 }
 
+//https://www.youtube.com/watch?v=hYucH6dXGSM
 class ShardedChatRooms(implicit system: ActorSystem[Nothing]) {
   implicit val shardingTO = akka.util.Timeout(ChatRoomEntity.hubInitTimeout)
 
@@ -93,7 +94,7 @@ class ShardedChatRooms(implicit system: ActorSystem[Nothing]) {
   )*/
 
   val chatShardRegion = sharding.init(
-    Entity(ChatRoomEntity.entityKey)(entityCtx ⇒ ChatRoomEntity(entityCtx.entityId))
+    Entity(ChatRoomEntity.entityKey)(ChatRoomEntity(_))
     //ShardingMessageExtractor[UserCmd](512)
       .withMessageExtractor(ChatRoomsMsgExtractor[UserCmdWithReply](numberOfShards))
       .withSettings(settings)
