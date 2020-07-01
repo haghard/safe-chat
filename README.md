@@ -146,7 +146,9 @@ https://manuel.bernhardt.io/2018/02/26/tour-akka-cluster-cluster-sharding/
 ## Akka cluster split brain
 
 https://blog.softwaremill.com/akka-cluster-split-brain-failures-are-you-ready-for-it-d9406b97e099
+
 https://doc.akka.io/docs/akka-enhancements/current/split-brain-resolver.html#using-the-split-brain-resolver
+
 https://www.youtube.com/watch?v=vc6eTolxGbM
 
 
@@ -178,21 +180,21 @@ https://github.com/wiringbits/safer.chat
 
 https://doc.akka.io/docs/akka-persistence-cassandra/1.0/migrations.html
 
+## Sharding
 
-Distributed processing with Akka Cluster & Kafka(for how to integrate Kafka with Cluster Sharding)
-https://akka.io/blog/news/2020/03/18/akka-sharding-kafka-video 
+Distributed processing with Akka Cluster & Kafka(for how to integrate Kafka with Cluster Sharding): https://akka.io/blog/news/2020/03/18/akka-sharding-kafka-video 
 
-
-## CQRS
 How to use CQRS in Akka 2.6 https://www.youtube.com/watch?v=6ECsFlNNIAM
 
+Akka typed persistence:  https://www.youtube.com/watch?v=hYucH6dXGSM
 
 ##  Avro
 
 https://avro.apache.org/docs/1.8.2/spec.html#Maps
-https://www.confluent.io/blog/learn-stream-processing-with-kafka-tutorials/
-https://medium.com/jeroen-rosenberg/building-and-deploying-your-first-cloudflow-application-6ea4b7157e6d
 
+https://www.confluent.io/blog/learn-stream-processing-with-kafka-tutorials/
+
+https://medium.com/jeroen-rosenberg/building-and-deploying-your-first-cloudflow-application-6ea4b7157e6d
 
 ## K8s
 

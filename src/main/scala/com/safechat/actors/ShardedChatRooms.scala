@@ -47,7 +47,6 @@ object ShardedChatRooms {
   }
 }
 
-//https://www.youtube.com/watch?v=hYucH6dXGSM
 class ShardedChatRooms(implicit system: ActorSystem[Nothing]) {
   implicit val shardingTO = akka.util.Timeout(ChatRoomEntity.hubInitTimeout)
 
@@ -93,16 +92,16 @@ class ShardedChatRooms(implicit system: ActorSystem[Nothing]) {
       .withAllocationStrategy(new ExternalShardAllocationStrategy(system, ChatRoomEntity.entityKey.name))
   )*/
 
-  val chatShardRegion = sharding.init(
-    Entity(ChatRoomEntity.entityKey)(ChatRoomEntity(_))
+  val entity = Entity(ChatRoomEntity.entityKey)(ChatRoomEntity(_))
     //ShardingMessageExtractor[UserCmd](512)
-      .withMessageExtractor(ChatRoomsMsgExtractor[UserCmdWithReply](numberOfShards))
-      .withSettings(settings)
-      //https://doc.akka.io/docs/akka/current/typed/cluster-sharding.html
-      //For any shardId that has not been allocated it will be allocated to the requesting node (like a sticky session)
-      .withAllocationStrategy(new ExternalShardAllocationStrategy(system, ChatRoomEntity.entityKey.name))
-      .withEntityProps(akka.actor.typed.Props.empty.withDispatcherFromConfig("shard-dispatcher"))
-  )
+    .withMessageExtractor(ChatRoomsMsgExtractor[UserCmdWithReply](numberOfShards))
+    .withSettings(settings)
+    //https://doc.akka.io/docs/akka/current/typed/cluster-sharding.html
+    //For any shardId that has not been allocated it will be allocated to the requesting node (like a sticky session)
+    .withAllocationStrategy(new ExternalShardAllocationStrategy(system, ChatRoomEntity.entityKey.name))
+    .withEntityProps(akka.actor.typed.Props.empty.withDispatcherFromConfig("shard-dispatcher"))
+
+  val chatShardRegion = sharding.init(entity)
 
   //system.systemActorOf(KeepAlive(chatShardRegion.narrow[UserCmd]), "keep-alive")
 
@@ -121,6 +120,10 @@ class ShardedChatRooms(implicit system: ActorSystem[Nothing]) {
   //
   val client             = ExternalShardAllocation(system).clientFor(ChatRoomEntity.entityKey.name)
   val done: Future[Done] = client.updateShardLocation("chat0", Address("akka", "system", "127.0.0.1", 2552))
+
+  entity.allocationStrategy.get.asInstanceOf[ExternalShardAllocation]
+    .clientFor(ChatRoomEntity.entityKey.name)
+    .updateShardLocation("chat0", system.path.address)
 
   //do not use the ChatRoomsMsgExtractor
   //use akka.cluster.sharding.typed.ShardingEnvelope(chatId, JoinUser(chatId, login, pubKey, replyTo))
