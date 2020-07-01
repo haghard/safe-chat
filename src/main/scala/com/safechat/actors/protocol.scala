@@ -2,11 +2,14 @@
 
 package com.safechat.actors
 
+import java.util.{TimeZone, UUID}
+
 import akka.NotUsed
 import akka.actor.typed.ActorRef
-import com.safechat.domain.RingBuffer
+import com.safechat.domain.{Joined, MsgEnvelope, RingBuffer}
 import akka.stream.scaladsl.{Sink, Source}
 import akka.http.scaladsl.model.ws.Message
+import akka.persistence.typed.scaladsl.{Effect, ReplyEffect}
 import akka.stream.{SinkRef, SourceRef, UniqueKillSwitch}
 
 sealed trait ChatRoomReply {
@@ -36,15 +39,20 @@ sealed trait UserCmdWithReply extends UserCmd {
   def replyTo: ActorRef[ChatRoomReply]
 }
 
-case class JoinUser(chatId: String, user: String, pubKey: String, replyTo: ActorRef[ChatRoomReply])
+final case class JoinUser(chatId: String, user: String, pubKey: String, replyTo: ActorRef[ChatRoomReply])
     extends UserCmdWithReply
 
-case class PostText(chatId: String, sender: String, receiver: String, text: String, replyTo: ActorRef[ChatRoomReply])
-    extends UserCmdWithReply
+final case class PostText(
+  chatId: String,
+  sender: String,
+  receiver: String,
+  text: String,
+  replyTo: ActorRef[ChatRoomReply]
+) extends UserCmdWithReply
 
-case class DisconnectUser(chatId: String, user: String, replyTo: ActorRef[ChatRoomReply]) extends UserCmdWithReply
+final case class DisconnectUser(chatId: String, user: String, replyTo: ActorRef[ChatRoomReply]) extends UserCmdWithReply
 
-case class ChatRoomHub(sinkHub: Sink[Message, NotUsed], srcHub: Source[Message, NotUsed], ks: UniqueKillSwitch)
+final case class ChatRoomHub(sinkHub: Sink[Message, NotUsed], srcHub: Source[Message, NotUsed], ks: UniqueKillSwitch)
 
 case class FullChatState(
   regUsers: Map[String, String] = Map.empty,
@@ -53,24 +61,16 @@ case class FullChatState(
   hub: Option[ChatRoomHub] = None
 ) {
 
-  /*def applyCmd(cmd: UserCmd): ReplyEffect[MsgEnvelope, FullChatState] =
+  def applyCmd(cmd: UserCmd): ReplyEffect[MsgEnvelope, FullChatState] =
     cmd match {
       case m: JoinUser ⇒
-        Effect
-          .persist(
-            new MsgEnvelope(
-              UUID.randomUUID.toString,
-              System.currentTimeMillis,
-              TimeZone.getDefault.getID,
-              Joined.newBuilder.setLogin(m.user).setPubKey(m.pubKey).build()
-            )
-          )
-          .thenReply(cmd.replyTo) { _ ⇒
-            ???
-          }
+        Effect.noReply
+      case m: PostText ⇒
+        Effect.noReply
+      case m: DisconnectUser ⇒
+        Effect.noReply
     }
 
   def applyEvn(env: MsgEnvelope): FullChatState = ???
-   */
 
 }

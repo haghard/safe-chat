@@ -62,8 +62,10 @@ object ChatRoomEntity {
       implicit val sys = ctx.system
       implicit val c   = ctx
 
-      /*EventSourcedBehavior.withEnforcedReplies[UserCmd, MsgEnvelope, FullChatState](
-        PersistenceId("chat-room", entityId),
+      /*
+      fp style
+      EventSourcedBehavior.withEnforcedReplies[UserCmd, MsgEnvelope, FullChatState](
+        PersistenceId.ofUniqueId(entityId),
         empty,
         (state, cmd) ⇒ state.applyCmd(cmd),
         (state, event) ⇒ state.applyEvn(event)
