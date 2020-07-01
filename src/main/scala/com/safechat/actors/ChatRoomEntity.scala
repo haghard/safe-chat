@@ -99,8 +99,13 @@ object ChatRoomEntity {
           case (_, signal) ⇒
             ctx.log.info(s"★ ★ ★ Signal $signal ★ ★ ★")
         }
+        /*.snapshotWhen {
+          case (_, env, _) if env.getPayload.isInstanceOf[JoinUser] ⇒ true
+          case _                                                    ⇒ false
+        }*/
         .snapshotWhen(snapshotPredicate(ctx))
-        //.withRetention(RetentionCriteria.snapshotEvery(numberOfEvents = snapshotEveryN, keepNSnapshots = 2))
+        //save a snapshot on every 100 events and keep max 2
+        .withRetention(RetentionCriteria.snapshotEvery(numberOfEvents = snapshotEveryN, keepNSnapshots = 2))
         .onPersistFailure(
           SupervisorStrategy
             .restartWithBackoff(minBackoff = 2.seconds, maxBackoff = 20.seconds, randomFactor = 0.3)
@@ -131,7 +136,7 @@ object ChatRoomEntity {
     sys: ActorSystem[Nothing]
   ): ChatRoomHub = {
     implicit val ec = sys.executionContext
-    implicit val t  = akka.util.Timeout(1.second)
+    implicit val askTo  = akka.util.Timeout(2.second)
 
     //ctx.log.info("create hub for {}", persistenceId)
     val ((sinkHub, ks), sourceHub) =

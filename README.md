@@ -85,6 +85,8 @@ https://doc.akka.io/docs/akka/current/typed/persistence.html#example
 
 https://doc.akka.io/docs/akka/current/typed/cluster-sharding.html
 
+https://github.com/renatocaval/akka-persistence-typed-talk
+
 
 ## message evolution/versioning
 
