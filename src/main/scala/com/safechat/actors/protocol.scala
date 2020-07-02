@@ -52,14 +52,14 @@ final case class DisconnectUser(chatId: String, user: String, replyTo: ActorRef[
 
 final case class ChatRoomHub(sinkHub: Sink[Message, NotUsed], srcHub: Source[Message, NotUsed], ks: UniqueKillSwitch)
 
-case class FullChatState(
+case class ChatRoomState(
   regUsers: Map[String, String] = Map.empty,
   online: Set[String] = Set.empty,
   recentHistory: RingBuffer[String] = new RingBuffer[String](1 << 4),
   hub: Option[ChatRoomHub] = None
 ) {
 
-  def applyCmd(cmd: UserCmd): ReplyEffect[MsgEnvelope, FullChatState] =
+  def applyCmd(cmd: UserCmd): ReplyEffect[MsgEnvelope, ChatRoomState] =
     cmd match {
       case m: JoinUser       ⇒ Effect.noReply
       case m: PostText       ⇒ Effect.noReply
@@ -67,6 +67,6 @@ case class FullChatState(
       case m: PingShard      ⇒ Effect.noReply
     }
 
-  def applyEvn(env: MsgEnvelope): FullChatState = ???
+  def applyEvn(env: MsgEnvelope): ChatRoomState = ???
 
 }

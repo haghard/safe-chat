@@ -32,7 +32,7 @@ object ChatRoomEntity {
   val entityKey: EntityTypeKey[UserCmdWithReply] =
     EntityTypeKey[UserCmdWithReply]("chat-rooms")
 
-  def empty = FullChatState()
+  def empty = ChatRoomState()
 
   def persist(persistenceId: String, entity: ActorRef[PostText])(implicit
     writeTo: Timeout
@@ -63,25 +63,25 @@ object ChatRoomEntity {
       implicit val c   = ctx
 
       //fp style
-      EventSourcedBehavior.withEnforcedReplies[UserCmd, MsgEnvelope, FullChatState](
+      /*EventSourcedBehavior.withEnforcedReplies[UserCmd, MsgEnvelope, FullChatState](
         PersistenceId(entityCtx.entityTypeKey.name, entityCtx.entityId),
         empty,
         (state, cmd) ⇒ state.applyCmd(cmd),
         (state, event) ⇒ state.applyEvn(event)
-      )
+      )*/
 
       EventSourcedBehavior
-        .withEnforcedReplies[UserCmdWithReply, MsgEnvelope, FullChatState](
-          PersistenceId(entityCtx.entityTypeKey.name, entityCtx.entityId),
+        .withEnforcedReplies[UserCmdWithReply, MsgEnvelope, ChatRoomState](
           //PersistenceId.ofUniqueId(entityId),
-          FullChatState(),
+          PersistenceId(entityCtx.entityTypeKey.name, entityCtx.entityId),
+          ChatRoomState(),
           onCommand(ctx),
           onEvent(ctx.self.path.name)
         )
-        .withTagger {
+        /*.withTagger {
           //tagged events are useful for querying  by tag
           case m: MsgEnvelope if m.getPayload.isInstanceOf[Joined] ⇒ Set("user")
-        }
+        }*/
         .receiveSignal {
           case (state, RecoveryCompleted) ⇒
             ctx.log.info(s"★ ★ ★ Recovered: [${state.regUsers.keySet.mkString(",")}] ★ ★ ★")
@@ -178,9 +178,9 @@ object ChatRoomEntity {
     ChatRoomHub(sinkHub, sourceHub, ks)
   }
 
-  def onCommand(ctx: ActorContext[UserCmdWithReply])(state: FullChatState, cmd: UserCmdWithReply)(implicit
+  def onCommand(ctx: ActorContext[UserCmdWithReply])(state: ChatRoomState, cmd: UserCmdWithReply)(implicit
     sys: ActorSystem[Nothing]
-  ): ReplyEffect[MsgEnvelope, FullChatState] =
+  ): ReplyEffect[MsgEnvelope, ChatRoomState] =
     cmd match {
       case m: JoinUser ⇒
         Effect
@@ -192,7 +192,7 @@ object ChatRoomEntity {
               Joined.newBuilder.setLogin(m.user).setPubKey(m.pubKey).build()
             )
           ) //Note that the new state after applying the event is passed as parameter to the thenReply function
-          .thenReply(m.replyTo) { state: FullChatState ⇒
+          .thenReply(m.replyTo) { state: ChatRoomState ⇒
             //val settings = StreamRefAttributes.subscriptionTimeout(hubInitTimeout).and(akka.stream.Attributes.inputBuffer(bs, bs))
             state.hub
               .map { hub ⇒
@@ -226,7 +226,7 @@ object ChatRoomEntity {
                 new TextAdded(cmd.sender, cmd.receiver, cmd.text)
               )
             )
-            .thenReply(cmd.replyTo) { newState: FullChatState ⇒
+            .thenReply(cmd.replyTo) { newState: ChatRoomState ⇒
               ctx.log.info("users online:[{}]", newState.online.mkString(","))
               TextPostedReply(cmd.chatId, num, s"[from:${cmd.sender} -> to:${cmd.receiver}] - ${cmd.text}")
             }
@@ -241,16 +241,16 @@ object ChatRoomEntity {
               Disconnected.newBuilder.setLogin(cmd.user).build
             )
           )
-          .thenReply(cmd.replyTo) { newState: FullChatState ⇒
+          .thenReply(cmd.replyTo) { newState: ChatRoomState ⇒
             ctx.log.info("{} disconnected - online:[{}]", cmd.user, newState.online.mkString(""))
             DisconnectReply(cmd.chatId, cmd.user)
           }
     }
 
-  def onEvent(persistenceId: String)(state: FullChatState, event: MsgEnvelope)(implicit
+  def onEvent(persistenceId: String)(state: ChatRoomState, event: MsgEnvelope)(implicit
     sys: ActorSystem[Nothing],
     ctx: ActorContext[UserCmdWithReply]
-  ): FullChatState =
+  ): ChatRoomState =
     if (event.getPayload.isInstanceOf[Joined]) {
       val ev = event.getPayload.asInstanceOf[Joined]
       if (state.online.isEmpty && state.hub.isEmpty)
@@ -285,7 +285,7 @@ object ChatRoomEntity {
 
   def snapshotPredicate(
     ctx: ActorContext[UserCmdWithReply]
-  )(state: FullChatState, event: MsgEnvelope, id: Long): Boolean = {
+  )(state: ChatRoomState, event: MsgEnvelope, id: Long): Boolean = {
     val ifSnap = id > 0 && id % snapshotEveryN == 0
 
     if (ifSnap)

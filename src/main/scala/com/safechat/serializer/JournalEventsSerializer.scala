@@ -8,7 +8,7 @@ import java.util
 
 import com.safechat.domain._
 import akka.serialization.SerializerWithStringManifest
-import com.safechat.actors.FullChatState
+import com.safechat.actors.ChatRoomState
 import org.apache.avro.io.{BinaryEncoder, DecoderFactory, EncoderFactory}
 import org.apache.avro.specific.{SpecificDatumReader, SpecificDatumWriter}
 
@@ -94,7 +94,7 @@ final class JournalEventsSerializer extends SerializerWithStringManifest {
   override def toBinary(o: AnyRef): Array[Byte] = {
     val schema = schemaMap(activeSchemaHash)
     o match {
-      case state: FullChatState ⇒
+      case state: ChatRoomState ⇒
         Using.resource(new ByteArrayOutputStream()) { out ⇒
           Using.resource(EncoderFactory.get.binaryEncoder(out, null)) { enc ⇒
             val users = new java.util.HashMap[CharSequence, CharSequence]()
@@ -120,12 +120,12 @@ final class JournalEventsSerializer extends SerializerWithStringManifest {
     val readerSchema = schemaMap(activeSchemaHash)
     if (manifest.startsWith(classOf[MsgEnvelope].getName))
       fromByteArray[MsgEnvelope](bytes, writerSchema, readerSchema)
-    else if (manifest.startsWith(classOf[FullChatState].getName)) {
+    else if (manifest.startsWith(classOf[ChatRoomState].getName)) {
       val state    = fromByteArray[ChatState](bytes, writerSchema, readerSchema)
       var userKeys = Map.empty[String, String]
       state.getRegisteredUsers.forEach((login, pubKey) ⇒ userKeys = userKeys + (login.toString → pubKey.toString))
 
-      val s = FullChatState(regUsers = userKeys)
+      val s = ChatRoomState(regUsers = userKeys)
       state.getRecentHistory.forEach(e ⇒ s.recentHistory.add(e.toString))
       s
     } else

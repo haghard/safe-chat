@@ -103,27 +103,9 @@ class ShardedChatRooms(implicit system: ActorSystem[Nothing]) {
 
   val chatShardRegion = sharding.init(entity)
 
-  //system.systemActorOf(KeepAlive(chatShardRegion.narrow[UserCmd]), "keep-alive")
 
-  //https://doc.akka.io/docs/akka-projection/current/running.html#initializing-the-sharded-daemon
-  /*akka.cluster.sharding.typed.scaladsl
-    .ShardedDaemonProcess(system)
-    .init[KeepAlive.Probe](
-      name = "keep-alive",
-      numberOfInstances = 3, //numberOfInstances = Int,
-      behaviorFactory = { (n: Int) ⇒ KeepAlive(chatShardRegion.narrow[UserCmd]) },
-      stopMessage = KeepAlive.Probe.Stop
-    )*/
-
-  //To make explicit allocations
-  //Make use of it in docker-cluster project !!!!
-  //
-  val client             = ExternalShardAllocation(system).clientFor(ChatRoomEntity.entityKey.name)
-  val done: Future[Done] = client.updateShardLocation("chat0", Address("akka", "system", "127.0.0.1", 2552))
-
-  entity.allocationStrategy.get.asInstanceOf[ExternalShardAllocation]
-    .clientFor(ChatRoomEntity.entityKey.name)
-    .updateShardLocation("chat0", system.path.address)
+  //val client             = ExternalShardAllocation(system).clientFor(ChatRoomEntity.entityKey.name)
+  //val done: Future[Done] = client.updateShardLocation("chat0", Address("akka", "system", "127.0.0.1", 2552))
 
   //do not use the ChatRoomsMsgExtractor
   //use akka.cluster.sharding.typed.ShardingEnvelope(chatId, JoinUser(chatId, login, pubKey, replyTo))
