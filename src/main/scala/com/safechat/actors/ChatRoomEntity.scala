@@ -57,10 +57,10 @@ object ChatRoomEntity {
     * Each `ChatRoomEntity` actor is a single source of true, acting as a consistency boundary for the data that is manages.
     */
   def apply(entityCtx: EntityContext[UserCmdWithReply]): Behavior[UserCmdWithReply] =
+  //com.safechat.LoggingBehaviorInterceptor(ctx.log) {
     Behaviors.setup { ctx ⇒
-      //com.safechat.LoggingBehaviorInterceptor(ctx.log) {
       implicit val sys = ctx.system
-      implicit val c   = ctx
+      implicit val actorCtx  = ctx
 
       //fp style
       /*EventSourcedBehavior.withEnforcedReplies[UserCmd, MsgEnvelope, FullChatState](
@@ -111,7 +111,6 @@ object ChatRoomEntity {
             .restartWithBackoff(minBackoff = 2.seconds, maxBackoff = 20.seconds, randomFactor = 0.3)
             .withMaxRestarts(100)
         )
-      //}
     }
 
   /**
