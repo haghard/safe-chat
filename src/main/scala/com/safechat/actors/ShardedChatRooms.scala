@@ -27,12 +27,11 @@ object ShardedChatRooms {
     def apply[T <: UserCmdWithReply](numberOfShards: Int): ShardingMessageExtractor[T, T] =
       new ShardingMessageExtractor[T, T] {
         val SEED = 512L
-
-        //
-        private def hash3_128(entityId: String): Long = {
+        
+        /*private def hash3_128(entityId: String): Long = {
           val bts = entityId.getBytes(UTF_8)
           CassandraHash.hash3_x64_128(ByteBuffer.wrap(bts), 0, bts.length, SEED)(1)
-        }
+        }*/
 
         override def entityId(cmd: T): String =
           cmd.chatId
@@ -98,7 +97,9 @@ class ShardedChatRooms(implicit system: ActorSystem[Nothing]) {
     .withSettings(settings)
     //https://doc.akka.io/docs/akka/current/typed/cluster-sharding.html
     //For any shardId that has not been allocated it will be allocated to the requesting node (like a sticky session)
-    .withAllocationStrategy(new ExternalShardAllocationStrategy(system, ChatRoomEntity.entityKey.name))
+    //.withAllocationStrategy(new ExternalShardAllocationStrategy(system, ChatRoomEntity.entityKey.name))
+    //default AllocationStrategy
+    .withAllocationStrategy(new akka.cluster.sharding.ShardCoordinator.LeastShardAllocationStrategy(1, 3))
     .withEntityProps(akka.actor.typed.Props.empty.withDispatcherFromConfig("shard-dispatcher"))
 
   val chatShardRegion = sharding.init(entity)
