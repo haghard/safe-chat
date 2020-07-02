@@ -9,11 +9,11 @@ import org.apache.commons.codec.digest.DigestUtils
 
 object AvroSchemaRegistry {
 
-  //private val activeSchema: File = new File("./src/main/avro/UsersEventsV1.avsc")
-  private val activeSchema: File = new File("avro/UsersEventsV1.avsc")
+  //private val activeSchema: File = new File("./src/main/avro/ChatRoomEventsV1.avsc")
+  private val activeSchema: File = new File("avro/ChatRoomEventsV1.avsc")
 
   private val schemaHistory: List[File] = Nil
-  //List(new File("./src/main/avroHistory/UsersEventsV1.avsc")) //, "/avro/UsersEventsV1.avsc")
+  //List(new File("./src/main/avroHistory/ChatRoomEventsV1.avsc")) //, "/avro/ChatRoomEventsV1.avsc")
 
   private val activeSchemaHash: String = getMD5FromUrl(activeSchema)
 

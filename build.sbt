@@ -100,8 +100,8 @@ lazy val root = project
       val dockerResourcesDir        = baseDir / "docker-resources"
       val dockerResourcesTargetPath = s"$imageAppBaseDir/"
 
-      val avroResourcesDir            = baseDir / "src" / "main" / "avro" / "UsersEventsV1.avsc"
-      val avroResourcesDirTargetPath  = s"$imageAppBaseDir/avro/UsersEventsV1.avsc"
+      val avroResourcesDir            = baseDir / "src" / "main" / "avro" / "ChatRoomEventsV1.avsc"
+      val avroResourcesDirTargetPath  = s"$imageAppBaseDir/avro/ChatRoomEventsV1.avsc"
 
       val prodConfigSrc = baseDir / "src" / "main" / "resources" / "production.conf"
       val devConfigSrc  = baseDir / "src" / "main" / "resources" / "development.conf"

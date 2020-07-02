@@ -2,11 +2,7 @@
 
 package com.safechat.actors
 
-import java.nio.ByteBuffer
-import java.nio.charset.StandardCharsets.UTF_8
-
-import akka.actor.typed.{ActorSystem, PostStop}
-import com.safechat.domain.CassandraHash
+import akka.actor.typed.ActorSystem
 import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, Entity}
 import akka.cluster.sharding.typed.ClusterShardingSettings.StateStoreModeDData
 import akka.cluster.sharding.typed.{ClusterShardingSettings, ShardingMessageExtractor}
@@ -14,21 +10,16 @@ import akka.cluster.sharding.typed.{ClusterShardingSettings, ShardingMessageExtr
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import ShardedChatRooms._
-import akka.Done
-import akka.actor.Address
 import akka.actor.typed.scaladsl.AskPattern._
-import akka.actor.typed.scaladsl.Behaviors
-import akka.cluster.sharding.external.scaladsl.ExternalShardAllocationClient
-import akka.cluster.sharding.external.{ExternalShardAllocation, ExternalShardAllocationStrategy}
 
 object ShardedChatRooms {
 
   object ChatRoomsMsgExtractor {
     def apply[T <: UserCmdWithReply](numberOfShards: Int): ShardingMessageExtractor[T, T] =
       new ShardingMessageExtractor[T, T] {
+        /*
         val SEED = 512L
-        
-        /*private def hash3_128(entityId: String): Long = {
+        private def hash3_128(entityId: String): Long = {
           val bts = entityId.getBytes(UTF_8)
           CassandraHash.hash3_x64_128(ByteBuffer.wrap(bts), 0, bts.length, SEED)(1)
         }*/
@@ -107,6 +98,7 @@ class ShardedChatRooms(implicit system: ActorSystem[Nothing]) {
   //val client             = ExternalShardAllocation(system).clientFor(ChatRoomEntity.entityKey.name)
   //val done: Future[Done] = client.updateShardLocation("chat0", Address("akka", "system", "127.0.0.1", 2552))
 
+
   //do not use the ChatRoomsMsgExtractor
   //use akka.cluster.sharding.typed.ShardingEnvelope(chatId, JoinUser(chatId, login, pubKey, replyTo))
   /*
@@ -124,6 +116,6 @@ class ShardedChatRooms(implicit system: ActorSystem[Nothing]) {
   def disconnect(chatId: String, user: String): Future[ChatRoomReply] =
     chatShardRegion.ask[ChatRoomReply](DisconnectUser(chatId, user, _))
 
-  def enter(chatId: String, login: String, pubKey: String): Future[ChatRoomReply] =
+  def joinChatRoom(chatId: String, login: String, pubKey: String): Future[ChatRoomReply] =
     chatShardRegion.ask[ChatRoomReply](JoinUser(chatId, login, pubKey, _))
 }
