@@ -110,7 +110,8 @@ lazy val root = project
       val appDevConfTarget  = s"$imageAppBaseDir/$configDir/development.conf"
 
       new sbtdocker.mutable.Dockerfile {
-        from("adoptopenjdk:11.0.6_10-jdk-hotspot")
+        from("adoptopenjdk:11")
+        //from("adoptopenjdk:11.0.6_10-jdk-hotspot")
 
         //from("adoptopenjdk/openjdk12")
         //from("adoptopenjdk/openjdk11:jdk-11.0.2.9")

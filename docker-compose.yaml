@@ -1,0 +1,13 @@
+version: "3"
+
+services:
+  cassandra-seed:
+    image: "cassandra:3.11.6"
+    ports:
+      - "9042:9042"
+  #cassandra:
+  #  image: "cassandra:3.11.6"
+  #  ports:
+  #    - "9042"
+  #  environment:
+  #    CASSANDRA_SEEDS: cassandra-seed

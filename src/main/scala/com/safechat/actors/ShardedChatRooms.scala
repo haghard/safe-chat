@@ -83,7 +83,7 @@ class ShardedChatRooms(implicit system: ActorSystem[Nothing]) {
   )*/
 
   val entity = Entity(ChatRoomEntity.entityKey)(ChatRoomEntity(_))
-  //ShardingMessageExtractor[UserCmd](512)
+    //ShardingMessageExtractor[UserCmd](512)
     .withMessageExtractor(ChatRoomsMsgExtractor[UserCmdWithReply](numberOfShards))
     .withSettings(settings)
     //https://doc.akka.io/docs/akka/current/typed/cluster-sharding.html
@@ -116,6 +116,6 @@ class ShardedChatRooms(implicit system: ActorSystem[Nothing]) {
   def disconnect(chatId: String, user: String): Future[ChatRoomReply] =
     chatShardRegion.ask[ChatRoomReply](DisconnectUser(chatId, user, _))
 
-  def joinChatRoom(chatId: String, login: String, pubKey: String): Future[ChatRoomReply] =
+  def enter(chatId: String, login: String, pubKey: String): Future[ChatRoomReply] =
     chatShardRegion.ask[ChatRoomReply](JoinUser(chatId, login, pubKey, _))
 }

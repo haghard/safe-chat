@@ -233,6 +233,7 @@ DData example:            https://github.com/akka/akka-samples/tree/2.6/akka-sam
 
 CQRS ShoppingCart example: read-side is implemented using Akka Projections: https://github.com/akka/akka-samples/tree/2.6/akka-sample-cqrs-scala
 
+
 ## Git
 
 git tag -a v0.1.0 -m "v0.1.0" &&  git push --tags
