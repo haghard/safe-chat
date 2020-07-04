@@ -5,9 +5,9 @@ services:
     image: "cassandra:3.11.6"
     ports:
       - "9042:9042"
-  #cassandra:
-  #  image: "cassandra:3.11.6"
-  #  ports:
-  #    - "9042"
-  #  environment:
-  #    CASSANDRA_SEEDS: cassandra-seed
+  cassandra:
+    image: "cassandra:3.11.6"
+    ports:
+      - "9042"
+    environment:
+      CASSANDRA_SEEDS: cassandra-seed
