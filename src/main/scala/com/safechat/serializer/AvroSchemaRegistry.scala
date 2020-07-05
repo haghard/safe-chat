@@ -5,6 +5,7 @@ package com.safechat.serializer
 import org.apache.avro.Schema
 import java.io.{File, FileInputStream}
 
+import com.typesafe.config.Config
 import org.apache.commons.codec.digest.DigestUtils
 
 object AvroSchemaRegistry {
@@ -13,7 +14,7 @@ object AvroSchemaRegistry {
   private val activeSchema: File = new File("avro/ChatRoomEventsV1.avsc")
 
   private val schemaHistory: List[File] = Nil
-  //List(new File("./src/main/avroHistory/ChatRoomEventsV1.avsc")) //, "/avro/ChatRoomEventsV1.avsc")
+  //List(new File("./src/main/avro/prev/ChatRoomEventsV1.avsc")) //, "/avro/ChatRoomEventsV1.avsc")
 
   private val activeSchemaHash: String = getMD5FromUrl(activeSchema)
 
@@ -33,4 +34,28 @@ object AvroSchemaRegistry {
   // return the fingerprint for the current schema, and the map for all schemas
   def apply(): (String, Map[String, Schema]) =
     (activeSchemaHash, schemaMap)
+
+  def validateSerializationBindings(cfg: Config): Unit = {
+    //https://kwark.github.io/refined-in-practice/#1
+    import eu.timepit.refined._
+    import eu.timepit.refined.string.MatchesRegex
+
+    type ClassesToPersist = MatchesRegex[W.`"com.safechat.domain.MsgEnvelope|com.safechat.actors.ChatRoomState"`.T]
+
+    var cnt: Int = 0
+    val iter     = cfg.getConfig("akka.actor.serialization-bindings").entrySet().iterator()
+    while (iter.hasNext) {
+      val kv = iter.next()
+      if (kv.getValue.render() == "\"journalSerializer\"") {
+        cnt += 1
+        refineV[ClassesToPersist](kv.getKey.replace("\"", "")).getOrElse(
+          throw new Exception(s"Unexpected serialization bindings ${kv.getKey}")
+        )
+      }
+    }
+
+    if (cnt != 2)
+      throw new Exception(s"Expected serialization bindings size: 2 but found $cnt")
+  }
+
 }

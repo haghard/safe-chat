@@ -83,7 +83,7 @@ class ShardedChatRooms(implicit system: ActorSystem[Nothing]) {
   )*/
 
   val entity = Entity(ChatRoomEntity.entityKey)(ChatRoomEntity(_))
-    //ShardingMessageExtractor[UserCmd](512)
+  //ShardingMessageExtractor[UserCmd](512)
     .withMessageExtractor(ChatRoomsMsgExtractor[UserCmdWithReply](numberOfShards))
     .withSettings(settings)
     //https://doc.akka.io/docs/akka/current/typed/cluster-sharding.html
@@ -97,7 +97,6 @@ class ShardedChatRooms(implicit system: ActorSystem[Nothing]) {
 
   //val client             = ExternalShardAllocation(system).clientFor(ChatRoomEntity.entityKey.name)
   //val done: Future[Done] = client.updateShardLocation("chat0", Address("akka", "system", "127.0.0.1", 2552))
-
 
   //do not use the ChatRoomsMsgExtractor
   //use akka.cluster.sharding.typed.ShardingEnvelope(chatId, JoinUser(chatId, login, pubKey, replyTo))

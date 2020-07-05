@@ -16,6 +16,7 @@ import akka.actor.typed.scaladsl.adapter._
 import scala.jdk.CollectionConverters._
 import com.safechat.actors.ShardedChatRooms
 import com.safechat.rest.ChatRoomApi
+import com.safechat.serializer.AvroSchemaRegistry
 
 import scala.collection.Map
 import scala.util.Try
@@ -113,6 +114,9 @@ object Server extends Ops {
 
     //check dispatcher name
     cfg.getObject(Dispatcher)
+
+    //check serialization bindings
+    AvroSchemaRegistry.validateSerializationBindings(cfg)
 
     val system =
       akka.actor.typed.ActorSystem[Nothing](guardian(akkaExternalHostName, httpPort), AkkaSystemName, cfg)

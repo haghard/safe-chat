@@ -27,7 +27,7 @@ class ChatRoomApi(rooms: ShardedChatRooms)(implicit sys: ActorSystem[Nothing]) e
     200.millis,
     () ⇒
       rooms
-        .joinChatRoom(ChatRoomEntity.wakeUpEntityName, ChatRoomEntity.wakeUpUserName, "fake-pub-key")
+        .enter(ChatRoomEntity.wakeUpEntityName, ChatRoomEntity.wakeUpUserName, "fake-pub-key")
         .mapTo[ChatRoomReply]
         .flatMap(_ ⇒ rooms.disconnect(ChatRoomEntity.wakeUpEntityName, ChatRoomEntity.wakeUpUserName))
   )
@@ -47,7 +47,7 @@ class ChatRoomApi(rooms: ShardedChatRooms)(implicit sys: ActorSystem[Nothing]) e
     pubKey: String
   ): Future[JoinReply] =
     rooms
-      .joinChatRoom(chatId, user, pubKey)
+      .enter(chatId, user, pubKey)
       .mapTo[JoinReply]
       .recoverWith {
         case NonFatal(_) ⇒
