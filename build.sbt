@@ -185,6 +185,11 @@ libraryDependencies ++= Seq(
   "ch.qos.logback" % "logback-classic" % "1.2.3",
   "org.apache.avro" % "avro" % "1.9.1",
 
+  //https://kwark.github.io/refined-in-practice/#1
+  "eu.timepit" %% "refined"                 % "0.9.14",
+  "eu.timepit" %% "refined-shapeless"       % "0.9.14",
+
+
   "commons-codec" % "commons-codec" % "1.11",
   "org.scalatest" %% "scalatest" % "3.2.0" % Test,
   "com.typesafe.akka" %% "akka-http-testkit" % akkaHttpVersion % Test,

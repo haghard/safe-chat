@@ -1,5 +1,4 @@
 .idea
-avro/
 target
 *.class
 *.log
