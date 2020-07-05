@@ -38,30 +38,26 @@ object AvroSchemaRegistry {
   def validateSerializationBindings(cfg: Config): Unit = {
     //import eu.timepit.refined._
     //import eu.timepit.refined.string.MatchesRegex
+    //type ClassesToPersist = MatchesRegex[W.`"com.safechat.domain.MsgEnvelope|com.safechat.actors.ChatRoomState"`.T]
+    //refineV[ClassesToPersist](kv.getKey.replace("\"", "")).getOrElse(throw new Exception(s"Unexpected serialization bindings ${kv.getKey}"))
 
-    val classes2Persist = getSchemaFromUrl(activeSchema)
-        .getTypes()
-        .toArray(Array.ofDim[Schema](2))
+    val typesFromSchema = getSchemaFromUrl(activeSchema).getTypes()
+    val classes2Persist = typesFromSchema
+        .toArray(Array.ofDim[Schema](typesFromSchema.size()))
         .map(sch ⇒ sch.getNamespace + "." + sch.getName)
         .toSet + classOf[com.safechat.actors.ChatRoomState].getName - classOf[com.safechat.domain.ChatState].getName
 
-    //type ClassesToPersist = MatchesRegex[W.`"com.safechat.domain.MsgEnvelope|com.safechat.actors.ChatRoomState"`.T]
-
-    var bindings: Set[String] = Set.empty
-
+    var bindingsFromConfig: Set[String] = Set.empty
     val iter = cfg.getConfig("akka.actor.serialization-bindings").entrySet().iterator()
     while (iter.hasNext) {
       val kv = iter.next()
       if (kv.getValue.render() == "\"journalSerializer\"")
-        bindings = bindings + kv.getKey.replace("\"", "")
-      /*refineV[ClassesToPersist](kv.getKey.replace("\"", "")).getOrElse(
-          throw new Exception(s"Unexpected serialization bindings ${kv.getKey}")
-        )*/
+        bindingsFromConfig = bindingsFromConfig + kv.getKey.replace("\"", "")
     }
 
-    if (classes2Persist != bindings)
+    if (classes2Persist != bindingsFromConfig)
       throw new Exception(
-        s"Serialization bindings error. Should be:[${classes2Persist.mkString(",")}] Actual:[${bindings.mkString(",")}]"
+        s"Serialization bindings error. Should be:[${classes2Persist.mkString(",")}] Actual:[${bindingsFromConfig.mkString(",")}]"
       )
 
   }
