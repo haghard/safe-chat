@@ -15,7 +15,6 @@ import org.apache.avro.specific.{SpecificDatumReader, SpecificDatumWriter}
 import scala.util.Using
 import scala.util.Using.Releasable
 import JournalEventsSerializer._
-import eu.timepit.refined.boolean.Not
 import org.apache.avro.Schema
 
 import scala.reflect.ClassTag

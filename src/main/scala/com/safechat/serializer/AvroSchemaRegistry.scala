@@ -36,26 +36,33 @@ object AvroSchemaRegistry {
     (activeSchemaHash, schemaMap)
 
   def validateSerializationBindings(cfg: Config): Unit = {
-    //https://kwark.github.io/refined-in-practice/#1
-    import eu.timepit.refined._
-    import eu.timepit.refined.string.MatchesRegex
+    //import eu.timepit.refined._
+    //import eu.timepit.refined.string.MatchesRegex
 
-    type ClassesToPersist = MatchesRegex[W.`"com.safechat.domain.MsgEnvelope|com.safechat.actors.ChatRoomState"`.T]
+    val classes2Persist = getSchemaFromUrl(activeSchema)
+        .getTypes()
+        .toArray(Array.ofDim[Schema](2))
+        .map(sch ⇒ sch.getNamespace + "." + sch.getName)
+        .toSet + classOf[com.safechat.actors.ChatRoomState].getName - classOf[com.safechat.domain.ChatState].getName
 
-    var cnt: Int = 0
-    val iter     = cfg.getConfig("akka.actor.serialization-bindings").entrySet().iterator()
+    //type ClassesToPersist = MatchesRegex[W.`"com.safechat.domain.MsgEnvelope|com.safechat.actors.ChatRoomState"`.T]
+
+    var bindings: Set[String] = Set.empty
+
+    val iter = cfg.getConfig("akka.actor.serialization-bindings").entrySet().iterator()
     while (iter.hasNext) {
       val kv = iter.next()
-      if (kv.getValue.render() == "\"journalSerializer\"") {
-        cnt += 1
-        refineV[ClassesToPersist](kv.getKey.replace("\"", "")).getOrElse(
+      if (kv.getValue.render() == "\"journalSerializer\"")
+        bindings = bindings + kv.getKey.replace("\"", "")
+      /*refineV[ClassesToPersist](kv.getKey.replace("\"", "")).getOrElse(
           throw new Exception(s"Unexpected serialization bindings ${kv.getKey}")
-        )
-      }
+        )*/
     }
 
-    if (cnt != 2)
-      throw new Exception(s"Expected serialization bindings size: 2 but found $cnt")
-  }
+    if (classes2Persist != bindings)
+      throw new Exception(
+        s"Serialization bindings error. Should be:[${classes2Persist.mkString(",")}] Actual:[${bindings.mkString(",")}]"
+      )
 
+  }
 }
