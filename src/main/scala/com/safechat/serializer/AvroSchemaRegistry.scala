@@ -35,7 +35,10 @@ object AvroSchemaRegistry {
   def apply(): (String, Map[String, Schema]) =
     (activeSchemaHash, schemaMap)
 
+  private val sectionName = "akka.actor.serialization-bindings"
+
   def validateSerializationBindings(cfg: Config): Unit = {
+
     //import eu.timepit.refined._
     //import eu.timepit.refined.string.MatchesRegex
     //type ClassesToPersist = MatchesRegex[W.`"com.safechat.domain.MsgEnvelope|com.safechat.actors.ChatRoomState"`.T]
@@ -45,10 +48,10 @@ object AvroSchemaRegistry {
     val classes2Persist = typesFromSchema
         .toArray(Array.ofDim[Schema](typesFromSchema.size()))
         .map(sch ⇒ sch.getNamespace + "." + sch.getName)
-        .toSet + classOf[com.safechat.actors.ChatRoomState].getName - classOf[com.safechat.domain.ChatState].getName
+        .toSet + classOf[com.safechat.actors.ChatRoomState].getName - classOf[com.safechat.domain.ChatState].getName //app specific thing
 
     var bindingsFromConfig: Set[String] = Set.empty
-    val iter = cfg.getConfig("akka.actor.serialization-bindings").entrySet().iterator()
+    val iter                            = cfg.getConfig(sectionName).entrySet().iterator()
     while (iter.hasNext) {
       val kv = iter.next()
       if (kv.getValue.render() == "\"journalSerializer\"")

@@ -117,7 +117,7 @@ object Server extends Ops {
 
     //check serialization bindings
     AvroSchemaRegistry.validateSerializationBindings(cfg)
-    
+
     val system =
       akka.actor.typed.ActorSystem[Nothing](guardian(akkaExternalHostName, httpPort), AkkaSystemName, cfg)
 
