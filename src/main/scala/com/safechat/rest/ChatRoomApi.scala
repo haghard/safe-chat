@@ -21,7 +21,7 @@ case class ChatRoomApi(rooms: ShardedChatRooms)(implicit sys: ActorSystem[Nothin
   implicit val cx  = sys.executionContext
   implicit val sch = sys.scheduler
 
-  //wake up ChatRoom shard region using a fake user
+  //Wake up ChatRoom shard region using a fake user
   //sharding would start a new entity on first message sent to it.
   sch.scheduleOnce(
     200.millis,
