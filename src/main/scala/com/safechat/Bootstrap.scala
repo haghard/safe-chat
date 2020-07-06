@@ -59,6 +59,13 @@ case class Bootstrap(routes: Route, host: String, port: Int)(implicit
         }
       }
 
+      /*shutdown.addTask(PhaseServiceUnbind, "akka-management.stop") { () =>
+        AkkaManagement(classicSystem).stop().map { done =>
+          classicSystem.log.info("CoordinatedShutdown [akka-management.stop]")
+          done
+        }
+      }*/
+
       //graceful termination request being handled on this connection
       shutdown.addTask(PhaseServiceRequestsDone, "http-api.terminate") { () ⇒
         /**

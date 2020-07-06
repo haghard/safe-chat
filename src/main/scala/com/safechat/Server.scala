@@ -36,8 +36,7 @@ object Server extends Ops {
         Behaviors.receive { (ctx, _) ⇒
           //ctx.log.info(info)
           cluster.subscriptions ! Unsubscribe(ctx.self)
-
-          Bootstrap(ChatRoomApi(new ShardedChatRooms).routes, hostName, httpPort)(sys.toClassic)
+          Bootstrap(ChatRoomApi(new ShardedChatRooms()).routes, hostName, httpPort)(sys.toClassic)
           Behaviors.empty
         }
       }
