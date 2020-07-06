@@ -35,7 +35,8 @@ object AvroSchemaRegistry {
   def apply(): (String, Map[String, Schema]) =
     (activeSchemaHash, schemaMap)
 
-  private val sectionName = "akka.actor.serialization-bindings"
+  private val serializerName = "\"journalSerializer\""
+  private val sectionName    = "akka.actor.serialization-bindings"
 
   def validateSerializationBindings(cfg: Config): Unit = {
 
@@ -48,13 +49,15 @@ object AvroSchemaRegistry {
     val classes2Persist = typesFromSchema
         .toArray(Array.ofDim[Schema](typesFromSchema.size()))
         .map(sch ⇒ sch.getNamespace + "." + sch.getName)
-        .toSet + classOf[com.safechat.actors.ChatRoomState].getName - classOf[com.safechat.domain.ChatState].getName //app specific thing
+        .toSet + classOf[com.safechat.actors.ChatRoomState].getName - classOf[
+        com.safechat.domain.ChatState
+      ].getName //app specific thing
 
     var bindingsFromConfig: Set[String] = Set.empty
     val iter                            = cfg.getConfig(sectionName).entrySet().iterator()
     while (iter.hasNext) {
       val kv = iter.next()
-      if (kv.getValue.render() == "\"journalSerializer\"")
+      if (kv.getValue.render() == serializerName)
         bindingsFromConfig = bindingsFromConfig + kv.getKey.replace("\"", "")
     }
 

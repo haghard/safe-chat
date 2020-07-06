@@ -37,7 +37,7 @@ object Server extends Ops {
           //ctx.log.info(info)
           cluster.subscriptions ! Unsubscribe(ctx.self)
 
-          new Bootstrap(new ChatRoomApi(new ShardedChatRooms).routes, hostName, httpPort)(sys.toClassic)
+          Bootstrap(ChatRoomApi(new ShardedChatRooms).routes, hostName, httpPort)(sys.toClassic)
           Behaviors.empty
         }
       }
@@ -99,7 +99,6 @@ object Server extends Ops {
     val cfg: Config = {
       val general = ConfigFactory.empty()
       val local   = dbConf.fold(general)(c ⇒ general.withFallback(c))
-
       akkaSeeds
         .fold(local)(c ⇒ local.withFallback(c))
         .withFallback(ConfigFactory.parseString(s"akka.remote.artery.canonical.bind.hostname=$dockerAddr"))
@@ -109,7 +108,8 @@ object Server extends Ops {
         .withFallback(ConfigFactory.parseString(s"akka.management.cluster.http.host=$akkaExternalHostName"))
         .withFallback(ConfigFactory.parseString(s"akka.management.cluster.http.port=$akkaPort"))
         .withFallback(ConfigFactory.parseFile(configFile).resolve())
-        .withFallback(ConfigFactory.load())
+        .withFallback(pureconfig.ConfigSource.default.loadOrThrow[Config]) //.at(AkkaSystemName)
+      //.withFallback(ConfigFactory.load())
     }
 
     //check dispatcher name

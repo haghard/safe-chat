@@ -3,21 +3,21 @@
 package com.safechat.rest
 
 import akka.http.scaladsl.server._
-import spray.json._
-import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
+//import spray.json._
+//import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import akka.actor.typed.scaladsl.adapter._
 import akka.NotUsed
 import akka.stream.scaladsl.{Flow, RestartFlow}
 import akka.actor.typed.ActorSystem
 import akka.management.cluster.scaladsl.ClusterHttpManagementRoutes
-import akka.stream.{ActorAttributes, OverflowStrategy, StreamRefAttributes}
-import com.safechat.actors.{ChatRoomEntity, ChatRoomReply, JoinReply, JoinUser, KeepAlive, ShardedChatRooms}
+import akka.stream.OverflowStrategy
+import com.safechat.actors.{ChatRoomEntity, ChatRoomReply, JoinReply, ShardedChatRooms}
 
 import scala.concurrent.duration._
 import scala.util.control.NonFatal
 import scala.concurrent.Future
 
-class ChatRoomApi(rooms: ShardedChatRooms)(implicit sys: ActorSystem[Nothing]) extends RestApi {
+case class ChatRoomApi(rooms: ShardedChatRooms)(implicit sys: ActorSystem[Nothing]) extends RestApi {
   implicit val cx  = sys.executionContext
   implicit val sch = sys.scheduler
 
