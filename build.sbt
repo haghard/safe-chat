@@ -4,7 +4,7 @@ import sbtdocker.ImageName
 val projectName   = "safe-chat"
 val Version       = "0.1.0"
 
-val akkaVersion = "2.6.6"
+val akkaVersion = "2.6.7"
 val akkaHttpVersion = "10.1.12"
 
 promptTheme := ScalapenosTheme
