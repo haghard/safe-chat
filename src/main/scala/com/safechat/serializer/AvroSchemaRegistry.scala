@@ -49,6 +49,7 @@ object AvroSchemaRegistry {
     val classes2Persist = typesFromSchema
         .toArray(Array.ofDim[Schema](typesFromSchema.size()))
         .map(sch ⇒ sch.getNamespace + "." + sch.getName)
+        //I add those additions|removals because we do not have one to one mapping between what we persist and bindings in the config
         .toSet + classOf[com.safechat.actors.ChatRoomState].getName - classOf[
         com.safechat.domain.ChatState
       ].getName //app specific thing
