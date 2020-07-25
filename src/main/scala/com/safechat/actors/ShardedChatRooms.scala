@@ -45,11 +45,11 @@ class ShardedChatRooms(implicit system: ActorSystem[Nothing]) {
   val sharding       = ClusterSharding(system)
   val settings =
     ClusterShardingSettings(system)
-      /*
+    /*
         rememberEntities == false ensures that a shard entity won't be recreates/restarted automatically on
         a different `ShardRegion` due to rebalance, crash or graceful exit. That is exactly what we want, because we want lazy
         start for each ChatRoomEntity.
-       */
+     */
       .withRememberEntities(false)
       .withStateStoreMode(StateStoreModeDData)
       .withPassivateIdleEntityAfter(passivationTO)
@@ -83,7 +83,7 @@ class ShardedChatRooms(implicit system: ActorSystem[Nothing]) {
   )*/
 
   val entity = Entity(ChatRoomEntity.entityKey)(ChatRoomEntity(_))
-    //ShardingMessageExtractor[UserCmd](512)
+  //ShardingMessageExtractor[UserCmd](512)
     .withMessageExtractor(ChatRoomsMsgExtractor[UserCmdWithReply](numberOfShards))
     .withSettings(settings)
     //https://doc.akka.io/docs/akka/current/typed/cluster-sharding.html
