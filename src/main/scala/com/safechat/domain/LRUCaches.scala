@@ -8,6 +8,9 @@ import scala.collection.mutable
 /**
   * One more interesting implementation is akka.remote.artery.LruBoundedCache
   * https://www.sebastiansylvan.com/post/robin-hood-hashing-should-be-your-default-hash-table-implementation/
+  *
+  * ZIO stm based LRUCache
+  * https://scalac.io/how-to-write-a-completely-lock-free-concurrent-lru-cache-with-zio-stm/
   */
 object LRUCache {
 
@@ -177,7 +180,7 @@ object LRUCache {
 
       def loopList(n: Node[K, V], sb: mutable.StringBuilder): String = {
         val buf =
-          if (n.next != null || /*&&*/ n.previous != null) sb.append(n.key).append(",") else sb
+          if (n.next != null || n.previous != null) sb.append(n.key).append(",") else sb
         if (n.next != null) loopList(n.next, buf)
         else sb.append(" - ").toString
       }
