@@ -66,6 +66,7 @@ case class ChatRoomApi(rooms: ShardedChatRooms)(implicit sys: ActorSystem[Nothin
           Flow
             .fromSinkAndSourceCoupled(reply.sinkRef.sink, reply.sourceRef.source)
             .buffer(buf.max, OverflowStrategy.backpressure)
+            .backpressureTimeout(3.seconds) //automatic cleanup for very slow subscribers.
             .watchTermination() { (_, c) ⇒
               c.flatMap { _ ⇒
                 sys.log.info("ws-con for {}@{} has been terminated", user, chatId)
@@ -85,13 +86,13 @@ case class ChatRoomApi(rooms: ShardedChatRooms)(implicit sys: ActorSystem[Nothin
     (path("chat" / Segment / "user" / Segment) & parameter("pub".as[String])) { (chatId, user, pubKey) ⇒
       val flow =
         //When ChatRoomEntities get rebalanced, a flow(src, sink) we got once may no longed be valid so we need to restart that transparently for users
-        RestartFlow.withBackoff(ChatRoomEntity.hubInitTimeout, ChatRoomEntity.hubInitTimeout + 1.second, 0.5)(() ⇒
+        //TODO: When reconnect, filter out recent chat history
+        RestartFlow.withBackoff(ChatRoomEntity.hubInitTimeout, ChatRoomEntity.hubInitTimeout, 0.5)(() ⇒
           Flow.futureFlow(chatRoomWsFlow(rooms, chatId, user, pubKey))
         )
       handleWebSocketMessages(flow)
     } ~ ClusterHttpManagementRoutes(akka.cluster.Cluster(sys.toClassic))
 }
-
 
 /*def auth(credentials: Option[HttpCredentials]): Future[AuthenticationResult[User]] =
   Future {
@@ -102,7 +103,7 @@ case class ChatRoomApi(rooms: ShardedChatRooms)(implicit sys: ActorSystem[Nothin
         AuthenticationResult.success[User](User("11111", "haghard"))
     }
 }
-*/
+ */
 
 //https://gist.github.com/johanandren/964672acc37b84caca40
 //https://discuss.lightbend.com/t/authentication-in-websocket-connections/4174

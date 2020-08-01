@@ -6,19 +6,19 @@ import java.time.format.DateTimeFormatter
 import java.time.{Instant, ZoneId, ZonedDateTime}
 import java.util.{TimeZone, UUID}
 
-import akka.actor.typed.{ActorRef, ActorSystem, Behavior, PostStop, PreRestart, SupervisorStrategy}
+import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
+import akka.actor.typed._
+import akka.cluster.sharding.typed.scaladsl.{EntityContext, EntityTypeKey}
+import akka.http.scaladsl.model.ws.{Message, TextMessage}
+import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior, ReplyEffect, RetentionCriteria}
+import akka.persistence.typed._
+import akka.stream.scaladsl.{BroadcastHub, Flow, Keep, MergeHub, Source, StreamRefs}
+import akka.stream.{KillSwitches, StreamRefAttributes}
+import akka.util.Timeout
+import com.safechat.domain.{Disconnected, Joined, MsgEnvelope, TextAdded}
+import com.safechat.rest.WsScaffolding
 
 import scala.concurrent.duration._
-import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
-import akka.cluster.sharding.typed.scaladsl.{EntityContext, EntityTypeKey}
-import akka.persistence.typed.{PersistenceId, RecoveryCompleted, RecoveryFailed, SnapshotCompleted, SnapshotFailed}
-import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior, ReplyEffect, RetentionCriteria}
-import akka.stream.{KillSwitches, StreamRefAttributes}
-import com.safechat.domain.{Disconnected, Joined, MsgEnvelope, TextAdded}
-import akka.http.scaladsl.model.ws.{Message, TextMessage}
-import akka.stream.scaladsl.{BroadcastHub, Flow, Keep, MergeHub, Source, StreamRefs}
-import akka.util.Timeout
-import com.safechat.rest.WsScaffolding
 
 object ChatRoomEntity {
 
@@ -35,7 +35,7 @@ object ChatRoomEntity {
   def empty = ChatRoomState()
 
   def persist(persistenceId: String, entity: ActorRef[PostText])(implicit
-    writeTo: Timeout
+    persistTimeout: Timeout
   ): Flow[Message, ChatRoomReply, akka.NotUsed] =
     akka.stream.typed.scaladsl.ActorFlow.ask[Message, PostText, ChatRoomReply](1)(entity) {
       (msg: Message, replyTo: akka.actor.typed.ActorRef[ChatRoomReply]) ⇒
@@ -44,10 +44,9 @@ object ChatRoomEntity {
             val segments = text.split(":")
             if (text.split(":").size == 3)
               PostText(persistenceId, segments(0).trim, segments(1).trim, segments(2).trim, replyTo)
-            else if (text eq WsScaffolding.hbMessage)
+            else if (text == WsScaffolding.hbMessage)
               PostText(persistenceId, text, text, text, replyTo)
             else PostText(persistenceId, "null", "null", s"Message error. Wrong format $text", replyTo)
-          //throw new Exception(s"Unexpected text message $text")
           case other ⇒
             throw new Exception(s"Unexpected message type ${other.getClass.getName}")
         }
@@ -229,7 +228,7 @@ object ChatRoomEntity {
               )
             )
             .thenReply(cmd.replyTo) { newState: ChatRoomState ⇒
-              ctx.log.info("users online:[{}]", newState.online.mkString(","))
+              ctx.log.info("online:[{}]", newState.online.mkString(","))
               TextPostedReply(cmd.chatId, num, s"[from:${cmd.sender} -> to:${cmd.receiver}] - ${cmd.text}")
             }
 
