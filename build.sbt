@@ -5,6 +5,8 @@ val projectName   = "safe-chat"
 val Version       = "0.1.0"
 
 val akkaVersion = "2.6.8"
+val AkkaManagement = "1.0.8"
+
 val akkaHttpVersion = "10.1.12"
 
 promptTheme := ScalapenosTheme
@@ -26,6 +28,7 @@ lazy val root = project
   .settings(commonSettings)
   .settings(
     buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion),
+    buildInfoPackage := "com.safechat",
 
     resolvers ++= Seq("Typesafe Snapshots" at "https://repo.akka.io/snapshots"),
 
@@ -174,7 +177,12 @@ libraryDependencies ++= Seq(
     .excludeAll(ExclusionRule(organization = "io.netty", name="netty-all")), //to exclude netty-all-4.1.39.Final.jar
 
   //a module that provides HTTP endpoints for introspecting and managing Akka clusters
-  "com.lightbend.akka.management" %% "akka-management-cluster-http" % "1.0.8",
+  //"com.lightbend.akka.management" %% "akka-management-cluster-http" % "1.0.8",
+
+  "com.typesafe.akka"             %% "akka-discovery"                    % akkaVersion,
+  //"com.lightbend.akka.discovery"  %% "akka-discovery-kubernetes-api"     % AkkaManagement,
+  "com.lightbend.akka.management" %% "akka-management-cluster-bootstrap" % AkkaManagement,
+  "com.lightbend.akka.management" %% "akka-management-cluster-http"      % AkkaManagement,
 
   "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
   "com.typesafe.akka" %% "akka-http-spray-json" % akkaHttpVersion,
@@ -186,6 +194,9 @@ libraryDependencies ++= Seq(
   //"eu.timepit" %% "refined"                 % "0.9.14",
   //"eu.timepit" %% "refined-shapeless"       % "0.9.14",
 
+
+  //https://scalalandio.github.io/chimney/
+  "io.scalaland"            %% "chimney"      % "0.5.3",
 
   "commons-codec" % "commons-codec" % "1.11",
   "org.scalatest" %% "scalatest" % "3.2.0" % Test,

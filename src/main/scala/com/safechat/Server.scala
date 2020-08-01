@@ -106,6 +106,11 @@ object Server extends Ops {
         .withFallback(ConfigFactory.parseString(s"akka.remote.artery.canonical.port=$akkaPort"))
         .withFallback(ConfigFactory.parseString(s"akka.management.cluster.http.host=$akkaExternalHostName"))
         .withFallback(ConfigFactory.parseString(s"akka.management.cluster.http.port=$akkaPort"))
+        .withFallback(
+          ConfigFactory.parseString(
+            s"akka.management.cluster.bootstrap.contact-point-discovery.discovery-method=config"
+          )
+        )
         .withFallback(ConfigFactory.parseFile(configFile).resolve())
         .withFallback(pureconfig.ConfigSource.default.loadOrThrow[Config]) //.at(AkkaSystemName)
       //.withFallback(ConfigFactory.load())
@@ -127,6 +132,8 @@ object Server extends Ops {
       cfg.getStringList("akka.cluster.seed-nodes").asScala.mkString(", ")
     )
     system.log.info(greeting)
+
+    akka.management.cluster.bootstrap.ClusterBootstrap(system.toClassic).start()
   }
 
   def showGreeting(cfg: Config, httpPort: Int, host: String, seedNodes: String): String = {
@@ -163,7 +170,7 @@ object Server extends Ops {
         """
       )
       .append('\n')
-      .append(s"Version:${buildinfo.BuildInfo.version}")
+      .append(s"Version:${com.safechat.BuildInfo.version}")
 
     val memorySize = ManagementFactory.getOperatingSystemMXBean
       .asInstanceOf[com.sun.management.OperatingSystemMXBean]

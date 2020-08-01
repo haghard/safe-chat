@@ -260,3 +260,35 @@ https://doc.akka.io/docs/akka/current/typed/actors.html#a-more-complex-example
 https://github.com/akka/akka-samples/tree/2.6/akka-sample-sharding-scala
 
 https://github.com/apache/cassandra/blob/trunk/src/java/org/apache/cassandra/dht/IPartitioner.java
+
+
+###
+
+http GET :8080/cluster/members
+
+Find the PID for the unreachable node:
+> lsof -i :2551 | grep LISTEN | awk '{print $2}'
+
+Hard kill
+> kill -9 <pid>
+
+Suspend
+> kill -stop <pid>
+
+Resume
+> kill -cont <pid>
+
+
+curl -w '\n' -X PUT -H 'Content-Type: multipart/form-data' -F operation=down http://localhost:8080/cluster/members/safe-chat@127.0.0.1:2550
+
+curl -w '\n' -X PUT -H 'Content-Type: multipart/form-data' -F operation=leave http://localhost:8080/cluster/members/safe-chat@127.0.0.1:2550
+
+
+
+### Akka-cluster-sharding links 
+
+https://manuel.bernhardt.io/2018/02/26/tour-akka-cluster-cluster-sharding/
+
+https://www.youtube.com/watch?v=SrPubnOKJcQ
+
+https://doc.akka.io/docs/akka/current/typed/cluster-sharding.html
