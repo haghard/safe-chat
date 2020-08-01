@@ -252,9 +252,8 @@ object ChatRoomEntity {
   def onEvent(persistenceId: String)(state: ChatRoomState, event: MsgEnvelope)(implicit
     sys: ActorSystem[Nothing],
     ctx: ActorContext[UserCmdWithReply]
-  ): ChatRoomState = {
+  ): ChatRoomState =
     //sys.log.warn("onEvent: {}", event.getPayload)
-
     if (event.getPayload.isInstanceOf[Joined]) {
       val ev = event.getPayload.asInstanceOf[Joined]
 
@@ -266,7 +265,7 @@ object ChatRoomEntity {
           state.copy(
             regUsers = state.regUsers + (ev.getLogin.toString → ev.getPubKey.toString),
             online = Set(ev.getLogin.toString),
-            hub = Some(createHub(persistenceId, ctx.self.narrow[PostText])),
+            hub = Some(createHub(persistenceId, ctx.self.narrow[PostText]))
           )
       else
         state.copy(
@@ -288,7 +287,6 @@ object ChatRoomEntity {
       state
     } else
       state
-  }
 
   def snapshotPredicate(
     ctx: ActorContext[UserCmdWithReply]

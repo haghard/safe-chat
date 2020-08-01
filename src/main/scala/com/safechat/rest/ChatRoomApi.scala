@@ -49,7 +49,7 @@ case class ChatRoomApi(rooms: ShardedChatRooms)(implicit sys: ActorSystem[Nothin
       .mapTo[JoinReply]
       .recoverWith(_ ⇒ getChatRoomFlow(rooms, chatId, user, pubKey))
 
-  private def constructWsFlow(
+  private def chatRoomWsFlow(
     rooms: ShardedChatRooms,
     chatId: String,
     user: String,
@@ -84,34 +84,37 @@ case class ChatRoomApi(rooms: ShardedChatRooms)(implicit sys: ActorSystem[Nothin
   val routes: Route =
     (path("chat" / Segment / "user" / Segment) & parameter("pub".as[String])) { (chatId, user, pubKey) ⇒
       val flow =
+        //When ChatRoomEntities get rebalanced, a flow(src, sink) we got once may no longed be valid so we need to restart that transparently for users
         RestartFlow.withBackoff(ChatRoomEntity.hubInitTimeout, ChatRoomEntity.hubInitTimeout + 1.second, 0.5)(() ⇒
-          Flow.futureFlow(constructWsFlow(rooms, chatId, user, pubKey))
+          Flow.futureFlow(chatRoomWsFlow(rooms, chatId, user, pubKey))
         )
       handleWebSocketMessages(flow)
     } ~ ClusterHttpManagementRoutes(akka.cluster.Cluster(sys.toClassic))
-
-  /*def auth(credentials: Option[HttpCredentials]): Future[AuthenticationResult[User]] =
-    Future {
-      credentials.fold[AuthenticationResult[User]](AuthenticationResult.failWithChallenge(HttpChallenge("", ???))) {
-        cr ⇒
-          cr.token()
-          cr.params
-          AuthenticationResult.success[User](User("11111", "haghard"))
-      }
-    }*/
-
-  //https://gist.github.com/johanandren/964672acc37b84caca40
-  //https://discuss.lightbend.com/t/authentication-in-websocket-connections/4174
-  //https://stackoverflow.com/questions/22383089/is-it-possible-to-use-bearer-authentication-for-websocket-upgrade-requests
-  //TODO: try it out
-
-  /*get {
-    extractRequest { req ⇒
-      //authorizeAsync(reqCtx ⇒ ???)
-      authenticateOrRejectWithChallenge(auth(_)) { user ⇒
-        //user
-        handleWebSocketMessages(???)
-      }
-    }
-  }*/
 }
+
+
+/*def auth(credentials: Option[HttpCredentials]): Future[AuthenticationResult[User]] =
+  Future {
+    credentials.fold[AuthenticationResult[User]](AuthenticationResult.failWithChallenge(HttpChallenge("", ???))) {
+      cr ⇒
+        cr.token()
+        cr.params
+        AuthenticationResult.success[User](User("11111", "haghard"))
+    }
+}
+*/
+
+//https://gist.github.com/johanandren/964672acc37b84caca40
+//https://discuss.lightbend.com/t/authentication-in-websocket-connections/4174
+//https://stackoverflow.com/questions/22383089/is-it-possible-to-use-bearer-authentication-for-websocket-upgrade-requests
+//TODO: try it out
+
+/*get {
+  extractRequest { req ⇒
+    //authorizeAsync(reqCtx ⇒ ???)
+    authenticateOrRejectWithChallenge(auth(_)) { user ⇒
+      //user
+      handleWebSocketMessages(???)
+    }
+  }
+}*/
