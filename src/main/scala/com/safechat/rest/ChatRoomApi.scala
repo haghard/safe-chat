@@ -2,19 +2,17 @@
 
 package com.safechat.rest
 
+import akka.http.scaladsl.model.ws.Message
 import akka.http.scaladsl.server._
-//import spray.json._
-//import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import akka.actor.typed.scaladsl.adapter._
 import akka.NotUsed
 import akka.stream.scaladsl.{Flow, RestartFlow}
 import akka.actor.typed.ActorSystem
 import akka.management.cluster.scaladsl.ClusterHttpManagementRoutes
-import akka.stream.OverflowStrategy
+import akka.stream.{ActorAttributes, OverflowStrategy}
 import com.safechat.actors.{ChatRoomEntity, ChatRoomReply, JoinReply, ShardedChatRooms}
 
 import scala.concurrent.duration._
-import scala.util.control.NonFatal
 import scala.concurrent.Future
 
 case class ChatRoomApi(rooms: ShardedChatRooms)(implicit sys: ActorSystem[Nothing]) extends RestApi {
@@ -24,7 +22,7 @@ case class ChatRoomApi(rooms: ShardedChatRooms)(implicit sys: ActorSystem[Nothin
   //Wake up ChatRoom shard region using a fake user
   //sharding would start a new entity on first message sent to it.
   sch.scheduleOnce(
-    200.millis,
+    500.millis,
     () ⇒
       rooms
         .enter(ChatRoomEntity.wakeUpEntityName, ChatRoomEntity.wakeUpUserName, "fake-pub-key")
@@ -49,9 +47,33 @@ case class ChatRoomApi(rooms: ShardedChatRooms)(implicit sys: ActorSystem[Nothin
     rooms
       .enter(chatId, user, pubKey)
       .mapTo[JoinReply]
-      .recoverWith {
-        case NonFatal(_) ⇒
-          getChatRoomFlow(rooms, chatId, user, pubKey)
+      .recoverWith(_ ⇒ getChatRoomFlow(rooms, chatId, user, pubKey))
+
+  private def constructWsFlow(
+    rooms: ShardedChatRooms,
+    chatId: String,
+    user: String,
+    pubKey: String
+  ): Future[Flow[Message, Message, Future[NotUsed]]] =
+    getChatRoomFlow(rooms, chatId, user, pubKey)
+      .map { reply ⇒
+        Flow.fromMaterializer { (mat, attr) ⇒
+          //val ec: ExecutionContextExecutor = mat.executionContext
+          //val disp                        = attr.get[ActorAttributes.Dispatcher].get
+          val buf = attr.get[akka.stream.Attributes.InputBuffer].get
+          //println("attributes: " + attr.attributeList.mkString(","))
+
+          Flow
+            .fromSinkAndSourceCoupled(reply.sinkRef.sink, reply.sourceRef.source)
+            .buffer(buf.max, OverflowStrategy.backpressure)
+            .watchTermination() { (_, c) ⇒
+              c.flatMap { _ ⇒
+                sys.log.info("ws-con for {}@{} has been terminated", user, chatId)
+                rooms.disconnect(chatId, user)
+              }
+              NotUsed
+            }
+        }
       }
 
   /**
@@ -61,71 +83,12 @@ case class ChatRoomApi(rooms: ShardedChatRooms)(implicit sys: ActorSystem[Nothin
     */
   val routes: Route =
     (path("chat" / Segment / "user" / Segment) & parameter("pub".as[String])) { (chatId, user, pubKey) ⇒
-      //Maybe smth like Retry form https://www.infoq.com/presentations/squbs/
-      val flow = RestartFlow.withBackoff(1.second, 5.second, 0.3) { () ⇒
-        val f = getChatRoomFlow(rooms, chatId, user, pubKey)
-          .map { reply ⇒
-            Flow.fromMaterializer { (mat, attr) ⇒
-              //val ec: ExecutionContextExecutor = mat.executionContext
-              //val dis                          = attr.get[ActorAttributes.Dispatcher].get
-              val buf = attr.get[akka.stream.Attributes.InputBuffer].get
-              //println(attr.attributeList.mkString(","))
-
-              Flow
-                .fromSinkAndSourceCoupled(reply.sinkRef.sink, reply.sourceRef.source)
-                .buffer(buf.max, OverflowStrategy.backpressure)
-                .watchTermination() { (_, c) ⇒
-                  c.flatMap { _ ⇒
-                    sys.log.info("ws-con for {}@{} has been terminated", user, chatId)
-                    rooms.disconnect(chatId, user)
-                  }
-                  NotUsed
-                }
-            }
-          }
-        /*
-        Flow.fromSinkAndSourceCoupled(
-          drainInput,
-          RestartSource.withBackoff(2.second, 5.second, 0.3) { () =>
-            Source.futureSource(master.ask[SourceRef[String]](Master.ConnectIntoWs(_)).map(_.source.map(TextMessage.Strict)))
-          }
+      val flow =
+        RestartFlow.withBackoff(ChatRoomEntity.hubInitTimeout, ChatRoomEntity.hubInitTimeout + 1.second, 0.5)(() ⇒
+          Flow.futureFlow(constructWsFlow(rooms, chatId, user, pubKey))
         )
-         */
-
-        //TODO: check if it works. If not, then replace it with Source.futureSource(???) and Sink.futureSink(???)
-        RestartFlow.withBackoff(2.second, 5.second, 0.3)(() ⇒ Flow.futureFlow(f))
-      }
-
       handleWebSocketMessages(flow)
     } ~ ClusterHttpManagementRoutes(akka.cluster.Cluster(sys.toClassic))
-
-  val route0: Route =
-    (path("chat" / Segment / "user" / Segment) & parameter("key".as[String])) { (chatId, user, pubKey) ⇒
-      //(rooms ? JoinChatRoom(chatId, user)).mapTo[JoinReply]
-      val f = getChatRoomFlow(rooms, chatId, user, pubKey)
-      onComplete(f) {
-        case scala.util.Success(reply) ⇒
-          /*Flow.fromMaterializer { (mat, attr) ⇒
-            attr.attributeList.mkString(",")
-            val ec: ExecutionContextExecutor = mat.executionContext
-            val parallelism = mat.system.settings.config.getInt("max-into-parallelism")
-            ???
-          }*/
-
-          val flow = Flow
-            .fromSinkAndSourceCoupled(reply.sinkRef.sink, reply.sourceRef.source)
-            .watchTermination() { (_, c) ⇒
-              c.flatMap { _ ⇒
-                sys.log.info("Flow for {}@{} has been terminated", user, chatId)
-                rooms.disconnect(chatId, user)
-              }
-              NotUsed
-            }
-          handleWebSocketMessages(flow)
-        case scala.util.Failure(err) ⇒
-          complete(err.toString)
-      }
-    }
 
   /*def auth(credentials: Option[HttpCredentials]): Future[AuthenticationResult[User]] =
     Future {

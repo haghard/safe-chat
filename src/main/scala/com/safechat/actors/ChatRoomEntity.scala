@@ -13,7 +13,7 @@ import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
 import akka.cluster.sharding.typed.scaladsl.{EntityContext, EntityTypeKey}
 import akka.persistence.typed.{PersistenceId, RecoveryCompleted, RecoveryFailed, SnapshotCompleted, SnapshotFailed}
 import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior, ReplyEffect, RetentionCriteria}
-import akka.stream.KillSwitches
+import akka.stream.{KillSwitches, StreamRefAttributes}
 import com.safechat.domain.{Disconnected, Joined, MsgEnvelope, TextAdded}
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
 import akka.stream.scaladsl.{BroadcastHub, Flow, Keep, MergeHub, Source, StreamRefs}
@@ -23,7 +23,7 @@ import com.safechat.rest.WsScaffolding
 object ChatRoomEntity {
 
   val snapshotEveryN = 100       //TODO should be configurable
-  val hubInitTimeout = 5.seconds //TODO should be configurable
+  val hubInitTimeout = 2.seconds //TODO should be configurable
 
   val wakeUpUserName   = "John Doe"
   val wakeUpEntityName = "dungeon"
@@ -135,7 +135,7 @@ object ChatRoomEntity {
     sys: ActorSystem[Nothing]
   ): ChatRoomHub = {
     implicit val ec    = sys.executionContext
-    implicit val askTo = akka.util.Timeout(2.second)
+    implicit val askTo = akka.util.Timeout(1.second) //persist timeout
 
     //ctx.log.info("create hub for {}", persistenceId)
     val ((sinkHub, ks), sourceHub) =
@@ -192,7 +192,10 @@ object ChatRoomEntity {
             )
           ) //Note that the new state after applying the event is passed as parameter to the thenReply function
           .thenReply(m.replyTo) { state: ChatRoomState ⇒
-            //val settings = StreamRefAttributes.subscriptionTimeout(hubInitTimeout).and(akka.stream.Attributes.inputBuffer(bs, bs))
+            ctx.log.info("***** JoinUser attempt {} *****", m.user)
+
+            val settings =
+              StreamRefAttributes.subscriptionTimeout(hubInitTimeout) //.and(akka.stream.Attributes.inputBuffer(bs, bs))
             state.hub
               .map { hub ⇒
                 val history = state.recentHistory.entries.mkString("\n")
@@ -201,11 +204,11 @@ object ChatRoomEntity {
                 //Add new producer on the fly
                 //If the consumer cannot keep up then all of the producers are backpressured
                 val srcRefF = (Source.single[Message](TextMessage(history)) ++ hub.srcHub)
-                  .runWith(StreamRefs.sourceRef[Message]) /*.addAttributes(settings)*/
+                  .runWith(StreamRefs.sourceRef[Message].addAttributes(settings))
 
                 //Add new consumers on the fly
                 //The rate of the producer will be automatically adapted to the slowest consumer
-                val sinkRefF = hub.sinkHub.runWith(StreamRefs.sinkRef[Message] /*.addAttributes(settings)*/ )
+                val sinkRefF = hub.sinkHub.runWith(StreamRefs.sinkRef[Message].addAttributes(settings))
                 JoinReply(m.chatId, m.user, sinkRefF, srcRefF)
               }
               .getOrElse(JoinReplyFailure(m.chatId, m.user))
@@ -242,7 +245,7 @@ object ChatRoomEntity {
           )
           .thenReply(cmd.replyTo) { newState: ChatRoomState ⇒
             ctx.log.info("{} disconnected - online:[{}]", cmd.user, newState.online.mkString(""))
-            DisconnectReply(cmd.chatId, cmd.user)
+            DisconnectedReply(cmd.chatId, cmd.user)
           }
     }
 

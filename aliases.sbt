@@ -8,7 +8,7 @@ addCommandAlias(
   "-DHOSTNAME=127.0.0.1\n" +
   "-DSEEDS=127.0.0.1:2550,127.0.0.2:2550\n" +
   "-Dcassandra.hosts=84.201.150.26:9042,84.201.146.112:9042\n" +
-  "-Dcassandra.psw=pws\n" +
+  "-Dcassandra.psw=...\n" +
   "-Dcassandra.user=fsa"
 )
 
@@ -27,6 +27,6 @@ addCommandAlias(
   "-Dcassandra.hosts=84.201.150.26:9042,84.201.146.112:9042\n" +
   //"-Ddatastax-java-driver.basic.contact-points.0=84.201.150.26:9042\n" +
   //"-Ddatastax-java-driver.basic.contact-points.1=84.201.146.112:9042\n" +
-  "-Dcassandra.psw=..." +
-  "-Dcassandra.user=..."
+  "-Dcassandra.psw=...\n" +
+  "-Dcassandra.user=fsa"
 )

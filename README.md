@@ -7,11 +7,11 @@ We want to have a MergeHub connected with a BroadcastHub to achieve dynamic fan-
 ws://127.0.0.1:8080/chat/aaa/user/harry?pub=hjkhkjhjk
 
 # Connect charly
-ws://127.0.0.1:8080/chat/aaa/user/charly?pub=hjkhkjhjk
+ws://127.0.0.2:8080/chat/aaa/user/charly?pub=hjkhkjhjk
 
 # Message format
  harry:charly:Hello
- harry:charly:WATS up
+ charly:harry:WATS up
 
 ### How to run locally
 
@@ -240,7 +240,7 @@ git tag -a v0.1.0 -m "v0.1.0" &&  git push --tags
 
 ```bash
 
-select persistence_id, partition_nr, sequence_nr, timestamp, ser_id, ser_manifest from chat_journal where persistence_id='chat-room|703c1ae555da3cd4' and partition_nr = 0;
+select persistence_id, partition_nr, sequence_nr, timestamp, ser_id, ser_manifest from chat_journal where persistence_id='chat-rooms|aaa' and partition_nr = 0;
 
  chat-room|703c1ae555da3cd4 |            0 |           1 | 6a8b6c60-7be9-11ea-96e6-9f6061501887 |   9999 |       com.safechat.domain.MsgEnvelope/Joined:b936961c182c4389a3f88ba780575915
  chat-room|703c1ae555da3cd4 |            0 |           2 | 7ac552d0-7be9-11ea-96e6-9f6061501887 |   9999 | com.safechat.domain.MsgEnvelope/Disconnected:b936961c182c4389a3f88ba780575915

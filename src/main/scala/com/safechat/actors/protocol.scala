@@ -14,25 +14,32 @@ sealed trait ChatRoomReply {
   def chatId: String
 }
 
-case class JoinReply(
+final case class JoinReply(
   chatId: String,
   user: String,
   sinkRef: SinkRef[Message],
   sourceRef: SourceRef[Message]
 ) extends ChatRoomReply
 
-case class JoinReplyFailure(chatId: String, user: String) extends ChatRoomReply
+final case class ReconnectReply(
+  chatId: String,
+  user: String,
+  sinkRef: SinkRef[Message]
+) extends ChatRoomReply
 
-case class TextPostedReply(chatId: String, seqNum: Long, content: String) extends ChatRoomReply
-case class PingReply(chatId: String, msg: String)                         extends ChatRoomReply
-case class DisconnectReply(chatId: String, user: String)                  extends ChatRoomReply
+final case class JoinReplyFailure(chatId: String, user: String) extends ChatRoomReply
+
+final case class TextPostedReply(chatId: String, seqNum: Long, content: String) extends ChatRoomReply
+final case class PingReply(chatId: String, msg: String)                         extends ChatRoomReply
+final case class DisconnectedReply(chatId: String, user: String)                extends ChatRoomReply
 
 sealed trait UserCmd {
   def chatId: String
 }
 
-case class PingShard(chatId: String, replyTo: ActorRef[KeepAlive.Probe]) extends UserCmd
+final case class PingShard(chatId: String, replyTo: ActorRef[KeepAlive.Probe]) extends UserCmd
 
+//sealed trait UserCmdWithReply[-T <: ChatRoomReply] extends UserCmd {
 sealed trait UserCmdWithReply extends UserCmd {
   def replyTo: ActorRef[ChatRoomReply]
 }
@@ -52,10 +59,10 @@ final case class DisconnectUser(chatId: String, user: String, replyTo: ActorRef[
 
 final case class ChatRoomHub(sinkHub: Sink[Message, NotUsed], srcHub: Source[Message, NotUsed], ks: UniqueKillSwitch)
 
-case class ChatRoomState(
+final case class ChatRoomState(
   regUsers: Map[String, String] = Map.empty,
   online: Set[String] = Set.empty,
-  recentHistory: RingBuffer[String] = new RingBuffer[String](1 << 4),
+  recentHistory: RingBuffer[String] = new RingBuffer[String](1 << 16),
   hub: Option[ChatRoomHub] = None
 ) {
 
