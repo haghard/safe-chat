@@ -16,6 +16,15 @@ lazy val commonSettings = Seq(
   organization := "haghard",
   version := Version,
   startYear := Some(2019),
+  developers := List(
+    Developer(
+      "haghard",
+      "Vadim Bondarev",
+      "hagard84@gmail.com",
+      url("http://haghard.ru")
+    )
+  ),
+
   //sbt headerCreate
   licenses += ("Apache-2.0", new URL("https://www.apache.org/licenses/LICENSE-2.0.txt")),
   scalaVersion := "2.13.3",
