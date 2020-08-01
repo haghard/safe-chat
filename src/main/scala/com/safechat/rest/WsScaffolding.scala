@@ -12,7 +12,7 @@ object WsScaffolding {
 
   val hbMessage = "hb"
 
-  def flowWithHeartbeat(d: FiniteDuration = 45.second): Flow[Message, Message, akka.NotUsed] = {
+  def flowWithHeartbeat(d: FiniteDuration): Flow[Message, Message, akka.NotUsed] = {
     val hbMsg = TextMessage(hbMessage)
     Flow.fromGraph(
       GraphDSL.create() { implicit b ⇒

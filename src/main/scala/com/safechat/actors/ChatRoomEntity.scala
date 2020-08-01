@@ -137,13 +137,13 @@ object ChatRoomEntity {
     implicit val ec    = sys.executionContext
     implicit val askTo = akka.util.Timeout(1.second) //persist timeout
 
-    //ctx.log.info("create hub for {}", persistenceId)
+    sys.log.warn("Hub for {}", persistenceId)
     val ((sinkHub, ks), sourceHub) =
       MergeHub
         .source[Message](sys.settings.config.getInt("akka.stream.materializer.max-input-buffer-size"))
         .via(
           WsScaffolding
-            .flowWithHeartbeat()
+            .flowWithHeartbeat(30.second)
             .via(persist(persistenceId, entity))
             .collect {
               case r: PingReply       ⇒ TextMessage.Strict(s"${r.chatId}:${r.msg}")
@@ -192,18 +192,18 @@ object ChatRoomEntity {
             )
           ) //Note that the new state after applying the event is passed as parameter to the thenReply function
           .thenReply(m.replyTo) { state: ChatRoomState ⇒
-            ctx.log.info("***** JoinUser attempt {} *****", m.user)
+            //ctx.log.info("JoinUser attempt {}", m.user)
 
             val settings =
               StreamRefAttributes.subscriptionTimeout(hubInitTimeout) //.and(akka.stream.Attributes.inputBuffer(bs, bs))
+
             state.hub
               .map { hub ⇒
-                val history = state.recentHistory.entries.mkString("\n")
-                //val userKeys = newState.regUsers.filter(_._1 != m.user).map { case (k, v) ⇒ s"$k:$v" }.mkString("\n")
+                val chatHistory = state.recentHistory.entries.mkString("\n")
 
                 //Add new producer on the fly
                 //If the consumer cannot keep up then all of the producers are backpressured
-                val srcRefF = (Source.single[Message](TextMessage(history)) ++ hub.srcHub)
+                val srcRefF = (Source.single[Message](TextMessage(chatHistory)) ++ hub.srcHub)
                   .runWith(StreamRefs.sourceRef[Message].addAttributes(settings))
 
                 //Add new consumers on the fly
@@ -252,17 +252,21 @@ object ChatRoomEntity {
   def onEvent(persistenceId: String)(state: ChatRoomState, event: MsgEnvelope)(implicit
     sys: ActorSystem[Nothing],
     ctx: ActorContext[UserCmdWithReply]
-  ): ChatRoomState =
+  ): ChatRoomState = {
+    //sys.log.warn("onEvent: {}", event.getPayload)
+
     if (event.getPayload.isInstanceOf[Joined]) {
       val ev = event.getPayload.asInstanceOf[Joined]
+
+      //Hub hasn't been created yet
       if (state.online.isEmpty && state.hub.isEmpty)
-        if (ev.getLogin == ChatRoomEntity.wakeUpUserName)
+        if (ev.getLogin.toString == ChatRoomEntity.wakeUpUserName)
           state
         else
           state.copy(
             regUsers = state.regUsers + (ev.getLogin.toString → ev.getPubKey.toString),
+            online = Set(ev.getLogin.toString),
             hub = Some(createHub(persistenceId, ctx.self.narrow[PostText])),
-            online = Set(ev.getLogin.toString)
           )
       else
         state.copy(
@@ -284,6 +288,7 @@ object ChatRoomEntity {
       state
     } else
       state
+  }
 
   def snapshotPredicate(
     ctx: ActorContext[UserCmdWithReply]
