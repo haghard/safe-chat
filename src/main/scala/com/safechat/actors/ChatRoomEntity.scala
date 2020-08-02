@@ -98,8 +98,8 @@ object ChatRoomEntity {
             ctx.log.info(s"★ ★ ★ Signal $signal ★ ★ ★")
         }
         /*.snapshotWhen {
-          case (_, env, _) if env.getPayload.isInstanceOf[JoinUser] ⇒ true
-          case _                                                    ⇒ false
+          case (_, UserJoined(_, _), _) ⇒ true
+          case _                        ⇒ false
         }*/
         .snapshotWhen(snapshotPredicate(ctx))
         //save a snapshot on every 100 events and keep max 2
