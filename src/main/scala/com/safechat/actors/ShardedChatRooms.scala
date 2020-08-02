@@ -40,9 +40,9 @@ object ShardedChatRooms {
 class ShardedChatRooms(implicit system: ActorSystem[Nothing]) {
   implicit val shardAskTimeout = akka.util.Timeout(ChatRoomEntity.hubInitTimeout)
 
-  val numberOfShards = 1 << 8    //TODO: make it configurable
-  val passivationTO  = 1.minutes //TODO: make it configurable
-  val sharding       = ClusterSharding(system)
+  val numberOfShards     = 1 << 8      //TODO: make it configurable
+  val passivationTimeout = 160.seconds //TODO: make it configurable
+  val sharding           = ClusterSharding(system)
   val settings =
     ClusterShardingSettings(system)
       /*
@@ -52,7 +52,7 @@ class ShardedChatRooms(implicit system: ActorSystem[Nothing]) {
        */
       .withRememberEntities(false)
       .withStateStoreMode(StateStoreModeDData)
-      .withPassivateIdleEntityAfter(passivationTO)
+      .withPassivateIdleEntityAfter(passivationTimeout)
 
   /**
     * Aa a example of non persistent but sharded `Entity`.

@@ -127,7 +127,7 @@ object JournalEventsSerializer {
               UUID.randomUUID.toString,
               System.currentTimeMillis,
               TimeZone.getDefault.getID,
-              com.safechat.persistent.domain.UserJoined.newBuilder.setLogin(e.login).setPubKey(e.pubKey).build()
+              com.safechat.persistent.domain.UserJoined.newBuilder.setLogin(e.originator).setPubKey(e.pubKey).build()
             )
           case UserTextAdded(originator, receiver, content, when, tz) ⇒
             new com.safechat.persistent.domain.MsgEnvelope(
@@ -141,7 +141,7 @@ object JournalEventsSerializer {
               UUID.randomUUID.toString,
               System.currentTimeMillis,
               TimeZone.getDefault.getID,
-              com.safechat.persistent.domain.UserDisconnected.newBuilder.setLogin(e.login).build
+              com.safechat.persistent.domain.UserDisconnected.newBuilder.setLogin(e.originator).build
             )
         }
         toByteArray[com.safechat.persistent.domain.MsgEnvelope](env, schema)

@@ -2,8 +2,8 @@
 
 package com.safechat.rest
 
-import akka.http.scaladsl.model.ws.{Message, TextMessage}
 import akka.stream.FlowShape
+import akka.http.scaladsl.model.ws.{Message, TextMessage}
 import akka.stream.scaladsl.{Flow, GraphDSL, MergePreferred, Source}
 
 import scala.concurrent.duration._
@@ -26,5 +26,4 @@ object WsScaffolding {
       }
     )
   }
-
 }

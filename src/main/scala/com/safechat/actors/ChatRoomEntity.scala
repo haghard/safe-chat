@@ -12,17 +12,19 @@ import akka.cluster.sharding.typed.scaladsl.{EntityContext, EntityTypeKey}
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
 import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior, ReplyEffect, RetentionCriteria}
 import akka.persistence.typed._
-import akka.stream.scaladsl.{BroadcastHub, Flow, Keep, MergeHub, Source, StreamRefs}
+import akka.stream.scaladsl.{BroadcastHub, Flow, Keep, MergeHub, RestartFlow, Source, StreamRefs}
 import akka.stream.{KillSwitches, StreamRefAttributes}
 import akka.util.Timeout
-import com.safechat.rest.WsScaffolding
 
 import scala.concurrent.duration._
 
 object ChatRoomEntity {
 
-  val snapshotEveryN = 300       //TODO should be configurable
-  val hubInitTimeout = 3.seconds //TODO should be configurable
+  val snapshotEveryN   = 300       //TODO should be configurable
+  val hubInitTimeout   = 3.seconds //TODO should be configurable
+  val writeParallelism = 1
+
+  val MSG_SEP = ":"
 
   val wakeUpUserName   = "John Doe"
   val wakeUpEntityName = "dungeon"
@@ -31,28 +33,37 @@ object ChatRoomEntity {
   val entityKey: EntityTypeKey[UserCmdWithReply] =
     EntityTypeKey[UserCmdWithReply]("chat-rooms")
 
-  def empty = com.safechat.actors.ChatRoomState()
+  val empty = com.safechat.actors.ChatRoomState()
 
   def persist(persistenceId: String, entity: ActorRef[PostText])(implicit
     persistTimeout: Timeout
-  ): Flow[Message, ChatRoomReply, akka.NotUsed] =
-    akka.stream.typed.scaladsl.ActorFlow.ask[Message, PostText, ChatRoomReply](1)(entity) {
-      (msg: Message, replyTo: akka.actor.typed.ActorRef[ChatRoomReply]) ⇒
+  ): Flow[Message, ChatRoomReply, akka.NotUsed] = {
+    def persistFlow = akka.stream.typed.scaladsl.ActorFlow.ask[Message, PostText, ChatRoomReply](writeParallelism)(entity) {
+      (msg: Message, replyTo: ActorRef[ChatRoomReply]) ⇒
         msg match {
           case TextMessage.Strict(text) ⇒
-            val segments = text.split(":")
-            if (text.split(":").size == 3)
+            val segments = text.split(MSG_SEP)
+            if (text.split(MSG_SEP).size == 3)
               PostText(persistenceId, segments(0).trim, segments(1).trim, segments(2).trim, replyTo)
-            else if (text == WsScaffolding.hbMessage)
-              PostText(persistenceId, text, text, text, replyTo)
-            else PostText(persistenceId, "null", "null", s"Message error. Wrong format $text", replyTo)
+            else
+              PostText(persistenceId, "null", "null", s"Message error. Wrong format $text", replyTo)
           case other ⇒
             throw new Exception(s"Unexpected message type ${other.getClass.getName}")
         }
     }
 
+    //TODO: maybe would be better to fail instead of retrying
+    RestartFlow.withBackoff(1.second, 10.seconds, 0.3)(() ⇒ persistFlow)
+  }
+
   /**
     * Each `ChatRoomEntity` actor is a single source of true, acting as a consistency boundary for the data that is manages.
+    *
+    * Messages in a single chat define a single total order.
+    *
+    * Messages in a single chat causally dependent on each other by design.
+    *
+    * Causal consistency is maintained as we always write to the journal with parallelism == 1
     */
   def apply(entityCtx: EntityContext[UserCmdWithReply]): Behavior[UserCmdWithReply] =
     //com.safechat.LoggingBehaviorInterceptor(ctx.log) {
@@ -119,34 +130,32 @@ object ChatRoomEntity {
     *
     * A MergeHub allows to implement a dynamic fan-in junction point(many-to-one) in a graph where elements coming from
     * different producers are emitted in a First-Comes-First-Served fashion.
-    * If the consumer cannot keep up then all of the producers are backpressured.
+    * If the consumer cannot keep up, then all of the producers will be backpressured.
     *
     * A BroadcastHub can be used to consume elements from a common producer by a dynamic set of consumers (one-to-many).
     * (dynamic number of producers and new consumers can be added on the fly)
-    * The rate of the producer will be automatically adapted to the slowest consumer. In this case, the hub is a Sink to
-    * which the single producer must be attached first
+    * The rate of the producer will be automatically adapted to the slowest consumer.
     */
   def createPubSub(
     persistenceId: String,
     entity: ActorRef[PostText]
   )(implicit
     sys: ActorSystem[Nothing]
-  ): ChatRoomHub = {
-    implicit val ec    = sys.executionContext
-    implicit val askTo = akka.util.Timeout(1.second) //persist timeout
+  ): ChatRoomPubSub = {
+    implicit val ec = sys.executionContext
+
+    val initBs = sys.settings.config.getInt("akka.stream.materializer.initial-input-buffer-size")
+    //val bs1 = sys.settings.config.getInt("akka.stream.materializer.max-input-buffer-size")
 
     sys.log.warn("Create pub-sub for {} chatroom", persistenceId)
+
     val ((sinkHub, ks), sourceHub) =
       MergeHub
-        .source[Message](sys.settings.config.getInt("akka.stream.materializer.max-input-buffer-size"))
+        .source[Message](initBs)
         .via(
-          WsScaffolding
-            .flowWithHeartbeat(30.second)
-            .via(persist(persistenceId, entity))
-            .collect {
-              case r: PingReply       ⇒ TextMessage.Strict(s"${r.chatId}:${r.msg}")
-              case r: TextPostedReply ⇒ TextMessage.Strict(s"chat-room:${r.chatId} msgId:${r.seqNum}  ${r.content}")
-            }
+          //WsScaffolding.flowWithHeartbeat(30.second).via(persist(persistenceId, entity))
+          persist(persistenceId, entity)(akka.util.Timeout(1.second))
+            .collect { case r: TextPostedReply ⇒ TextMessage.Strict(s"${r.chatId}:${r.seqNum} - ${r.content}") }
         )
         /*
         .via(
@@ -170,19 +179,20 @@ object ChatRoomEntity {
             }
         )*/
         .viaMat(KillSwitches.single)(Keep.both)
-        .toMat(BroadcastHub.sink[Message](1 << 3))(Keep.both)
+        .toMat(BroadcastHub.sink[Message](initBs))(Keep.both)
         .run()
-    ChatRoomHub(sinkHub, sourceHub, ks)
+
+    ChatRoomPubSub(sinkHub, sourceHub, ks)
   }
 
   def onCommand(ctx: ActorContext[UserCmdWithReply])(state: ChatRoomState, cmd: UserCmdWithReply)(implicit
     sys: ActorSystem[Nothing]
   ): ReplyEffect[ChatRoomEvent, ChatRoomState] =
     cmd match {
-      case m: JoinUser ⇒
+      case cmd: JoinUser ⇒
         Effect
-          .persist(UserJoined(m.user, m.pubKey))
-          .thenReply(m.replyTo) { updateState: ChatRoomState ⇒ //That's new state after applying the event
+          .persist(UserJoined(cmd.user, cmd.pubKey))
+          .thenReply(cmd.replyTo) { updateState: ChatRoomState ⇒ //That's new state after applying the event
             //ctx.log.info("JoinUser attempt {}", m.user)
 
             val settings =
@@ -200,24 +210,21 @@ object ChatRoomEntity {
                 //Add new consumers on the fly
                 //The rate of the producer will be automatically adapted to the slowest consumer
                 val sinkRefF = hub.sinkHub.runWith(StreamRefs.sinkRef[Message].addAttributes(settings))
-                JoinReply(m.chatId, m.user, sinkRefF, srcRefF)
+                JoinReply(cmd.chatId, cmd.user, sinkRefF, srcRefF)
               }
-              .getOrElse(JoinReplyFailure(m.chatId, m.user))
+              .getOrElse(JoinReplyFailure(cmd.chatId, cmd.user))
           }
 
       case cmd: PostText ⇒
         val num = EventSourcedBehavior.lastSequenceNumber(ctx)
-        if (cmd.content == WsScaffolding.hbMessage)
-          Effect.none.thenReply(cmd.replyTo)(_ ⇒ PingReply(cmd.chatId, cmd.content))
-        else
-          Effect
-            .persist(
-              UserTextAdded(cmd.sender, cmd.receiver, cmd.content, System.currentTimeMillis, TimeZone.getDefault.getID)
-            )
-            .thenReply(cmd.replyTo) { updatedState: ChatRoomState ⇒
-              ctx.log.info("online:[{}]", updatedState.online.mkString(","))
-              TextPostedReply(cmd.chatId, num, s"[from:${cmd.sender} -> to:${cmd.receiver}] - ${cmd.content}")
-            }
+        Effect
+          .persist(
+            UserTextAdded(cmd.sender, cmd.receiver, cmd.content, System.currentTimeMillis, TimeZone.getDefault.getID)
+          )
+          .thenReply(cmd.replyTo) { updatedState: ChatRoomState ⇒
+            ctx.log.info("online:[{}]", updatedState.online.mkString(","))
+            TextPostedReply(cmd.chatId, num, s"[from:${cmd.sender} -> to:${cmd.receiver}] - ${cmd.content}")
+          }
 
       case cmd: DisconnectUser ⇒
         Effect

@@ -30,8 +30,9 @@ final case class ReconnectReply(
 final case class JoinReplyFailure(chatId: String, user: String) extends ChatRoomReply
 
 final case class TextPostedReply(chatId: String, seqNum: Long, content: String) extends ChatRoomReply
-final case class PingReply(chatId: String, msg: String)                         extends ChatRoomReply
-final case class DisconnectedReply(chatId: String, user: String)                extends ChatRoomReply
+
+final case class DisconnectedReply(chatId: String, user: String) extends ChatRoomReply
+
 
 sealed trait UserCmd {
   def chatId: String
@@ -57,19 +58,22 @@ final case class PostText(
 
 final case class DisconnectUser(chatId: String, user: String, replyTo: ActorRef[ChatRoomReply]) extends UserCmdWithReply
 
-sealed trait ChatRoomEvent
-final case class UserJoined(login: String, pubKey: String) extends ChatRoomEvent
-final case class UserTextAdded(originator: String, receiver: String, content: String, when: Long, tz: String)
-    extends ChatRoomEvent
-final case class UserDisconnected(login: String) extends ChatRoomEvent
+sealed trait ChatRoomEvent {
+  def originator: String
+}
 
-final case class ChatRoomHub(sinkHub: Sink[Message, NotUsed], srcHub: Source[Message, NotUsed], ks: UniqueKillSwitch)
+final case class UserJoined(originator: String, pubKey: String) extends ChatRoomEvent
+final case class UserTextAdded(originator: String, recipient: String, content: String, when: Long, tz: String)
+    extends ChatRoomEvent
+final case class UserDisconnected(originator: String) extends ChatRoomEvent
+
+final case class ChatRoomPubSub(sinkHub: Sink[Message, NotUsed], srcHub: Source[Message, NotUsed], ks: UniqueKillSwitch)
 
 final case class ChatRoomState(
   regUsers: Map[String, String] = Map.empty,
   online: Set[String] = Set.empty,
   recentHistory: RingBuffer[String] = new RingBuffer[String](1 << 4),
-  hub: Option[ChatRoomHub] = None
+  hub: Option[ChatRoomPubSub] = None
 ) {
 
   def applyCmd(cmd: UserCmd): ReplyEffect[ChatRoomEvent, ChatRoomState] =
