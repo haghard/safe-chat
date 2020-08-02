@@ -7,18 +7,16 @@ import java.io.{ByteArrayOutputStream, NotSerializableException}
 import java.util
 import java.util.{TimeZone, UUID}
 
+import akka.actor.ExtendedActorSystem
 import akka.serialization.SerializerWithStringManifest
+import com.safechat.actors.{ChatRoomEvent, UserDisconnected, UserJoined, UserTextAdded}
+import org.apache.avro.Schema
 import org.apache.avro.io.{BinaryEncoder, DecoderFactory, EncoderFactory}
 import org.apache.avro.specific.{SpecificDatumReader, SpecificDatumWriter}
 
+import scala.reflect.ClassTag
 import scala.util.Using
 import scala.util.Using.Releasable
-import JournalEventsSerializer._
-import akka.actor.ExtendedActorSystem
-import com.safechat.actors.{ChatRoomEvent, UserDisconnected, UserJoined, UserTextAdded}
-import org.apache.avro.Schema
-
-import scala.reflect.ClassTag
 
 /*
 
