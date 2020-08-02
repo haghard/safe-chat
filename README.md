@@ -154,7 +154,9 @@ https://www.youtube.com/watch?v=vc6eTolxGbM
 
 ## Akka cluster links
 
-How Akka Cluster Works: https://www.lightbend.com/blog/akka-cluster-quickstart-dashboard-part-1-getting-started 
+How Akka Cluster Works: https://www.lightbend.com/blog/akka-cluster-quickstart-dashboard-part-1-getting-started
+
+Sample project: https://github.com/mckeeh3/akka-typed-java-cluster.git 
 
 
 
