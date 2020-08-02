@@ -152,6 +152,12 @@ https://doc.akka.io/docs/akka-enhancements/current/split-brain-resolver.html#usi
 https://www.youtube.com/watch?v=vc6eTolxGbM
 
 
+## Akka cluster links
+
+How Akka Cluster Works: https://www.lightbend.com/blog/akka-cluster-quickstart-dashboard-part-1-getting-started 
+
+
+
 ## message evolution/versioning
 
 https://www.scala-exercises.org/shapeless/coproducts
