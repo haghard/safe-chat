@@ -52,8 +52,8 @@ object JournalEventsSerializer {
   val SEP         = ":"
   val subEventSEP = "/"
 
-  val EVENT_PREF                = "EVENT_"
-  val STATE_PREF                = "STATE_"
+  val EVENT_PREF = "EVENT_"
+  val STATE_PREF = "STATE_"
 
   implicit object BinaryEncoderIsReleasable extends Releasable[BinaryEncoder] {
     def release(resource: BinaryEncoder): Unit =
@@ -174,7 +174,13 @@ final class JournalEventsSerializer extends SerializerWithStringManifest {
         UserJoined(event.getLogin.toString, event.getPubKey.toString)
       } else if (envelope.getPayload.isInstanceOf[com.safechat.persistent.domain.TextAdded]) {
         val event = envelope.getPayload.asInstanceOf[com.safechat.persistent.domain.TextAdded]
-        TextAdded(event.getUser.toString, event.getReceiver.toString, event.getText.toString, envelope.getWhen, envelope.getTz.toString)
+        TextAdded(
+          event.getUser.toString,
+          event.getReceiver.toString,
+          event.getText.toString,
+          envelope.getWhen,
+          envelope.getTz.toString
+        )
       } else if (envelope.getPayload.isInstanceOf[com.safechat.persistent.domain.Disconnected]) {
         val event = envelope.getPayload.asInstanceOf[com.safechat.persistent.domain.Disconnected]
         UserDisconnected(event.getLogin.toString)

@@ -340,3 +340,8 @@ https://manuel.bernhardt.io/2018/02/26/tour-akka-cluster-cluster-sharding/
 https://www.youtube.com/watch?v=SrPubnOKJcQ
 
 https://doc.akka.io/docs/akka/current/typed/cluster-sharding.html
+
+
+### Git
+
+git tag -a v0.2.0 -m "v0.2.0" &&  git push --tags
