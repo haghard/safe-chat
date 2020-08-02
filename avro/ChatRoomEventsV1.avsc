@@ -2,7 +2,7 @@
 {
    "type":"record",
    "name":"MsgEnvelope",
-   "namespace":"com.safechat.domain",
+   "namespace":"com.safechat.persistent.domain",
    "fields":[
       {
          "name":"correlationId",
@@ -22,7 +22,7 @@
             {
                "name": "Joined",
                "type": "record",
-               "namespace": "com.safechat.domain",
+               "namespace": "com.safechat.persistent.domain",
                "fields": [
                    { "name": "login", "type": "string" },
                    { "name": "pubKey", "type": "string" },
@@ -32,7 +32,7 @@
             {
                "name": "TextAdded",
                "type": "record",
-               "namespace": "com.safechat.domain",
+               "namespace": "com.safechat.persistent.domain",
                "fields": [
                    { "name": "user", "type": "string" },
                    { "name": "receiver", "type": "string" },
@@ -42,7 +42,7 @@
             {
                "name": "Disconnected",
                "type": "record",
-               "namespace": "com.safechat.domain",
+               "namespace": "com.safechat.persistent.domain",
                "fields": [
                  { "name": "login", "type": "string" },
                  { "name": "email", "type": [ "null", "string" ], "default" : null, "doc": "optional email" }
@@ -51,7 +51,7 @@
             {
                "name": "LikedText",
                "type": "record",
-               "namespace": "com.safechat.domain",
+               "namespace": "com.safechat.persistent.domain",
                "fields": [
                  { "name": "login", "type": [ "null", "string" ], "default" : null, "doc": "Since v3" },
                  { "name": "seqNum", "type": [ "null", "long" ], "default" : null, "doc": "Since v3" }
@@ -63,8 +63,8 @@
 },
 {
      "type":"record",
-     "name":"ChatState",
-     "namespace":"com.safechat.domain",
+     "name":"ChatRoomState",
+     "namespace":"com.safechat.persistent.state",
      "fields":[
         {
           "name" : "registeredUsers",

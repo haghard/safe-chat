@@ -51,7 +51,8 @@ object Server extends Ops {
     val discoveryBackend =
       sys.props.get("DISCOVERY_BACKEND").getOrElse(throw new Exception("Env var DISCOVERY_BACKEND is expected"))
 
-    val akkaExternalHostName = sys.props.get("HOSTNAME")
+    val akkaExternalHostName = sys.props
+      .get("HOSTNAME")
       .getOrElse(throw new Exception("Env var HOSTNAME is expected"))
 
     //Inside the Docker container we bind to all available network interfaces

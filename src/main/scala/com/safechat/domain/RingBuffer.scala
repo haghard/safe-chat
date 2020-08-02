@@ -9,7 +9,7 @@ object RingBuffer {
     1 << (32 - Integer.numberOfLeadingZeros(value - 1))
 }
 
-class RingBuffer[T: ClassTag] private (capacity: Int, buffer: Array[T]) {
+final class RingBuffer[T: ClassTag] private (capacity: Int, buffer: Array[T]) {
   private var tail: Long = 0L
   private var head: Long = 0L
 

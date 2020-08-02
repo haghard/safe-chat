@@ -6,9 +6,9 @@ import akka.NotUsed
 import akka.actor.typed.ActorRef
 import akka.stream.scaladsl.{Sink, Source}
 import akka.http.scaladsl.model.ws.Message
-import com.safechat.domain.{MsgEnvelope, RingBuffer}
 import akka.stream.{SinkRef, SourceRef, UniqueKillSwitch}
 import akka.persistence.typed.scaladsl.{Effect, ReplyEffect}
+import com.safechat.domain.RingBuffer
 
 sealed trait ChatRoomReply {
   def chatId: String
@@ -51,7 +51,7 @@ final case class PostText(
   chatId: String,
   sender: String,
   receiver: String,
-  text: String,
+  content: String,
   replyTo: ActorRef[ChatRoomReply]
 ) extends UserCmdWithReply
 
@@ -62,10 +62,11 @@ final case class ChatRoomHub(sinkHub: Sink[Message, NotUsed], srcHub: Source[Mes
 final case class ChatRoomState(
   regUsers: Map[String, String] = Map.empty,
   online: Set[String] = Set.empty,
-  recentHistory: RingBuffer[String] = new RingBuffer[String](1 << 16),
+  recentHistory: RingBuffer[String] = new RingBuffer[String](1 << 4),
   hub: Option[ChatRoomHub] = None
 ) {
 
+  import com.safechat.persistent.domain.MsgEnvelope
   def applyCmd(cmd: UserCmd): ReplyEffect[MsgEnvelope, ChatRoomState] =
     cmd match {
       case m: JoinUser       ⇒ Effect.noReply

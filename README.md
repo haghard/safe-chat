@@ -85,6 +85,11 @@ https://doc.akka.io/docs/akka/current/typed/persistence.html#example
 
 https://doc.akka.io/docs/akka/current/typed/cluster-sharding.html
 
+
+### Talks
+
+LunaConf 2020 - Akka Persistence Typed by Renato Cavalcanti: https://youtu.be/hYucH6dXGSM?list=LLq_6THQ1qPDuFwd-a_O0pxg
+
 https://github.com/renatocaval/akka-persistence-typed-talk
 
 
@@ -160,15 +165,50 @@ Sample project: https://github.com/mckeeh3/akka-typed-java-cluster.git
 
 
 
-## message evolution/versioning
+## Schema evolution/versioning
 
 https://www.scala-exercises.org/shapeless/coproducts
+
 https://github.com/Keenworks/akka-avro-evolution.git
+
 https://softwaremill.com/schema-registry-and-topic-with-multiple-message-types/
 
-https://github.com/IainHull/akka-persistence-message-bug
 http://martin.kleppmann.com/2012/12/05/schema-evolution-in-avro-protocol-buffers-thrift.html
+
 https://www.programcreek.com/java-api-examples/?code=rkluszczynski/avro-cli/avro-cli-master/src/main/java/io/github/rkluszczynski/avro/cli/command/conversion/RawConverterUtil.java
+
+Schema Management at Depop: https://youtu.be/ztkyVHPaPgY
+
+
+https://pulsar.apache.org/docs/en/concepts-schema-registry/
+
+
+### Protocol-buffers
+
+https://rockset.com/blog/ivalue-efficient-representation-of-dynamic-types-in-cplusplus/
+https://www.lightbend.com/lightbend-platform-subscription
+
+https://codeburst.io/protocol-buffers-part-1-serialization-library-for-microservices-37418e72908b
+https://github.com/rotomer/protobuf-blogpost-1
+
+https://codeburst.io/protocol-buffers-part-2-the-untold-parts-of-using-any-6a328560048d
+https://github.com/rotomer/protobuf-blogpost-2
+
+https://codeburst.io/protocol-buffers-part-3-json-format-e1ca0af27774
+https://github.com/rotomer/protobuf-blogpost-3.git
+
+https://developers.google.com/protocol-buffers/docs/proto3
+
+https://developer.confluent.io/podcast/introducing-json-and-protobuf-support-ft-david-araujo-and-tushar-thole
+
+
+### Schema registry
+
+Schema registry:    https://www.confluent.io/blog/author/robert-yokota/
+
+Putting Several Event Types in the Same Topic – Revisited:  https://www.confluent.io/blog/multiple-event-types-in-the-same-kafka-topic
+
+
 
 
 ## Snapshotting

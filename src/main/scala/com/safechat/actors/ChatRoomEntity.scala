@@ -15,7 +15,7 @@ import akka.persistence.typed._
 import akka.stream.scaladsl.{BroadcastHub, Flow, Keep, MergeHub, Source, StreamRefs}
 import akka.stream.{KillSwitches, StreamRefAttributes}
 import akka.util.Timeout
-import com.safechat.domain.{Disconnected, Joined, MsgEnvelope, TextAdded}
+import com.safechat.persistent.domain.{Disconnected, Joined, MsgEnvelope, TextAdded}
 import com.safechat.rest.WsScaffolding
 
 import scala.concurrent.duration._
@@ -32,7 +32,7 @@ object ChatRoomEntity {
   val entityKey: EntityTypeKey[UserCmdWithReply] =
     EntityTypeKey[UserCmdWithReply]("chat-rooms")
 
-  def empty = ChatRoomState()
+  def empty = com.safechat.actors.ChatRoomState()
 
   def persist(persistenceId: String, entity: ActorRef[PostText])(implicit
     persistTimeout: Timeout
@@ -116,7 +116,7 @@ object ChatRoomEntity {
     * Each chat root contains MergeHub and BroadcastHub connected together to form a runnable graph.
     * Once we materialize this stream, we get back a pair of Source and Sink that together define the publish and subscribe sides of our chat room.
     *
-    * Dynamic fan-in and fan-out with MergeHub and BroadcastHub (//https://doc.akka.io/docs/akka/current/stream/stream-dynamic.html#combining-dynamic-operators-to-build-a-simple-publish-subscribe-service)
+    * Dynamic fan-in and fan-out with MergeHub and BroadcastHub (https://doc.akka.io/docs/akka/current/stream/stream-dynamic.html#combining-dynamic-operators-to-build-a-simple-publish-subscribe-service)
     *
     * A MergeHub allows to implement a dynamic fan-in junction point(many-to-one) in a graph where elements coming from
     * different producers are emitted in a First-Comes-First-Served fashion.
@@ -127,7 +127,7 @@ object ChatRoomEntity {
     * The rate of the producer will be automatically adapted to the slowest consumer. In this case, the hub is a Sink to
     * which the single producer must be attached first
     */
-  def createHub(
+  def createPubSub(
     persistenceId: String,
     entity: ActorRef[PostText]
   )(implicit
@@ -136,7 +136,7 @@ object ChatRoomEntity {
     implicit val ec    = sys.executionContext
     implicit val askTo = akka.util.Timeout(1.second) //persist timeout
 
-    sys.log.warn("Hub for {}", persistenceId)
+    sys.log.warn("Create pub-sub for {} chatroom", persistenceId)
     val ((sinkHub, ks), sourceHub) =
       MergeHub
         .source[Message](sys.settings.config.getInt("akka.stream.materializer.max-input-buffer-size"))
@@ -189,16 +189,16 @@ object ChatRoomEntity {
               TimeZone.getDefault.getID,
               Joined.newBuilder.setLogin(m.user).setPubKey(m.pubKey).build()
             )
-          ) //Note that the new state after applying the event is passed as parameter to the thenReply function
-          .thenReply(m.replyTo) { state: ChatRoomState ⇒
+          )
+          .thenReply(m.replyTo) { updateState: ChatRoomState ⇒ //That's new state after applying the event
             //ctx.log.info("JoinUser attempt {}", m.user)
 
             val settings =
               StreamRefAttributes.subscriptionTimeout(hubInitTimeout) //.and(akka.stream.Attributes.inputBuffer(bs, bs))
 
-            state.hub
+            updateState.hub
               .map { hub ⇒
-                val chatHistory = state.recentHistory.entries.mkString("\n")
+                val chatHistory = updateState.recentHistory.entries.mkString("\n")
 
                 //Add new producer on the fly
                 //If the consumer cannot keep up then all of the producers are backpressured
@@ -215,8 +215,8 @@ object ChatRoomEntity {
 
       case cmd: PostText ⇒
         val num = EventSourcedBehavior.lastSequenceNumber(ctx)
-        if (cmd.text eq WsScaffolding.hbMessage)
-          Effect.none.thenReply(cmd.replyTo)(_ ⇒ PingReply(cmd.chatId, cmd.text))
+        if (cmd.content == WsScaffolding.hbMessage)
+          Effect.none.thenReply(cmd.replyTo)(_ ⇒ PingReply(cmd.chatId, cmd.content))
         else
           Effect
             .persist(
@@ -224,12 +224,12 @@ object ChatRoomEntity {
                 UUID.randomUUID.toString,
                 System.currentTimeMillis,
                 TimeZone.getDefault.getID,
-                new TextAdded(cmd.sender, cmd.receiver, cmd.text)
+                new TextAdded(cmd.sender, cmd.receiver, cmd.content)
               )
             )
-            .thenReply(cmd.replyTo) { newState: ChatRoomState ⇒
-              ctx.log.info("online:[{}]", newState.online.mkString(","))
-              TextPostedReply(cmd.chatId, num, s"[from:${cmd.sender} -> to:${cmd.receiver}] - ${cmd.text}")
+            .thenReply(cmd.replyTo) { updatedState: ChatRoomState ⇒
+              ctx.log.info("online:[{}]", updatedState.online.mkString(","))
+              TextPostedReply(cmd.chatId, num, s"[from:${cmd.sender} -> to:${cmd.receiver}] - ${cmd.content}")
             }
 
       case cmd: DisconnectUser ⇒
@@ -242,8 +242,8 @@ object ChatRoomEntity {
               Disconnected.newBuilder.setLogin(cmd.user).build
             )
           )
-          .thenReply(cmd.replyTo) { newState: ChatRoomState ⇒
-            ctx.log.info("{} disconnected - online:[{}]", cmd.user, newState.online.mkString(""))
+          .thenReply(cmd.replyTo) { updatedState: ChatRoomState ⇒
+            ctx.log.info("{} disconnected - online:[{}]", cmd.user, updatedState.online.mkString(""))
             DisconnectedReply(cmd.chatId, cmd.user)
           }
     }
@@ -264,7 +264,7 @@ object ChatRoomEntity {
           state.copy(
             regUsers = state.regUsers + (ev.getLogin.toString → ev.getPubKey.toString),
             online = Set(ev.getLogin.toString),
-            hub = Some(createHub(persistenceId, ctx.self.narrow[PostText]))
+            hub = Some(createPubSub(persistenceId, ctx.self.narrow[PostText]))
           )
       else
         state.copy(
@@ -272,10 +272,10 @@ object ChatRoomEntity {
           online = state.online + ev.getLogin.toString
         )
 
-    } else if (event.getPayload.isInstanceOf[com.safechat.domain.Disconnected])
+    } else if (event.getPayload.isInstanceOf[com.safechat.persistent.domain.Disconnected])
       state.copy(
         online = state.online - event.getPayload
-            .asInstanceOf[com.safechat.domain.Disconnected]
+            .asInstanceOf[com.safechat.persistent.domain.Disconnected]
             .getLogin
             .toString
       )

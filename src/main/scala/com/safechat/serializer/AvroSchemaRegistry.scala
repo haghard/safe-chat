@@ -50,9 +50,9 @@ object AvroSchemaRegistry {
         .toArray(Array.ofDim[Schema](typesFromSchema.size()))
         .map(sch ⇒ sch.getNamespace + "." + sch.getName)
         //I add those additions|removals because we do not have one to one mapping between what we persist and bindings in the config
-        .toSet + classOf[com.safechat.actors.ChatRoomState].getName - classOf[
-        com.safechat.domain.ChatState
-      ].getName //app specific thing
+        .toSet +
+      classOf[com.safechat.actors.ChatRoomState].getName -         //this is what we pass in Effect.persist()
+      classOf[com.safechat.persistent.state.ChatRoomState].getName //this is what goes into the journal
 
     var bindingsFromConfig: Set[String] = Set.empty
     val iter                            = cfg.getConfig(sectionName).entrySet().iterator()
