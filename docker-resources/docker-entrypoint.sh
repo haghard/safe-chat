@@ -26,6 +26,7 @@ APP_OPTS="-server \
           -DSEEDS=${SEEDS} \
           -DHOSTNAME=${HOSTNAME} \
           -DAKKA_PORT=${AKKA_PORT} \
+          -DDISCOVERY_BACKEND=${DISCOVERY_BACKEND} \
           -Dcassandra.hosts=${CASSANDRA} \
           -Dcassandra.user=${CAS_USER} \
           -Dcassandra.psw="${CAS_PWS}

@@ -91,6 +91,17 @@ object LRUCache {
     }
   }
 
+  /*
+    Synchronization at Object level.
+    Every read/write operation needs to acquire lock. Locking the entire collection is a performance overhead.
+    This essentially gives access to only one thread to the entire map & blocks all the other threads.
+    It may cause contention.
+    SynchronizedHashMap returns Iterator, which fails-fast on concurrent modification.
+
+    https://medium.com/@itsromiljain/curious-case-of-concurrenthashmap-90249632d335
+   */
+  //java.util.Collections.synchronizedMap(new LRULinkedHashMapCache[String, Int](1 << 3))
+
   class Node[T, U](
     var previous: Node[T, U] = null,
     var next: Node[T, U] = null,

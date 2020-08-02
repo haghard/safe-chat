@@ -123,6 +123,8 @@ lazy val root = project
 
       new sbtdocker.mutable.Dockerfile {
         from("adoptopenjdk:11")
+        //from("adoptopenjdk/openjdk12:x86_64-ubuntu-jre-12.0.2_10")
+
         //from("adoptopenjdk:11.0.6_10-jdk-hotspot")
 
         //from("adoptopenjdk/openjdk12")

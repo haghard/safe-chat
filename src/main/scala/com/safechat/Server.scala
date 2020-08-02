@@ -48,9 +48,10 @@ object Server extends Ops {
 
     val confPath = sys.props.get("CONFIG").getOrElse(throw new Exception("Env var CONFIG is expected"))
     val env      = sys.props.get("ENV").getOrElse(throw new Exception("Env var ENV is expected"))
+    val discoveryBackend =
+      sys.props.get("DISCOVERY_BACKEND").getOrElse(throw new Exception("Env var DISCOVERY_BACKEND is expected"))
 
-    val akkaExternalHostName = sys.props
-      .get("HOSTNAME")
+    val akkaExternalHostName = sys.props.get("HOSTNAME")
       .getOrElse(throw new Exception("Env var HOSTNAME is expected"))
 
     //Inside the Docker container we bind to all available network interfaces
@@ -108,7 +109,7 @@ object Server extends Ops {
         .withFallback(ConfigFactory.parseString(s"akka.management.cluster.http.port=$akkaPort"))
         .withFallback(
           ConfigFactory.parseString(
-            s"akka.management.cluster.bootstrap.contact-point-discovery.discovery-method=config"
+            s"akka.management.cluster.bootstrap.contact-point-discovery.discovery-method=$discoveryBackend"
           )
         )
         .withFallback(ConfigFactory.parseFile(configFile).resolve())
