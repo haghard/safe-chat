@@ -61,12 +61,12 @@ object ChatRoomEntity {
       implicit val actorCtx = ctx
 
       //fp style
-      EventSourcedBehavior.withEnforcedReplies[UserCmd, ChatRoomEvent, ChatRoomState](
+      /*EventSourcedBehavior.withEnforcedReplies[UserCmd, ChatRoomEvent, ChatRoomState](
         PersistenceId(entityCtx.entityTypeKey.name, entityCtx.entityId),
         empty,
         (state, cmd) ⇒ state.applyCmd(cmd),
         (state, event) ⇒ state.applyEvn(event)
-      )
+      )*/
 
       EventSourcedBehavior
         .withEnforcedReplies[UserCmdWithReply, ChatRoomEvent, ChatRoomState](
