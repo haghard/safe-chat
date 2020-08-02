@@ -20,9 +20,10 @@
          "name": "payload",
          "type":[
             {
-               "name": "Joined",
+               "name": "UserJoined",
                "type": "record",
                "namespace": "com.safechat.persistent.domain",
+               "doc" : "com.safechat.actors.UserJoined",
                "fields": [
                    { "name": "login", "type": "string" },
                    { "name": "pubKey", "type": "string" },
@@ -30,9 +31,10 @@
                ]
             },
             {
-               "name": "TextAdded",
+               "name": "UserTextAdded",
                "type": "record",
                "namespace": "com.safechat.persistent.domain",
+               "doc" : "com.safechat.actors.UserTextAdded",
                "fields": [
                    { "name": "user", "type": "string" },
                    { "name": "receiver", "type": "string" },
@@ -40,21 +42,13 @@
                ]
             },
             {
-               "name": "Disconnected",
+               "name": "UserDisconnected",
                "type": "record",
                "namespace": "com.safechat.persistent.domain",
+               "doc" : "com.safechat.actors.UserDisconnected",
                "fields": [
                  { "name": "login", "type": "string" },
                  { "name": "email", "type": [ "null", "string" ], "default" : null, "doc": "optional email" }
-               ]
-            },
-            {
-               "name": "LikedText",
-               "type": "record",
-               "namespace": "com.safechat.persistent.domain",
-               "fields": [
-                 { "name": "login", "type": [ "null", "string" ], "default" : null, "doc": "Since v3" },
-                 { "name": "seqNum", "type": [ "null", "long" ], "default" : null, "doc": "Since v3" }
                ]
             }
          ]

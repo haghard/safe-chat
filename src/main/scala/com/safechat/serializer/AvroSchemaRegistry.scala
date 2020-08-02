@@ -5,7 +5,10 @@ package com.safechat.serializer
 import org.apache.avro.Schema
 import java.io.{File, FileInputStream}
 
+import com.typesafe.config.Config
 import org.apache.commons.codec.digest.DigestUtils
+
+import scala.jdk.CollectionConverters._
 
 object AvroSchemaRegistry {
 
@@ -35,7 +38,35 @@ object AvroSchemaRegistry {
     (activeSchemaHash, schemaMap)
 
   private val serializerName = "\"journalSerializer\""
-  private val sectionName    = "akka.actor.serialization-bindings"
+
+  def eventTypesMapping(cfg: Config, fieldName: String = "payload"): Map[String, String] = {
+    val typesFromSchema = getSchemaFromUrl(activeSchema).getTypes()
+    val topLevelRecords = typesFromSchema.asScala
+
+    var avroSchemaMapping: Map[String, String] = Map.empty
+    topLevelRecords
+      .filter(_.getName.contains("Envelope"))
+      .map { eventSchema ⇒
+        val it = eventSchema.getField(fieldName).schema().getTypes.iterator()
+        while (it.hasNext) {
+          val sch = it.next()
+          avroSchemaMapping = avroSchemaMapping + (sch.getDoc → s"${sch.getNamespace}.${sch.getName}")
+        }
+      }
+
+    var domainEvents: Set[String] = Set.empty
+    val iter                      = cfg.entrySet().iterator()
+    while (iter.hasNext) {
+      val kv = iter.next()
+      if (kv.getValue.render() == serializerName) {
+        val k = kv.getKey.replace("\"", "")
+        if (k.contains("User"))
+          domainEvents = domainEvents + k
+      }
+    }
+
+    domainEvents.map(domainEvent ⇒ (domainEvent, avroSchemaMapping(domainEvent))).toMap
+  }
 
   /*
   def validateSerializationBindings(cfg: Config): Unit = {

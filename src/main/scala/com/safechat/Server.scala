@@ -121,8 +121,8 @@ object Server extends Ops {
     //check dispatcher name
     cfg.getObject(Dispatcher)
 
-    //check serialization bindings
-    //AvroSchemaRegistry.validateSerializationBindings(cfg)
+    val eventMapping =
+      AvroSchemaRegistry.eventTypesMapping(cfg.getConfig("akka.actor.serialization-bindings"))
 
     val system =
       akka.actor.typed.ActorSystem[Nothing](guardian(akkaExternalHostName, httpPort), AkkaSystemName, cfg)
@@ -131,14 +131,21 @@ object Server extends Ops {
       cfg,
       httpPort,
       akkaExternalHostName,
-      cfg.getStringList("akka.cluster.seed-nodes").asScala.mkString(", ")
+      cfg.getStringList("akka.cluster.seed-nodes").asScala.mkString(", "),
+      eventMapping
     )
     system.log.info(greeting)
 
     akka.management.cluster.bootstrap.ClusterBootstrap(system.toClassic).start()
   }
 
-  def showGreeting(cfg: Config, httpPort: Int, host: String, seedNodes: String): String = {
+  def showGreeting(
+    cfg: Config,
+    httpPort: Int,
+    host: String,
+    seedNodes: String,
+    eventMapping: Map[String, String]
+  ): String = {
     //cfg.getDuration("akka.http.server.idle-timeout")
     //cfg.getDuration("akka.http.host-connection-pool.idle-timeout")
 
@@ -158,6 +165,12 @@ object Server extends Ops {
       .append(
         s"  Journal partition size: ${cfg.getInt("akka.persistence.cassandra.journal.target-partition-size")} ★ ★ ★"
       )
+      .append('\n')
+      .append("★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★  Mapping ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★")
+      .append('\n')
+      .append(eventMapping.mkString("\n"))
+      .append('\n')
+      .append("★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★")
       .append('\n')
       .append(s"★ ★ ★   Environment: [TZ:${TimeZone.getDefault.getID}. Start time:${LocalDateTime.now}]  ★ ★ ★")
       .append('\n')

@@ -59,7 +59,7 @@ final case class DisconnectUser(chatId: String, user: String, replyTo: ActorRef[
 
 sealed trait ChatRoomEvent
 final case class UserJoined(login: String, pubKey: String) extends ChatRoomEvent
-final case class TextAdded(originator: String, receiver: String, content: String, when: Long, tz: String)
+final case class UserTextAdded(originator: String, receiver: String, content: String, when: Long, tz: String)
     extends ChatRoomEvent
 final case class UserDisconnected(login: String) extends ChatRoomEvent
 

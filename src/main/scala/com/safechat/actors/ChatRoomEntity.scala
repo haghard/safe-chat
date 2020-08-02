@@ -21,7 +21,7 @@ import scala.concurrent.duration._
 
 object ChatRoomEntity {
 
-  val snapshotEveryN = 100       //TODO should be configurable
+  val snapshotEveryN = 300       //TODO should be configurable
   val hubInitTimeout = 3.seconds //TODO should be configurable
 
   val wakeUpUserName   = "John Doe"
@@ -212,7 +212,7 @@ object ChatRoomEntity {
         else
           Effect
             .persist(
-              TextAdded(cmd.sender, cmd.receiver, cmd.content, System.currentTimeMillis, TimeZone.getDefault.getID)
+              UserTextAdded(cmd.sender, cmd.receiver, cmd.content, System.currentTimeMillis, TimeZone.getDefault.getID)
             )
             .thenReply(cmd.replyTo) { updatedState: ChatRoomState ⇒
               ctx.log.info("online:[{}]", updatedState.online.mkString(","))
@@ -248,7 +248,7 @@ object ChatRoomEntity {
             regUsers = state.regUsers + (login → pubKey),
             online = state.online + login
           )
-      case TextAdded(originator, receiver, content, when, tz) ⇒
+      case UserTextAdded(originator, receiver, content, when, tz) ⇒
         val zoneDT = ZonedDateTime.ofInstant(Instant.ofEpochMilli(when), ZoneId.of(tz))
         state.recentHistory.add(s"[${frmtr.format(zoneDT)}] - $originator -> $receiver:$content")
         state
