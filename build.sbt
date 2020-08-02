@@ -2,7 +2,7 @@ import sbt._
 import sbtdocker.ImageName
 
 val projectName   = "safe-chat"
-val Version       = "0.1.0"
+val Version       = "0.2.0"
 
 val akkaVersion = "2.6.8"
 val AkkaManagement = "1.0.8"
@@ -187,9 +187,6 @@ libraryDependencies ++= Seq(
   ("com.typesafe.akka" %% "akka-persistence-cassandra" % "1.0.1") //-RC1
     .excludeAll(ExclusionRule(organization = "io.netty", name="netty-all")), //to exclude netty-all-4.1.39.Final.jar
 
-  //a module that provides HTTP endpoints for introspecting and managing Akka clusters
-  //"com.lightbend.akka.management" %% "akka-management-cluster-http" % "1.0.8",
-
   "com.typesafe.akka"             %% "akka-discovery"                    % akkaVersion,
   //"com.lightbend.akka.discovery"  %% "akka-discovery-kubernetes-api"     % AkkaManagement,
   "com.lightbend.akka.management" %% "akka-management-cluster-bootstrap" % AkkaManagement,
@@ -205,10 +202,6 @@ libraryDependencies ++= Seq(
   //"eu.timepit" %% "refined"                 % "0.9.14",
   //"eu.timepit" %% "refined-shapeless"       % "0.9.14",
 
-
-  //https://scalalandio.github.io/chimney/
-  "io.scalaland"            %% "chimney"      % "0.5.3",
-
   "commons-codec" % "commons-codec" % "1.11",
   "org.scalatest" %% "scalatest" % "3.2.0" % Test,
   "com.typesafe.akka" %% "akka-http-testkit" % akkaHttpVersion % Test,
@@ -218,9 +211,9 @@ libraryDependencies ++= Seq(
   ("com.lihaoyi" % "ammonite" % "2.2.0" % "test").cross(CrossVersion.full)
 )
 
-//workaround for sbt 1.3.0 https://github.com/sbt/sbt/issues/5075
 //comment out for test:run
-//Compile / run / fork := true
+
+Compile / run / fork := true
 
 scalafmtOnCompile := true
 

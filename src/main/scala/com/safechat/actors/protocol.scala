@@ -57,6 +57,12 @@ final case class PostText(
 
 final case class DisconnectUser(chatId: String, user: String, replyTo: ActorRef[ChatRoomReply]) extends UserCmdWithReply
 
+sealed trait ChatRoomEvent
+final case class UserJoined(login: String, pubKey: String) extends ChatRoomEvent
+final case class TextAdded(originator: String, receiver: String, content: String, when: Long, tz: String)
+    extends ChatRoomEvent
+final case class UserDisconnected(login: String) extends ChatRoomEvent
+
 final case class ChatRoomHub(sinkHub: Sink[Message, NotUsed], srcHub: Source[Message, NotUsed], ks: UniqueKillSwitch)
 
 final case class ChatRoomState(
@@ -66,15 +72,14 @@ final case class ChatRoomState(
   hub: Option[ChatRoomHub] = None
 ) {
 
-  import com.safechat.persistent.domain.MsgEnvelope
-  def applyCmd(cmd: UserCmd): ReplyEffect[MsgEnvelope, ChatRoomState] =
+  def applyCmd(cmd: UserCmd): ReplyEffect[ChatRoomEvent, ChatRoomState] =
     cmd match {
-      case m: JoinUser       ⇒ Effect.noReply
-      case m: PostText       ⇒ Effect.noReply
-      case m: DisconnectUser ⇒ Effect.noReply
-      case m: PingShard      ⇒ Effect.noReply
+      case c: JoinUser       ⇒ Effect.persist(UserJoined(c.user, c.pubKey)).thenNoReply()
+      case c: PostText       ⇒ Effect.noReply
+      case c: DisconnectUser ⇒ Effect.noReply
+      case c: PingShard      ⇒ Effect.noReply
     }
 
-  def applyEvn(env: MsgEnvelope): ChatRoomState = ???
+  def applyEvn(event: ChatRoomEvent): ChatRoomState = ???
 
 }

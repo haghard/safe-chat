@@ -4,7 +4,7 @@ package com.safechat.actors
 
 import java.time.format.DateTimeFormatter
 import java.time.{Instant, ZoneId, ZonedDateTime}
-import java.util.{TimeZone, UUID}
+import java.util.TimeZone
 
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
 import akka.actor.typed._
@@ -15,7 +15,6 @@ import akka.persistence.typed._
 import akka.stream.scaladsl.{BroadcastHub, Flow, Keep, MergeHub, Source, StreamRefs}
 import akka.stream.{KillSwitches, StreamRefAttributes}
 import akka.util.Timeout
-import com.safechat.persistent.domain.{Disconnected, Joined, MsgEnvelope, TextAdded}
 import com.safechat.rest.WsScaffolding
 
 import scala.concurrent.duration._
@@ -23,7 +22,7 @@ import scala.concurrent.duration._
 object ChatRoomEntity {
 
   val snapshotEveryN = 100       //TODO should be configurable
-  val hubInitTimeout = 2.seconds //TODO should be configurable
+  val hubInitTimeout = 3.seconds //TODO should be configurable
 
   val wakeUpUserName   = "John Doe"
   val wakeUpEntityName = "dungeon"
@@ -62,15 +61,15 @@ object ChatRoomEntity {
       implicit val actorCtx = ctx
 
       //fp style
-      /*EventSourcedBehavior.withEnforcedReplies[UserCmd, MsgEnvelope, FullChatState](
+      EventSourcedBehavior.withEnforcedReplies[UserCmd, ChatRoomEvent, ChatRoomState](
         PersistenceId(entityCtx.entityTypeKey.name, entityCtx.entityId),
         empty,
         (state, cmd) ⇒ state.applyCmd(cmd),
         (state, event) ⇒ state.applyEvn(event)
-      )*/
+      )
 
       EventSourcedBehavior
-        .withEnforcedReplies[UserCmdWithReply, MsgEnvelope, ChatRoomState](
+        .withEnforcedReplies[UserCmdWithReply, ChatRoomEvent, ChatRoomState](
           //PersistenceId.ofUniqueId(entityId),
           PersistenceId(entityCtx.entityTypeKey.name, entityCtx.entityId),
           ChatRoomState(),
@@ -178,18 +177,11 @@ object ChatRoomEntity {
 
   def onCommand(ctx: ActorContext[UserCmdWithReply])(state: ChatRoomState, cmd: UserCmdWithReply)(implicit
     sys: ActorSystem[Nothing]
-  ): ReplyEffect[MsgEnvelope, ChatRoomState] =
+  ): ReplyEffect[ChatRoomEvent, ChatRoomState] =
     cmd match {
       case m: JoinUser ⇒
         Effect
-          .persist(
-            new MsgEnvelope(
-              UUID.randomUUID.toString,
-              System.currentTimeMillis,
-              TimeZone.getDefault.getID,
-              Joined.newBuilder.setLogin(m.user).setPubKey(m.pubKey).build()
-            )
-          )
+          .persist(UserJoined(m.user, m.pubKey))
           .thenReply(m.replyTo) { updateState: ChatRoomState ⇒ //That's new state after applying the event
             //ctx.log.info("JoinUser attempt {}", m.user)
 
@@ -220,12 +212,7 @@ object ChatRoomEntity {
         else
           Effect
             .persist(
-              new MsgEnvelope(
-                UUID.randomUUID.toString,
-                System.currentTimeMillis,
-                TimeZone.getDefault.getID,
-                new TextAdded(cmd.sender, cmd.receiver, cmd.content)
-              )
+              TextAdded(cmd.sender, cmd.receiver, cmd.content, System.currentTimeMillis, TimeZone.getDefault.getID)
             )
             .thenReply(cmd.replyTo) { updatedState: ChatRoomState ⇒
               ctx.log.info("online:[{}]", updatedState.online.mkString(","))
@@ -234,62 +221,44 @@ object ChatRoomEntity {
 
       case cmd: DisconnectUser ⇒
         Effect
-          .persist(
-            new MsgEnvelope(
-              UUID.randomUUID.toString,
-              System.currentTimeMillis,
-              TimeZone.getDefault.getID,
-              Disconnected.newBuilder.setLogin(cmd.user).build
-            )
-          )
+          .persist(UserDisconnected(cmd.user))
           .thenReply(cmd.replyTo) { updatedState: ChatRoomState ⇒
             ctx.log.info("{} disconnected - online:[{}]", cmd.user, updatedState.online.mkString(""))
             DisconnectedReply(cmd.chatId, cmd.user)
           }
     }
 
-  def onEvent(persistenceId: String)(state: ChatRoomState, event: MsgEnvelope)(implicit
+  def onEvent(persistenceId: String)(state: ChatRoomState, event: ChatRoomEvent)(implicit
     sys: ActorSystem[Nothing],
     ctx: ActorContext[UserCmdWithReply]
   ): ChatRoomState =
-    //sys.log.warn("onEvent: {}", event.getPayload)
-    if (event.getPayload.isInstanceOf[Joined]) {
-      val ev = event.getPayload.asInstanceOf[Joined]
-
-      //Hub hasn't been created yet
-      if (state.online.isEmpty && state.hub.isEmpty)
-        if (ev.getLogin.toString == ChatRoomEntity.wakeUpUserName)
-          state
+    event match {
+      case UserJoined(login, pubKey) ⇒
+        if (state.online.isEmpty && state.hub.isEmpty)
+          if (login == ChatRoomEntity.wakeUpUserName)
+            state
+          else
+            state.copy(
+              regUsers = state.regUsers + (login → pubKey),
+              online = Set(login),
+              hub = Some(createPubSub(persistenceId, ctx.self.narrow[PostText]))
+            )
         else
           state.copy(
-            regUsers = state.regUsers + (ev.getLogin.toString → ev.getPubKey.toString),
-            online = Set(ev.getLogin.toString),
-            hub = Some(createPubSub(persistenceId, ctx.self.narrow[PostText]))
+            regUsers = state.regUsers + (login → pubKey),
+            online = state.online + login
           )
-      else
-        state.copy(
-          regUsers = state.regUsers + (ev.getLogin.toString → ev.getPubKey.toString),
-          online = state.online + ev.getLogin.toString
-        )
-
-    } else if (event.getPayload.isInstanceOf[com.safechat.persistent.domain.Disconnected])
-      state.copy(
-        online = state.online - event.getPayload
-            .asInstanceOf[com.safechat.persistent.domain.Disconnected]
-            .getLogin
-            .toString
-      )
-    else if (event.getPayload.isInstanceOf[TextAdded]) {
-      val ev     = event.getPayload.asInstanceOf[TextAdded]
-      val zoneDT = ZonedDateTime.ofInstant(Instant.ofEpochMilli(event.getWhen), ZoneId.of(event.getTz.toString))
-      state.recentHistory.add(s"[${frmtr.format(zoneDT)}] - ${ev.getUser} -> ${ev.getReceiver}:${ev.getText}")
-      state
-    } else
-      state
+      case TextAdded(originator, receiver, content, when, tz) ⇒
+        val zoneDT = ZonedDateTime.ofInstant(Instant.ofEpochMilli(when), ZoneId.of(tz))
+        state.recentHistory.add(s"[${frmtr.format(zoneDT)}] - $originator -> $receiver:$content")
+        state
+      case UserDisconnected(login) ⇒
+        state.copy(online = state.online - login)
+    }
 
   def snapshotPredicate(
     ctx: ActorContext[UserCmdWithReply]
-  )(state: ChatRoomState, event: MsgEnvelope, id: Long): Boolean = {
+  )(state: ChatRoomState, event: ChatRoomEvent /*MsgEnvelope*/, id: Long): Boolean = {
     val ifSnap = id > 0 && id % snapshotEveryN == 0
 
     if (ifSnap)

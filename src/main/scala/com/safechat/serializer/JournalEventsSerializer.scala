@@ -5,8 +5,8 @@ package serializer
 
 import java.io.{ByteArrayOutputStream, NotSerializableException}
 import java.util
+import java.util.{TimeZone, UUID}
 
-import com.safechat.persistent.domain._
 import akka.serialization.SerializerWithStringManifest
 import org.apache.avro.io.{BinaryEncoder, DecoderFactory, EncoderFactory}
 import org.apache.avro.specific.{SpecificDatumReader, SpecificDatumWriter}
@@ -14,6 +14,7 @@ import org.apache.avro.specific.{SpecificDatumReader, SpecificDatumWriter}
 import scala.util.Using
 import scala.util.Using.Releasable
 import JournalEventsSerializer._
+import com.safechat.actors.{ChatRoomEvent, TextAdded, UserDisconnected, UserJoined}
 import org.apache.avro.Schema
 
 import scala.reflect.ClassTag
@@ -51,12 +52,15 @@ object JournalEventsSerializer {
   val SEP         = ":"
   val subEventSEP = "/"
 
+  val EVENT_PREF                = "EVENT_"
+  val STATE_PREF                = "STATE_"
+
   implicit object BinaryEncoderIsReleasable extends Releasable[BinaryEncoder] {
     def release(resource: BinaryEncoder): Unit =
       resource.flush
   }
 
-  def fromByteArray[T](bts: Array[Byte], writerSchema: Schema, readerSchema: Schema): T = {
+  def fromAvroBytes[T](bts: Array[Byte], writerSchema: Schema, readerSchema: Schema): T = {
     val reader  = new SpecificDatumReader[T](writerSchema, readerSchema)
     val decoder = DecoderFactory.get.binaryDecoder(bts, null)
     reader.read(null.asInstanceOf[T], decoder)
@@ -80,25 +84,33 @@ final class JournalEventsSerializer extends SerializerWithStringManifest {
 
   val (activeSchemaHash, schemaMap) = AvroSchemaRegistry()
 
-
-
   /**
     * Possible inputs:
-    *   com.safechat.persistent.domain.MsgEnvelope
+    *   com.safechat.actors.ChatRoomEvent
     *   com.safechat.actors.ChatRoomState
+    *
+    *   Mapping between domain events and persistent model
     */
   override def manifest(o: AnyRef): String =
+    //Here we do mapping between domain events and persistent model
     o match {
-      case envelope: MsgEnvelope ⇒
-        o.getClass.getName + subEventSEP + envelope.getPayload.getClass.getSimpleName + SEP + activeSchemaHash
+      case ev: ChatRoomEvent ⇒
+        ev match {
+          case _: UserJoined ⇒
+            EVENT_PREF + classOf[com.safechat.persistent.domain.Joined].getName + SEP + activeSchemaHash
+          case _: TextAdded ⇒
+            EVENT_PREF + classOf[com.safechat.persistent.domain.TextAdded].getName + SEP + activeSchemaHash
+          case _: UserDisconnected ⇒
+            EVENT_PREF + classOf[com.safechat.persistent.domain.Disconnected].getName + SEP + activeSchemaHash
+        }
       case _: com.safechat.actors.ChatRoomState ⇒
         //swap up domain ChatRoomState with persistent ChatRoomState from schema
-        classOf[com.safechat.persistent.state.ChatRoomState].getName + SEP + activeSchemaHash
+        STATE_PREF + classOf[com.safechat.persistent.state.ChatRoomState].getName + SEP + activeSchemaHash
     }
 
   /**
     * Possible inputs:
-    *   com.safechat.persistent.domain.MsgEnvelope
+    *   com.safechat.actors.ChatRoomEvent
     *   com.safechat.actors.ChatRoomState
     */
   override def toBinary(o: AnyRef): Array[Byte] = {
@@ -119,21 +131,60 @@ final class JournalEventsSerializer extends SerializerWithStringManifest {
           }
           out.toByteArray
         }
-      case env: MsgEnvelope ⇒
-        toByteArray[MsgEnvelope](env, schema)
+
+      case e: ChatRoomEvent ⇒
+        val env = e match {
+          case e: UserJoined ⇒
+            new com.safechat.persistent.domain.MsgEnvelope(
+              UUID.randomUUID.toString,
+              System.currentTimeMillis,
+              TimeZone.getDefault.getID,
+              com.safechat.persistent.domain.Joined.newBuilder.setLogin(e.login).setPubKey(e.pubKey).build()
+            )
+          case TextAdded(originator, receiver, content, when, tz) ⇒
+            new com.safechat.persistent.domain.MsgEnvelope(
+              UUID.randomUUID.toString,
+              when,
+              tz,
+              new com.safechat.persistent.domain.TextAdded(originator, receiver, content)
+            )
+          case e: UserDisconnected ⇒
+            new com.safechat.persistent.domain.MsgEnvelope(
+              UUID.randomUUID.toString,
+              System.currentTimeMillis,
+              TimeZone.getDefault.getID,
+              com.safechat.persistent.domain.Disconnected.newBuilder.setLogin(e.login).build
+            )
+        }
+        toByteArray[com.safechat.persistent.domain.MsgEnvelope](env, schema)
     }
   }
 
   override def fromBinary(bytes: Array[Byte], manifest: String): AnyRef = {
     val writerSchemaKey = manifest.split(SEP)(1)
-
     //println(s"fromBinary Schemas:[writer:$writerSchemaKey reader:$activeSchemaHash]")
+
     val writerSchema = schemaMap(writerSchemaKey)
     val readerSchema = schemaMap(activeSchemaHash)
-    if (manifest.startsWith(classOf[MsgEnvelope].getName))
-      fromByteArray[MsgEnvelope](bytes, writerSchema, readerSchema)
-    else if (manifest.startsWith(classOf[com.safechat.persistent.state.ChatRoomState].getName)) {
-      val state    = fromByteArray[com.safechat.persistent.state.ChatRoomState](bytes, writerSchema, readerSchema)
+
+    if (manifest.startsWith(EVENT_PREF)) {
+      val envelope = fromAvroBytes[com.safechat.persistent.domain.MsgEnvelope](bytes, writerSchema, readerSchema)
+      if (envelope.getPayload.isInstanceOf[com.safechat.persistent.domain.Joined]) {
+        val event = envelope.getPayload.asInstanceOf[com.safechat.persistent.domain.Joined]
+        UserJoined(event.getLogin.toString, event.getPubKey.toString)
+      } else if (envelope.getPayload.isInstanceOf[com.safechat.persistent.domain.TextAdded]) {
+        val event = envelope.getPayload.asInstanceOf[com.safechat.persistent.domain.TextAdded]
+        TextAdded(event.getUser.toString, event.getReceiver.toString, event.getText.toString, envelope.getWhen, envelope.getTz.toString)
+      } else if (envelope.getPayload.isInstanceOf[com.safechat.persistent.domain.Disconnected]) {
+        val event = envelope.getPayload.asInstanceOf[com.safechat.persistent.domain.Disconnected]
+        UserDisconnected(event.getLogin.toString)
+      } else
+        notSerializable(
+          s"Deserialization for event $manifest not supported. Check fromBinary method in ${this.getClass.getName} class."
+        )
+
+    } else if (manifest.startsWith(STATE_PREF)) {
+      val state    = fromAvroBytes[com.safechat.persistent.state.ChatRoomState](bytes, writerSchema, readerSchema)
       var userKeys = Map.empty[String, String]
       state.getRegisteredUsers.forEach((login, pubKey) ⇒ userKeys = userKeys + (login.toString → pubKey.toString))
 

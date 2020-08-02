@@ -5,7 +5,6 @@ package com.safechat.serializer
 import org.apache.avro.Schema
 import java.io.{File, FileInputStream}
 
-import com.typesafe.config.Config
 import org.apache.commons.codec.digest.DigestUtils
 
 object AvroSchemaRegistry {
@@ -38,6 +37,7 @@ object AvroSchemaRegistry {
   private val serializerName = "\"journalSerializer\""
   private val sectionName    = "akka.actor.serialization-bindings"
 
+  /*
   def validateSerializationBindings(cfg: Config): Unit = {
 
     //import eu.timepit.refined._
@@ -67,5 +67,5 @@ object AvroSchemaRegistry {
         s"Serialization bindings error. Should be:[${classes2Persist.mkString(",")}] Actual:[${bindingsFromConfig.mkString(",")}]"
       )
 
-  }
+  }*/
 }

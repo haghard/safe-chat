@@ -122,7 +122,7 @@ object Server extends Ops {
     cfg.getObject(Dispatcher)
 
     //check serialization bindings
-    AvroSchemaRegistry.validateSerializationBindings(cfg)
+    //AvroSchemaRegistry.validateSerializationBindings(cfg)
 
     val system =
       akka.actor.typed.ActorSystem[Nothing](guardian(akkaExternalHostName, httpPort), AkkaSystemName, cfg)
