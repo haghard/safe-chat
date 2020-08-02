@@ -65,7 +65,7 @@ object JournalEventsSerializer {
     reader.read(null.asInstanceOf[T], decoder)
   }
 
-  def toByteArray[T: ClassTag](ev: T, schema: Schema): Array[Byte] =
+  def toAvroBytes[T: ClassTag](ev: T, schema: Schema): Array[Byte] =
     Using.resource(new ByteArrayOutputStream()) { baos ⇒
       Using.resource(EncoderFactory.get.binaryEncoder(baos, null)) { enc ⇒
         new SpecificDatumWriter[T](schema).write(ev, enc)
@@ -142,7 +142,7 @@ object JournalEventsSerializer {
               com.safechat.persistent.domain.UserDisconnected.newBuilder.setLogin(e.originator).build
             )
         }
-        toByteArray[com.safechat.persistent.domain.MsgEnvelope](env, schema)
+        toAvroBytes[com.safechat.persistent.domain.MsgEnvelope](env, schema)
     }
   }
 
@@ -201,7 +201,7 @@ class JournalEventsSerializer(val system: ExtendedActorSystem) extends Serialize
 
   val (activeSchemaHash, schemaMap) = AvroSchemaRegistry()
 
-  // Mapping from domain event to avro class that's being persisted
+  // Mapping from domain event to avro class that's being used for persistence
   val mapping =
     AvroSchemaRegistry
       .eventTypesMapping(system.settings.config.getConfig("akka.actor.serialization-bindings"))

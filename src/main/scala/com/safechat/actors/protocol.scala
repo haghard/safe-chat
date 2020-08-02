@@ -33,7 +33,6 @@ final case class TextPostedReply(chatId: String, seqNum: Long, content: String) 
 
 final case class DisconnectedReply(chatId: String, user: String) extends ChatRoomReply
 
-
 sealed trait UserCmd {
   def chatId: String
 }

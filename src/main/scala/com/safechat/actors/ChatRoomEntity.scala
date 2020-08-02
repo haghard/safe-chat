@@ -38,19 +38,20 @@ object ChatRoomEntity {
   def persist(persistenceId: String, entity: ActorRef[PostText])(implicit
     persistTimeout: Timeout
   ): Flow[Message, ChatRoomReply, akka.NotUsed] = {
-    def persistFlow = akka.stream.typed.scaladsl.ActorFlow.ask[Message, PostText, ChatRoomReply](writeParallelism)(entity) {
-      (msg: Message, replyTo: ActorRef[ChatRoomReply]) ⇒
-        msg match {
-          case TextMessage.Strict(text) ⇒
-            val segments = text.split(MSG_SEP)
-            if (text.split(MSG_SEP).size == 3)
-              PostText(persistenceId, segments(0).trim, segments(1).trim, segments(2).trim, replyTo)
-            else
-              PostText(persistenceId, "null", "null", s"Message error. Wrong format $text", replyTo)
-          case other ⇒
-            throw new Exception(s"Unexpected message type ${other.getClass.getName}")
-        }
-    }
+    def persistFlow =
+      akka.stream.typed.scaladsl.ActorFlow.ask[Message, PostText, ChatRoomReply](writeParallelism)(entity) {
+        (msg: Message, replyTo: ActorRef[ChatRoomReply]) ⇒
+          msg match {
+            case TextMessage.Strict(text) ⇒
+              val segments = text.split(MSG_SEP)
+              if (text.split(MSG_SEP).size == 3)
+                PostText(persistenceId, segments(0).trim, segments(1).trim, segments(2).trim, replyTo)
+              else
+                PostText(persistenceId, "null", "null", s"Message error. Wrong format $text", replyTo)
+            case other ⇒
+              throw new Exception(s"Unexpected message type ${other.getClass.getName}")
+          }
+      }
 
     //TODO: maybe would be better to fail instead of retrying
     RestartFlow.withBackoff(1.second, 10.seconds, 0.3)(() ⇒ persistFlow)
