@@ -20,6 +20,11 @@ import scala.util.Using.Releasable
 
 /*
 
+
+Schema evolution allows you to update the schema used to write new data, while maintaining backwards compatibility with the schema(s) of your old data.
+Then you can read it all together, as if all of the data has one schema. Of course there are precise rules governing the changes
+allowed, to maintain compatibility.
+
 Avro provides full compatibility support.
 Backward compatibility is necessary for reading the old version of events.
 Forward compatibility is required for rolling updates when at the same time old and new versions of events
