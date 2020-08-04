@@ -1,7 +1,6 @@
 // Copyright (c) 2019-2020 Vadim Bondarev. All rights reserved.
 
-package com.safechat
-package serializer
+package akka.io
 
 import java.io.{ByteArrayOutputStream, NotSerializableException}
 import java.nio.ByteBuffer
@@ -11,6 +10,7 @@ import java.util.{TimeZone, UUID}
 import akka.actor.ExtendedActorSystem
 import akka.serialization.{ByteBufferSerializer, SerializerWithStringManifest}
 import com.safechat.actors.{ChatRoomEvent, UserDisconnected, UserJoined, UserTextAdded}
+import com.safechat.serializer.AvroSchemaRegistry
 import org.apache.avro.Schema
 import org.apache.avro.io.{BinaryEncoder, DecoderFactory, EncoderFactory}
 import org.apache.avro.specific.{SpecificDatumReader, SpecificDatumWriter}
@@ -201,39 +201,58 @@ object JournalEventsSerializer {
   }
 }
 
-class JournalEventsSerializer(val system: ExtendedActorSystem)
+//https://doc.akka.io/docs/akka/current/remoting-artery.html#bytebuffer-based-serialization
+final class JournalEventsSerializer(val system: ExtendedActorSystem)
     extends SerializerWithStringManifest
     with ByteBufferSerializer {
 
   override val identifier = 99999
 
+  private val (activeSchemaHash, schemaMap) = AvroSchemaRegistry()
+
   private val frameSize =
     system.settings.config.getBytes("akka.remote.artery.advanced.maximum-frame-size").toInt
 
-  val (activeSchemaHash, schemaMap) = AvroSchemaRegistry()
-
   // Mapping from domain event to avro class that's being used for persistence
-  val mapping =
+  private val mapping =
     AvroSchemaRegistry
       .eventTypesMapping(system.settings.config.getConfig("akka.actor.serialization-bindings"))
 
-  override def manifest(obj: AnyRef): String = JournalEventsSerializer.manifest(obj, activeSchemaHash, mapping)
+  // you need to know the maximum size in bytes of the serialized messages
+  private val bufferPool =
+    new akka.io.DirectByteBufferPool(defaultBufferSize = frameSize, maxPoolEntries = 64)
 
+  override def manifest(obj: AnyRef): String =
+    JournalEventsSerializer.manifest(obj, activeSchemaHash, mapping)
+
+  override def toBinary(o: AnyRef): Array[Byte] = {
+    val buf = bufferPool.acquire()
+    try {
+      toBinary(o, buf)
+      buf.flip()
+      val bytes = new Array[Byte](buf.remaining)
+      buf.get(bytes)
+      bytes
+    } finally bufferPool.release(buf)
+  }
+
+  /*
   override def toBinary(obj: AnyRef): Array[Byte] = {
-    // in production code, acquire this from a BufferPool
-
+    //in production code, acquire this from a BufferPool
     val buf = ByteBuffer.allocate(frameSize)
-
     toBinary(obj, buf)
     buf.flip()
     val bytes = new Array[Byte](buf.remaining)
     buf.get(bytes)
     bytes
-    //JournalEventsSerializer.toBinary(obj, activeSchemaHash, schemaMap)
-  }
+  }*/
 
-  override def toBinary(obj: AnyRef, buf: ByteBuffer): Unit =
-    buf.put(JournalEventsSerializer.toBinary(obj, activeSchemaHash, schemaMap))
+  override def toBinary(obj: AnyRef, buf: ByteBuffer): Unit = {
+    val bts = JournalEventsSerializer.toBinary(obj, activeSchemaHash, schemaMap)
+    if (bts.size > frameSize)
+      JournalEventsSerializer.illegalArgument(s"Oversized payload: Limit:$frameSize Actual:${bts.size}")
+    else buf.put(bts)
+  }
 
   // Implement this method for compatibility with `SerializerWithStringManifest`.
   override def fromBinary(bytes: Array[Byte], manifest: String): AnyRef =
