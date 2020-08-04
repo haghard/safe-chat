@@ -282,9 +282,6 @@ DData example:            https://github.com/akka/akka-samples/tree/2.6/akka-sam
 CQRS ShoppingCart example: read-side is implemented using Akka Projections: https://github.com/akka/akka-samples/tree/2.6/akka-sample-cqrs-scala
 
 
-## Git
-
-git tag -a v0.1.0 -m "v0.1.0" &&  git push --tags
 
 ```bash
 
@@ -312,7 +309,7 @@ https://github.com/apache/cassandra/blob/trunk/src/java/org/apache/cassandra/dht
 
 ###
 
-http GET :8080/cluster/members
+http GET :8558/cluster/members
 
 Find the PID for the unreachable node:
 > lsof -i :2551 | grep LISTEN | awk '{print $2}'

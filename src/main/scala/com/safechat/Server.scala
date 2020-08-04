@@ -101,19 +101,16 @@ object Server extends Ops {
       val managementConf =
         s"""
           |akka.management {
-          |
+          |  http {
+          |     host = $akkaExternalHostName
+          |     port = 8558
+          |  }
           |  cluster {
-          |
           |     bootstrap {
           |       contact-point-discovery {
           |         # config|kubernetes-api
           |         discovery-method = $discoveryMethod
           |       }
-          |     }
-          |
-          |     http {
-          |       host = $akkaExternalHostName
-          |       port = $akkaPort
           |     }
           |  }
           |}
