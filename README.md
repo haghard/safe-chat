@@ -34,7 +34,7 @@ sbt second
 
 ```bash
 
-docker run --net="host" -d -p 2551:2551 -p 8080:8080 -e HOSTNAME=10.130.0.22 -e HTTP_PORT=8080 -e AKKA_PORT=2551 -e CASSANDRA=84.201.150.26:9042,84.201.146.112:9042 -e SEEDS=10.130.0.22:2551 -e DISCOVERY_BACKEND=config -e CAS_USER=... -e CAS_PWS=... -m 700MB haghard/safe-chat:0.1.0
+docker run --net="host" -d -p 2551:2551 -p 8080:8080 -e HOSTNAME=10.130.0.22 -e HTTP_PORT=8080 -e AKKA_PORT=2551 -e CASSANDRA=84.201.150.26:9042,84.201.146.112:9042 -e SEEDS=10.130.0.22:2551 -e DISCOVERY_METHOD=config -e CAS_USER=... -e CAS_PWS=... -m 700MB haghard/safe-chat:0.1.0
 
 
 ```

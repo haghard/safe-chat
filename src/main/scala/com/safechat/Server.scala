@@ -48,8 +48,8 @@ object Server extends Ops {
 
     val confPath = sys.props.get("CONFIG").getOrElse(throw new Exception("Env var CONFIG is expected"))
     val env      = sys.props.get("ENV").getOrElse(throw new Exception("Env var ENV is expected"))
-    val discoveryBackend =
-      sys.props.get("DISCOVERY_BACKEND").getOrElse(throw new Exception("Env var DISCOVERY_BACKEND is expected"))
+    val discoveryMethod =
+      sys.props.get("DISCOVERY_METHOD").getOrElse(throw new Exception("Env var DISCOVERY_METHOD is expected"))
 
     val akkaExternalHostName = sys.props
       .get("HOSTNAME")
@@ -98,6 +98,27 @@ object Server extends Ops {
     }
 
     val cfg: Config = {
+      val managementConf =
+        s"""
+          |akka.management {
+          |
+          |  cluster {
+          |
+          |     bootstrap {
+          |       contact-point-discovery {
+          |         # config|kubernetes-api
+          |         discovery-method = $discoveryMethod
+          |       }
+          |     }
+          |
+          |     http {
+          |       host = $akkaExternalHostName
+          |       port = $akkaPort
+          |     }
+          |  }
+          |}
+          |""".stripMargin
+
       val general = ConfigFactory.empty()
       val local   = dbConf.fold(general)(c ⇒ general.withFallback(c))
       akkaSeeds
@@ -106,13 +127,7 @@ object Server extends Ops {
         .withFallback(ConfigFactory.parseString(s"akka.remote.artery.canonical.bind.port=$akkaPort"))
         .withFallback(ConfigFactory.parseString(s"akka.remote.artery.canonical.hostname=$akkaExternalHostName"))
         .withFallback(ConfigFactory.parseString(s"akka.remote.artery.canonical.port=$akkaPort"))
-        .withFallback(ConfigFactory.parseString(s"akka.management.cluster.http.host=$akkaExternalHostName"))
-        .withFallback(ConfigFactory.parseString(s"akka.management.cluster.http.port=$akkaPort"))
-        .withFallback(
-          ConfigFactory.parseString(
-            s"akka.management.cluster.bootstrap.contact-point-discovery.discovery-method=$discoveryBackend"
-          )
-        )
+        .withFallback(ConfigFactory.parseString(managementConf))
         .withFallback(ConfigFactory.parseFile(configFile).resolve())
         .withFallback(pureconfig.ConfigSource.default.loadOrThrow[Config]) //.at(AkkaSystemName)
       //.withFallback(ConfigFactory.load())
@@ -136,6 +151,10 @@ object Server extends Ops {
     )
     system.log.info(greeting)
 
+    // Akka Management hosts the HTTP routes used by bootstrap
+    akka.management.scaladsl.AkkaManagement.get(system).start()
+
+    // Starting the bootstrap process needs to be done explicitly
     akka.management.cluster.bootstrap.ClusterBootstrap(system.toClassic).start()
   }
 
