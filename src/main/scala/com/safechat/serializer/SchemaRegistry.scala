@@ -10,7 +10,7 @@ import org.apache.commons.codec.digest.DigestUtils
 
 import scala.jdk.CollectionConverters._
 
-object AvroSchemaRegistry {
+object SchemaRegistry {
 
   //private val activeSchema: File = new File("./src/main/avro/ChatRoomEventsV1.avsc")
   private val activeSchema: File = new File("avro/ChatRoomEventsV1.avsc")
