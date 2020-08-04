@@ -187,6 +187,12 @@ libraryDependencies ++= Seq(
   ("com.typesafe.akka" %% "akka-persistence-cassandra" % "1.0.1") //-RC1
     .excludeAll(ExclusionRule(organization = "io.netty", name="netty-all")), //to exclude netty-all-4.1.39.Final.jar
 
+
+  //https://github.com/lightbend/akka-cluster-operator
+  //https://developer.lightbend.com/guides/openshift-deployment/lagom/forming-a-cluster.html#akka-management-http
+  //Akka management HTTP provides an HTTP API for querying the status of the Akka cluster, used both by the bootstrap process,
+  // as well as health checks to ensure requests don’t get routed to your pods until the pods have joined the cluster.
+
   "com.typesafe.akka"             %% "akka-discovery"                    % akkaVersion,
   //"com.lightbend.akka.discovery"  %% "akka-discovery-kubernetes-api"     % AkkaManagement,
   "com.lightbend.akka.management" %% "akka-management-cluster-bootstrap" % AkkaManagement,

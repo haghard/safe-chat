@@ -201,6 +201,10 @@ object Server extends Ops {
         """
       )
       .append('\n')
+      .append(
+        s"★ ★ ★  Artery: maximum-frame-size: ${cfg.getBytes("akka.remote.artery.advanced.maximum-frame-size")} bytes  ★ ★ ★"
+      )
+      .append('\n')
       .append(s"Version:${com.safechat.BuildInfo.version}")
 
     val memorySize = ManagementFactory.getOperatingSystemMXBean

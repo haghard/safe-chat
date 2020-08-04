@@ -4,11 +4,12 @@ package com.safechat
 package serializer
 
 import java.io.{ByteArrayOutputStream, NotSerializableException}
+import java.nio.ByteBuffer
 import java.util
 import java.util.{TimeZone, UUID}
 
 import akka.actor.ExtendedActorSystem
-import akka.serialization.SerializerWithStringManifest
+import akka.serialization.{ByteBufferSerializer, SerializerWithStringManifest}
 import com.safechat.actors.{ChatRoomEvent, UserDisconnected, UserJoined, UserTextAdded}
 import org.apache.avro.Schema
 import org.apache.avro.io.{BinaryEncoder, DecoderFactory, EncoderFactory}
@@ -200,9 +201,14 @@ object JournalEventsSerializer {
   }
 }
 
-class JournalEventsSerializer(val system: ExtendedActorSystem) extends SerializerWithStringManifest {
+class JournalEventsSerializer(val system: ExtendedActorSystem)
+    extends SerializerWithStringManifest
+    with ByteBufferSerializer {
 
   override val identifier = 99999
+
+  private val frameSize =
+    system.settings.config.getBytes("akka.remote.artery.advanced.maximum-frame-size").toInt
 
   val (activeSchemaHash, schemaMap) = AvroSchemaRegistry()
 
@@ -213,9 +219,26 @@ class JournalEventsSerializer(val system: ExtendedActorSystem) extends Serialize
 
   override def manifest(obj: AnyRef): String = JournalEventsSerializer.manifest(obj, activeSchemaHash, mapping)
 
-  override def toBinary(obj: AnyRef): Array[Byte] =
-    JournalEventsSerializer.toBinary(obj, activeSchemaHash, schemaMap)
+  override def toBinary(obj: AnyRef): Array[Byte] = {
+    // in production code, acquire this from a BufferPool
 
+    val buf = ByteBuffer.allocate(frameSize)
+
+    toBinary(obj, buf)
+    buf.flip()
+    val bytes = new Array[Byte](buf.remaining)
+    buf.get(bytes)
+    bytes
+    //JournalEventsSerializer.toBinary(obj, activeSchemaHash, schemaMap)
+  }
+
+  override def toBinary(obj: AnyRef, buf: ByteBuffer): Unit =
+    buf.put(JournalEventsSerializer.toBinary(obj, activeSchemaHash, schemaMap))
+
+  // Implement this method for compatibility with `SerializerWithStringManifest`.
   override def fromBinary(bytes: Array[Byte], manifest: String): AnyRef =
-    JournalEventsSerializer.fromBinary(bytes, manifest, activeSchemaHash, schemaMap)
+    fromBinary(ByteBuffer.wrap(bytes), manifest)
+
+  override def fromBinary(buf: ByteBuffer, manifest: String): AnyRef =
+    JournalEventsSerializer.fromBinary(buf.array(), manifest, activeSchemaHash, schemaMap)
 }

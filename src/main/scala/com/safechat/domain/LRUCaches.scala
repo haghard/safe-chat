@@ -102,11 +102,11 @@ object LRUCache {
    */
   //java.util.Collections.synchronizedMap(new LRULinkedHashMapCache[String, Int](1 << 3))
 
-  class Node[T, U](
-    var previous: Node[T, U] = null,
-    var next: Node[T, U] = null,
-    val key: T = null.asInstanceOf[T],
-    val value: U = null.asInstanceOf[U]
+  class Node[K, V](
+    var previous: Node[K, V] = null,
+    var next: Node[K, V] = null,
+    val key: K = null.asInstanceOf[K],
+    val value: V = null.asInstanceOf[V]
   ) {
 
     override def toString = {
@@ -200,5 +200,4 @@ object LRUCache {
       loopMap(nodes.keySet.iterator, new mutable.StringBuilder().append("map:"), true)
     }
   }
-
 }
