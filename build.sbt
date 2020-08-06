@@ -7,7 +7,7 @@ val Version       = "0.3.0-SNAPSHOT"
 val akkaVersion = "2.6.8"
 val AkkaManagement = "1.0.8"
 
-val akkaHttpVersion = "10.1.12"
+val akkaHttpVersion = "10.2.0"
 
 promptTheme := ScalapenosTheme
 
