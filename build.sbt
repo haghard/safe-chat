@@ -202,7 +202,9 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-http-spray-json" % akkaHttpVersion,
 
   "ch.qos.logback" % "logback-classic" % "1.2.3",
-  "org.apache.avro" % "avro" % "1.9.1",
+  "org.apache.avro" % "avro" % "1.10.0",
+
+  "ru.odnoklassniki" % "one-nio" % "1.2.0",
 
   //https://kwark.github.io/refined-in-practice/#1
   //"eu.timepit" %% "refined"                 % "0.9.14",

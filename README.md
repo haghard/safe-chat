@@ -3,15 +3,18 @@
 # Main idea
 We want to have a MergeHub connected with a BroadcastHub to achieve dynamic fan-in/fan-out (many-to-many) per a chat room in combination with StreamRefs to get long-running streams of data between two entities over the network.  
 
-# Connect harry
+
+## Connect
+
 ws://127.0.0.1:8080/chat/aaa/user/harry?pub=hjkhkjhjk
 
-# Connect charly
 ws://127.0.0.2:8080/chat/aaa/user/charly?pub=hjkhkjhjk
 
-# Message format
- harry:charly:Hello
- charly:harry:WATS up
+chrome-extension://pfdhoblngboilpfeibdedpjgfnlcodoo/index.html
+
+harry:charly:Hello
+
+charly:harry:WATS up
 
 ### How to run locally
 
