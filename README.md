@@ -65,7 +65,7 @@ ws://85.119.150.35:8080/chat/aaa/user/charley?key=sdfgsdf
 
 http GET 188.68.210.125:8080/cluster/shards/chat-rooms
 
-Executes leave operation in cluster for provided address
+Executes leave operation in cluster for the given address
 http DELETE 188.68.210.125:8080/cluster/members/akka://echatter@85.119.150.35:2551
 
 
@@ -257,10 +257,18 @@ https://doc.akka.io/docs/akka-management/current/bootstrap/details.html
 
 https://doc.akka.io/docs/akka-management/current/bootstrap/kubernetes-api.html  (akka.management.cluster.bootstrap.LowestAddressJoinDecider)
 
+https://www.lightbend.com/blog/how-to-distribute-application-state-with-akka-cluster-part-3-kubernetes-monitoring
+
 https://www.youtube.com/watch?v=2jKu_E1TZPM
 
 Managing an Akka Cluster on Kubernetes - Markus Jura: https://www.youtube.com/watch?v=Sz-SE1FyhJE&list=PLLMLOC3WM2r5KDwkSRrLJ1_O6kZqlhhFt&index=22
 
+
+## Gatling example
+
+https://blog.knoldus.com/gatling-for-websocket-protocol
+
+https://github.com/michael-read/akka-typed-distributed-state-blog/tree/master/gatling
 
 ## Videos
 
@@ -273,6 +281,14 @@ How to do distributed, stateful processing with #Akka Cluster Sharding and Kafka
 Stateful OR Stateless Applications: To Akka Cluster, Or Not https://www.youtube.com/watch?v=CiVsKjZV-Ys
 
 Split Brain Resolver in Akka Cluster https://www.youtube.com/watch?v=vc6eTolxGbM
+
+
+### SBT
+
+sbt '; set javaOptions += "-Dconfig.resource=cluster-application.conf" ; run’
+
+sbt -J-Xms512M -J-XX:+PrintCommandLineFlags -J-XshowSettings
+
 
 ### Examples
   

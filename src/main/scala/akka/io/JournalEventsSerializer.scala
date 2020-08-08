@@ -295,6 +295,8 @@ object JournalEventsSerializer {
   }
 }
 
+//https://doc.akka.io/api/akka/current/akka/serialization/ByteBufferSerializer.html
+//https://doc.akka.io/docs/akka/current/remoting-artery.html#bytebuffer-based-serialization
 final class JournalEventsSerializer(val system: ExtendedActorSystem) extends SerializerWithStringManifest {
 
   override val identifier = 99999
@@ -415,6 +417,10 @@ final class JournalEventsSerializer2(val system: ExtendedActorSystem)
   private val allocator =
     new FixedSizeAllocator(maxFrameSize + extraSpace, (maxFrameSize + extraSpace) * concurrencyLevel)
 
+  /**
+    * Allows the ByteBufferSerializer to directly write into a shared java.nio.ByteBuffer
+    * instead of being forced to allocate and return an Array[Byte] for each serialized message.
+    */
   override def toBinary(obj: AnyRef): Array[Byte] = {
     //DirectMemory: [used:264192 total:8454144]
     //println(s"DirectMemory: [entry:${allocator.entrySize} total:${allocator.chunkSize} ]")

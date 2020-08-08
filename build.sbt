@@ -11,6 +11,25 @@ val akkaHttpVersion = "10.2.0"
 
 promptTheme := ScalapenosTheme
 
+lazy val scalacSettings = Seq(
+  scalacOptions ++= Seq(
+    //"-deprecation",             // Emit warning and location for usages of deprecated APIs.
+    "-unchecked",               // Enable additional warnings where generated code depends on assumptions.
+    "-encoding", "UTF-8",       // Specify character encoding used by source files.
+    "-Ywarn-dead-code",         // Warn when dead code is identified.
+    "-Ywarn-extra-implicit",    // Warn when more than one implicit parameter section is defined.
+    "-Ywarn-numeric-widen",     // Warn when numerics are widened.
+    "-Ywarn-unused:implicits",  // Warn if an implicit parameter is unused.
+    "-Ywarn-unused:imports",    // Warn if an import selector is not referenced.
+    "-Ywarn-unused:locals",     // Warn if a local definition is unused.
+    "-Ywarn-unused:params",     // Warn if a value parameter is unused.
+    "-Ywarn-unused:patvars",    // Warn if a variable bound in a pattern is unused.
+    "-Ywarn-unused:privates",   // Warn if a private member is unused.
+    "-Ywarn-value-discard"      // Warn when non-Unit expression results are unused.
+  )
+)
+
+
 lazy val commonSettings = Seq(
   name := projectName,
   organization := "haghard",
@@ -35,6 +54,7 @@ lazy val commonSettings = Seq(
 lazy val root = project
   .in(file("."))
   .settings(commonSettings)
+  .settings(scalacSettings)
   .settings(
     buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion),
     buildInfoPackage := "com.safechat",
