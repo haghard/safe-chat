@@ -270,6 +270,13 @@ https://blog.knoldus.com/gatling-for-websocket-protocol
 
 https://github.com/michael-read/akka-typed-distributed-state-blog/tree/master/gatling
 
+
+### Microservices or microliths (method calls replaced by sync RPC) Increase coupling.
+
+https://blog.softwaremill.com/are-you-sure-youre-using-microservices-f8d4e912d014
+
+https://dzone.com/articles/are-you-building-microservices-or-microliths
+
 ## Videos
 
 How to use CQRS in Akka 2.6 https://www.youtube.com/watch?v=6ECsFlNNIAM
