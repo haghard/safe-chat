@@ -15,7 +15,7 @@ import com.safechat.actors.{ChatRoomEntity, ChatRoomReply, JoinReply, ShardedCha
 import scala.concurrent.duration._
 import scala.concurrent.Future
 
-case class ChatRoomApi(rooms: ShardedChatRooms)(implicit sys: ActorSystem[Nothing]) extends RestApi {
+case class ChatRoomApi(rooms: ShardedChatRooms)(implicit sys: ActorSystem[Nothing]) extends Directives {
   implicit val cx  = sys.executionContext
   implicit val sch = sys.scheduler
 
@@ -69,7 +69,7 @@ case class ChatRoomApi(rooms: ShardedChatRooms)(implicit sys: ActorSystem[Nothin
             .backpressureTimeout(3.seconds) //automatic cleanup for very slow subscribers.
             .watchTermination() { (_, c) ⇒
               c.flatMap { _ ⇒
-                sys.log.info("ws-con for {}@{} has been terminated", user, chatId)
+                sys.log.info("{}@{}: ws-con has been terminated", user, chatId)
                 rooms.disconnect(chatId, user)
               }
               NotUsed

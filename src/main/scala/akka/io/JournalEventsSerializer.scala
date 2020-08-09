@@ -452,13 +452,13 @@ final class JournalEventsSerializer2(val system: ExtendedActorSystem)
 
   override def fromBinary(buf: ByteBuffer, manifest: String): AnyRef =
     ???
-    //JournalEventsSerializer.fromBuffer(buf, manifest, activeSchemaHash, schemaMap)
+  //JournalEventsSerializer.fromBuffer(buf, manifest, activeSchemaHash, schemaMap)
 
-  override def fromBinary(bytes: Array[Byte], manifest: String): AnyRef = {
+  override def fromBinary(bytes: Array[Byte], manifest: String): AnyRef =
     //fromBinary(ByteBuffer.wrap(bytes), manifest)
     JournalEventsSerializer.fromArray(bytes, manifest, activeSchemaHash, schemaMap)
 
-    /*
+  /*
     val address = allocator.malloc(maxFrameSize)
     val buf = DirectMemory.wrap(address, maxFrameSize)
     try fromBinary(buf, manifest)
@@ -470,6 +470,5 @@ final class JournalEventsSerializer2(val system: ExtendedActorSystem)
           JournalEventsSerializer.illegalArgument("Allocator free error :" + err.getMessage)
       }
     }
-    */
-  }
+   */
 }
