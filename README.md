@@ -287,8 +287,13 @@ Split Brain Resolver in Akka Cluster https://www.youtube.com/watch?v=vc6eTolxGbM
 
 sbt '; set javaOptions += "-Dconfig.resource=cluster-application.conf" ; run’
 
-sbt -J-Xms512M -J-XX:+PrintCommandLineFlags -J-XshowSettings
+sbt -J-XX:MaxMetaspaceSize=512M -J-XX:+PrintCommandLineFlags -J-XshowSettings
 
+OR 
+
+Create .sbtopts 
+
+-J-XX:MaxMetaspaceSize=4512M
 
 ### Examples
   
