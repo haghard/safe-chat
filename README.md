@@ -166,7 +166,7 @@ How Akka Cluster Works: https://www.lightbend.com/blog/akka-cluster-quickstart-d
 
 Sample project: https://github.com/mckeeh3/akka-typed-java-cluster.git 
 
-
+https://doc.akka.io/docs/akka/current/typed/extending.html
 
 ## Schema evolution/versioning
 
@@ -181,7 +181,6 @@ http://martin.kleppmann.com/2012/12/05/schema-evolution-in-avro-protocol-buffers
 https://www.programcreek.com/java-api-examples/?code=rkluszczynski/avro-cli/avro-cli-master/src/main/java/io/github/rkluszczynski/avro/cli/command/conversion/RawConverterUtil.java
 
 Schema Management at Depop: https://youtu.be/ztkyVHPaPgY
-
 
 https://pulsar.apache.org/docs/en/concepts-schema-registry/
 
@@ -287,8 +286,14 @@ Split Brain Resolver in Akka Cluster https://www.youtube.com/watch?v=vc6eTolxGbM
 
 sbt '; set javaOptions += "-Dconfig.resource=cluster-application.conf" ; run’
 
+sbt -J-XX:MaxMetaspaceSize=512M -J-XX:+PrintCommandLineFlags -J-XshowSettings
+
+OR 
 sbt -J-Xms512M -J-XX:+PrintCommandLineFlags -J-XX:NativeMemoryTracking=summary -J-XshowSettings
 
+Create .sbtopts 
+
+-J-XX:MaxMetaspaceSize=4512M
 
 ### Examples
   

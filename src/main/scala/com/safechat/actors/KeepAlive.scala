@@ -1,3 +1,4 @@
+/*
 package com.safechat.actors
 
 import akka.actor.typed.{ActorRef, Behavior}
@@ -27,3 +28,4 @@ object KeepAlive {
       }
     }
 }
+ */

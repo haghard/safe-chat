@@ -4,10 +4,10 @@ package com.safechat.actors
 
 import akka.NotUsed
 import akka.actor.typed.ActorRef
-import akka.stream.scaladsl.{Sink, Source}
 import akka.http.scaladsl.model.ws.Message
-import akka.stream.{SinkRef, SourceRef, UniqueKillSwitch}
 import akka.persistence.typed.scaladsl.{Effect, ReplyEffect}
+import akka.stream.scaladsl.{Sink, Source}
+import akka.stream.{SinkRef, SourceRef, UniqueKillSwitch}
 import com.safechat.domain.RingBuffer
 
 sealed trait ChatRoomReply {
@@ -37,12 +37,12 @@ sealed trait UserCmd {
   def chatId: String
 }
 
-final case class PingShard(chatId: String, replyTo: ActorRef[KeepAlive.Probe]) extends UserCmd
-
 //sealed trait UserCmdWithReply[-T <: ChatRoomReply] extends UserCmd {
 sealed trait UserCmdWithReply extends UserCmd {
   def replyTo: ActorRef[ChatRoomReply]
 }
+
+//final case class PingShard(chatId: String, replyTo: ActorRef[KeepAlive.Probe]) extends UserCmd
 
 final case class JoinUser(chatId: String, user: String, pubKey: String, replyTo: ActorRef[ChatRoomReply])
     extends UserCmdWithReply
@@ -84,7 +84,6 @@ final case class ChatRoomState(
       case c: JoinUser       ⇒ Effect.persist(UserJoined(c.user, c.pubKey)).thenNoReply()
       case c: PostText       ⇒ Effect.noReply
       case c: DisconnectUser ⇒ Effect.noReply
-      case c: PingShard      ⇒ Effect.noReply
     }
 
   def applyEvn(event: ChatRoomEvent): ChatRoomState = ???

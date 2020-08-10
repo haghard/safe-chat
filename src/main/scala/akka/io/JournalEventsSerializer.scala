@@ -129,7 +129,7 @@ object JournalEventsSerializer {
       case e: ChatRoomEvent ⇒
         Using.resource(new ByteArrayOutputStream()) { baos ⇒
           Using.resource(EncoderFactory.get.binaryEncoder(baos, null)) { enc ⇒
-            new SpecificDatumWriter(schema).write(wrapInEnvelope(e), enc)
+            new SpecificDatumWriter(schema).write(wrap(e), enc)
           }
           baos.toByteArray
         }
@@ -185,7 +185,8 @@ object JournalEventsSerializer {
       )
   }
 
-  private def wrapInEnvelope(e: ChatRoomEvent) =
+  //Wraps the given event in avro envelope
+  private def wrap(e: ChatRoomEvent) =
     e match {
       case e: UserJoined ⇒
         new com.safechat.persistent.domain.MsgEnvelope(
@@ -242,7 +243,7 @@ object JournalEventsSerializer {
         }
 
       case e: ChatRoomEvent ⇒
-        writeToBuffer[com.safechat.persistent.domain.MsgEnvelope](wrapInEnvelope(e), buf, schema)
+        writeToBuffer[com.safechat.persistent.domain.MsgEnvelope](wrap(e), buf, schema)
     }
   }
 
@@ -451,18 +452,17 @@ final class JournalEventsSerializer2(val system: ExtendedActorSystem)
 
   override def fromBinary(buf: ByteBuffer, manifest: String): AnyRef =
     ???
+  //JournalEventsSerializer.fromBuffer(buf, manifest, activeSchemaHash, schemaMap)
 
   override def fromBinary(bytes: Array[Byte], manifest: String): AnyRef =
     //fromBinary(ByteBuffer.wrap(bytes), manifest)
     JournalEventsSerializer.fromArray(bytes, manifest, activeSchemaHash, schemaMap)
+
   /*
     val address = allocator.malloc(maxFrameSize)
-    val buf     = DirectMemory.wrap(address, maxFrameSize)
-    try {
-      val obj = fromBinary(buf, manifest)
-      println(s"fromBinary: ${obj}")
-      obj
-    } finally {
+    val buf = DirectMemory.wrap(address, maxFrameSize)
+    try fromBinary(buf, manifest)
+    finally {
       buf.clear()
       try allocator.free(address)
       catch {
