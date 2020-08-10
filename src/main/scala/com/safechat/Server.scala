@@ -205,7 +205,7 @@ object Server extends Ops {
         s"★ ★ ★  Artery: maximum-frame-size: ${cfg.getBytes("akka.remote.artery.advanced.maximum-frame-size")} bytes  ★ ★ ★"
       )
       .append('\n')
-      .append(s"Version:${com.safechat.BuildInfo.version}")
+      .append(s"Version:${BuildInfo.version} at ${BuildInfo.builtAtString}")
 
     val memorySize = ManagementFactory.getOperatingSystemMXBean
       .asInstanceOf[com.sun.management.OperatingSystemMXBean]

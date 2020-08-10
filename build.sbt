@@ -58,6 +58,7 @@ lazy val root = project
   .settings(
     buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion),
     buildInfoPackage := "com.safechat",
+    buildInfoOptions += BuildInfoOption.BuildTime,
 
     resolvers ++= Seq("Typesafe Snapshots" at "https://repo.akka.io/snapshots"),
 

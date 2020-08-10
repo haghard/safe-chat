@@ -287,7 +287,7 @@ Split Brain Resolver in Akka Cluster https://www.youtube.com/watch?v=vc6eTolxGbM
 
 sbt '; set javaOptions += "-Dconfig.resource=cluster-application.conf" ; run’
 
-sbt -J-Xms512M -J-XX:+PrintCommandLineFlags -J-XshowSettings
+sbt -J-Xms512M -J-XX:+PrintCommandLineFlags -J-XX:NativeMemoryTracking=summary -J-XshowSettings
 
 
 ### Examples
