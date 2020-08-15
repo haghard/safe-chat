@@ -296,8 +296,10 @@ object JournalEventsSerializer {
   }
 }
 
-//https://doc.akka.io/api/akka/current/akka/serialization/ByteBufferSerializer.html
-//https://doc.akka.io/docs/akka/current/remoting-artery.html#bytebuffer-based-serialization
+/**
+  * https://doc.akka.io/api/akka/current/akka/serialization/ByteBufferSerializer.html
+  * https://doc.akka.io/docs/akka/current/remoting-artery.html#bytebuffer-based-serialization
+  */
 final class JournalEventsSerializer(val system: ExtendedActorSystem) extends SerializerWithStringManifest {
 
   override val identifier = 99999

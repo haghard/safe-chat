@@ -12,13 +12,13 @@ APP_OPTS="-server \
           -XX:MaxGCPauseMillis=400 \
           -XX:+UseStringDeduplication \
           -XX:+UseG1GC \
-          -XX:ConcGCThreads=4 -XX:ParallelGCThreads=4 \
           -XX:+UseContainerSupport \
-          -XX:+PreferContainerQuotaForCPUCount \
+          -XX:ConcGCThreads=4 -XX:ParallelGCThreads=4 \
           -XX:+UnlockExperimentalVMOptions \
           -XX:InitialRAMPercentage=60 \
           -XX:MaxRAMPercentage=75 \
           -XX:MinRAMPercentage=50 \
+          -XX:+PreferContainerQuotaForCPUCount \
           -XshowSettings \
           -DENV=${ENV} \
           -DHTTP_PORT=${HTTP_PORT} \
