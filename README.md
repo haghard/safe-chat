@@ -246,8 +246,6 @@ https://www.confluent.io/blog/learn-stream-processing-with-kafka-tutorials/
 
 https://medium.com/jeroen-rosenberg/building-and-deploying-your-first-cloudflow-application-6ea4b7157e6d
 
-https://medium.com/data-rocks/schema-evolution-is-not-that-complex-b7cf7eb567ac
-
 ## K8s
 
 https://github.com/akka/akka-sample-cluster-kubernetes-scala.git
@@ -271,6 +269,28 @@ https://blog.knoldus.com/gatling-for-websocket-protocol
 
 https://github.com/michael-read/akka-typed-distributed-state-blog/tree/master/gatling
 
+
+https://github.com/chbatey/akka-talks/blob/f3babead55fa7e678ce21dcbf780e9423afb7448/http-streams/src/test/scala/info/batey/akka/http/ApplyLoad.scala
+https://whiteprompt.com/scala/stress-test-restful-service-gatling/
+https://sysgears.com/articles/restful-service-load-testing-using-gatling-2/
+https://github.com/satyriasizz/gatling2-load-test-example
+
+
+## Jvm inside a docker container
+
+https://blog.csanchez.org/2017/05/31/running-a-jvm-in-a-container-without-getting-killed/
+https://blog.csanchez.org/2018/06/21/running-a-jvm-in-a-container-without-getting-killed-ii/
+
+http://www.batey.info/docker-jvm-k8s.html
+https://github.com/chbatey/docker-jvm-akka
+https://blog.docker.com/2018/12/top-5-post-docker-container-java/
+https://efekahraman.github.io/2018/04/docker-awareness-in-java
+
+### CPU considerations for Java applications running in Docker and Kubernetes
+
+https://www.lightbend.com/blog/cpu-considerations-for-java-applications-running-in-docker-and-kubernetes
+
+
 ## Videos
 
 How to use CQRS in Akka 2.6 https://www.youtube.com/watch?v=6ECsFlNNIAM
@@ -286,16 +306,20 @@ Split Brain Resolver in Akka Cluster https://www.youtube.com/watch?v=vc6eTolxGbM
 
 ### SBT
 
+```bash
+
 sbt '; set javaOptions += "-Dconfig.resource=cluster-application.conf" ; run’
 
 sbt -J-XX:MaxMetaspaceSize=512M -J-XX:+PrintCommandLineFlags -J-XshowSettings
 
-OR 
 sbt -J-Xms512M -J-XX:+PrintCommandLineFlags -J-XX:NativeMemoryTracking=summary -J-XshowSettings
 
-Create .sbtopts 
+```
 
--J-XX:MaxMetaspaceSize=4512M
+OR
+
+Create .sbtopts
+
 
 ### Examples
   

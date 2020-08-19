@@ -35,7 +35,16 @@
            }
          },
        { "name": "customer_address", "type": "com.safechat.domain.CustomerAddress" },
-       { "name": "signup_ts", "type": "long", "logicalType": "timestamp-millis", "doc": "EPOCH millis Timestamp at which the user signed up "}
+       { "name": "signup_ts", "type": "long", "logicalType": "timestamp-millis", "doc": "EPOCH millis Timestamp at which the user signed up "},
+       { "name": "price",
+         "type": {
+             "type" : "bytes",
+             "logicalType" : "decimal",
+             "precision" : 20,
+             "scale":  8
+         },
+         "doc": "Price as a BigDecimal"
+       }
      ]
   }
 ]
