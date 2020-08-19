@@ -246,6 +246,8 @@ https://www.confluent.io/blog/learn-stream-processing-with-kafka-tutorials/
 
 https://medium.com/jeroen-rosenberg/building-and-deploying-your-first-cloudflow-application-6ea4b7157e6d
 
+https://medium.com/data-rocks/schema-evolution-is-not-that-complex-b7cf7eb567ac
+
 ## K8s
 
 https://github.com/akka/akka-sample-cluster-kubernetes-scala.git

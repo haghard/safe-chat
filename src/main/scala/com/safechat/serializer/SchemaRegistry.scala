@@ -10,6 +10,8 @@ import org.apache.commons.codec.digest.DigestUtils
 
 import scala.jdk.CollectionConverters._
 
+
+//https://medium.com/data-rocks/schema-evolution-is-not-that-complex-b7cf7eb567ac
 object SchemaRegistry {
 
   //private val activeSchema: File = new File("./src/main/avro/ChatRoomEventsV1.avsc")
