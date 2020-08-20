@@ -52,6 +52,9 @@ If you target full compatibility follows these rules:
  * rename fields
  * remove required fields
 
+ Schema-evolution-is-not-that-complex:
+  https://medium.com/data-rocks/schema-evolution-is-not-that-complex-b7cf7eb567ac
+
  */
 object JournalEventsSerializer {
   val SEP         = ":"
