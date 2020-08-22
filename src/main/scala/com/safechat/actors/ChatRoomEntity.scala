@@ -266,7 +266,7 @@ object ChatRoomEntity {
 
   def snapshotPredicate(
     ctx: ActorContext[UserCmdWithReply]
-  )(state: ChatRoomState, event: ChatRoomEvent /*MsgEnvelope*/, id: Long): Boolean = {
+  )(state: ChatRoomState, event: ChatRoomEvent, id: Long): Boolean = {
     val ifSnap = id > 0 && id % snapshotEveryN == 0
 
     if (ifSnap)

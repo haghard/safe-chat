@@ -29,14 +29,15 @@ case class Bootstrap(routes: Route, host: String, port: Int)(implicit
     .second
 
   val f = Http()
-    .bind(host, port)
+    .newServerAt(host, port)
+    .connectionSource()
     .to(Sink.foreach { con ⇒
-      classicSystem.log.info("Accept from {}", con.remoteAddress)
+      classicSystem.log.info("Accept connection from {}", con.remoteAddress)
       con.handleWith(routes)
     })
     .run()
 
-  //val f = Http().bindAndHandle(routes, host, port)
+  //val f = Http().newServerAt(host, port).bindFlow(routes)
 
   f.onComplete {
     case Failure(ex) ⇒
