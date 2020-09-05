@@ -11,6 +11,8 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 import ShardedChatRooms._
 import akka.actor.typed.scaladsl.AskPattern._
+import akka.cluster.sharding.external.ExternalShardAllocation
+import com.safechat.Server
 
 object ShardedChatRooms {
 
@@ -95,8 +97,9 @@ class ShardedChatRooms(implicit system: ActorSystem[Nothing]) {
 
   val chatShardRegion = sharding.init(entity)
 
+  //Example how to use explicit client:  akka.kafka.cluster.sharding.KafkaClusterSharding
   //val client             = ExternalShardAllocation(system).clientFor(ChatRoomEntity.entityKey.name)
-  //val done: Future[Done] = client.updateShardLocation("chat0", Address("akka", "system", "127.0.0.1", 2552))
+  //val done: Future[akka.Done] = client.updateShardLocation("chat0", akka.actor.Address("akka", Server.AkkaSystemName, "127.0.0.1", 2552))
 
   //do not use the ChatRoomsMsgExtractor
   //use akka.cluster.sharding.typed.ShardingEnvelope(chatId, JoinUser(chatId, login, pubKey, replyTo))
