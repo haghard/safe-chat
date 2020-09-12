@@ -4,7 +4,7 @@ import sbtdocker.ImageName
 val projectName   = "safe-chat"
 val Version       = "0.3.0-SNAPSHOT"
 
-val akkaVersion = "2.6.8"
+val akkaVersion = "2.6.9"
 val AkkaManagement = "1.0.8"
 
 val akkaHttpVersion = "10.2.0"
@@ -205,7 +205,7 @@ libraryDependencies ++= Seq(
 
   "com.typesafe.akka" %% "akka-persistence-query"     % akkaVersion,
 
-  ("com.typesafe.akka" %% "akka-persistence-cassandra" % "1.0.1") //-RC1
+  ("com.typesafe.akka" %% "akka-persistence-cassandra" % "1.0.3") //-RC1
     .excludeAll(ExclusionRule(organization = "io.netty", name="netty-all")), //to exclude netty-all-4.1.39.Final.jar
 
 
