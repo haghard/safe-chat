@@ -16,18 +16,24 @@ import scala.concurrent.duration._
 import scala.concurrent.Future
 
 case class ChatRoomApi(rooms: ShardedChatRooms)(implicit sys: ActorSystem[Nothing]) extends Directives {
-  implicit val cx  = sys.executionContext
-  implicit val sch = sys.scheduler
+  implicit val cx         = sys.executionContext
+  implicit val sch        = sys.scheduler
+  implicit val classicSch = sys.toClassic.scheduler
 
   //Wake up ChatRoom shard region using a fake user
   //sharding would start a new entity on first message sent to it.
   sch.scheduleOnce(
     500.millis,
     () ⇒
-      rooms
-        .enter(ChatRoomEntity.wakeUpEntityName, ChatRoomEntity.wakeUpUserName, "fake-pub-key")
-        .mapTo[ChatRoomReply]
-        .flatMap(_ ⇒ rooms.disconnect(ChatRoomEntity.wakeUpEntityName, ChatRoomEntity.wakeUpUserName))
+      akka.pattern.retry(
+        () ⇒
+          rooms
+            .enter(ChatRoomEntity.wakeUpEntityName, ChatRoomEntity.wakeUpUserName, "fake-pub-key")
+            .mapTo[ChatRoomReply]
+            .flatMap(_ ⇒ rooms.disconnect(ChatRoomEntity.wakeUpEntityName, ChatRoomEntity.wakeUpUserName)),
+        3,
+        1.second
+      )
   )
 
   //web socket flow
