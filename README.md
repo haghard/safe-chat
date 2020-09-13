@@ -271,6 +271,12 @@ https://blog.knoldus.com/gatling-for-websocket-protocol
 
 https://github.com/michael-read/akka-typed-distributed-state-blog/tree/master/gatling
 
+https://github.com/michael-read/akka-typed-distributed-state-blog/blob/master/gatling/src/test/scala/com/lightbend/gatling/ArtifactStateScenario.scala
+
+### Distributed state blog series 
+
+https://github.com/michael-read/akka-typed-distributed-state-blog
+
 
 https://github.com/chbatey/akka-talks/blob/f3babead55fa7e678ce21dcbf780e9423afb7448/http-streams/src/test/scala/info/batey/akka/http/ApplyLoad.scala
 https://whiteprompt.com/scala/stress-test-restful-service-gatling/

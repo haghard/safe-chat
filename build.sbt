@@ -188,6 +188,7 @@ lazy val root = project
   .enablePlugins(sbtdocker.DockerPlugin, BuildInfoPlugin)
 
 libraryDependencies ++= Seq(
+  "com.typesafe.akka"       %% "akka-slf4j"         % akkaVersion,
   "com.github.pureconfig"   %% "pureconfig"         % "0.12.3",
   "com.typesafe.akka"       %% "akka-actor-typed"   % akkaVersion,
   "com.typesafe.akka"       %% "akka-stream-typed"  % akkaVersion,
@@ -197,13 +198,9 @@ libraryDependencies ++= Seq(
   //"org.sisioh"        %% "akka-cluster-custom-downing" % "0.1.0",
   //"com.swissborg"    %% "lithium" % "0.11.1", brings cats
 
-  "com.typesafe.akka" %% "akka-slf4j" % akkaVersion,
-
-  "com.typesafe.akka" %% "akka-persistence-typed" % akkaVersion,
-
-  "com.typesafe.akka" %% "akka-cluster-sharding-typed" % akkaVersion,
-
-  "com.typesafe.akka" %% "akka-persistence-query"     % akkaVersion,
+  "com.typesafe.akka" %% "akka-cluster-sharding-typed"  % akkaVersion,
+  "com.typesafe.akka" %% "akka-persistence-typed"       % akkaVersion,
+  "com.typesafe.akka" %% "akka-persistence-query"       % akkaVersion,
 
   ("com.typesafe.akka" %% "akka-persistence-cassandra" % "1.0.3") //-RC1
     .excludeAll(ExclusionRule(organization = "io.netty", name="netty-all")), //to exclude netty-all-4.1.39.Final.jar
@@ -219,7 +216,7 @@ libraryDependencies ++= Seq(
   "com.lightbend.akka.management" %% "akka-management-cluster-bootstrap" % AkkaManagement,
   "com.lightbend.akka.management" %% "akka-management-cluster-http"      % AkkaManagement,
 
-  "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
+  "com.typesafe.akka" %% "akka-http"            % akkaHttpVersion,
   "com.typesafe.akka" %% "akka-http-spray-json" % akkaHttpVersion,
 
   "ch.qos.logback" % "logback-classic" % "1.2.3",
@@ -238,7 +235,14 @@ libraryDependencies ++= Seq(
 
   // li haoyi ammonite repl embed
   ("com.lihaoyi" % "ammonite" % "2.2.0" % "test").cross(CrossVersion.full)
+
 )
+
+
+// transitive dependency of akka 2.5x that is brought in
+dependencyOverrides += "com.typesafe.akka" %% "akka-protobuf"       % akkaVersion
+dependencyOverrides += "com.typesafe.akka" %% "akka-cluster-tools"  % akkaVersion
+dependencyOverrides += "com.typesafe.akka" %% "akka-coordination"   % akkaVersion
 
 //comment out for test:run
 
