@@ -11,6 +11,8 @@ import akka.actor.ExtendedActorSystem
 import akka.serialization.{ByteBufferSerializer, SerializerWithStringManifest}
 import com.safechat.actors.{ChatRoomEvent, UserDisconnected, UserJoined, UserTextAdded}
 import com.safechat.serializer.SchemaRegistry
+import io.netty.buffer.{ByteBufAllocator, ByteBufUtil, PooledByteBufAllocator, Unpooled}
+import io.netty.util.CharsetUtil
 import org.apache.avro.Schema
 import org.apache.avro.io.{BinaryEncoder, DecoderFactory, EncoderFactory}
 import org.apache.avro.specific.{SpecificDatumReader, SpecificDatumWriter}
@@ -118,9 +120,8 @@ object JournalEventsSerializer {
         Using.resource(new ByteArrayOutputStream()) { out ⇒
           Using.resource(EncoderFactory.get.binaryEncoder(out, null)) { enc ⇒
             val users = new java.util.HashMap[CharSequence, CharSequence]()
-            state.regUsers.foreach {
-              case (login, pubKey) ⇒
-                users.put(login, pubKey)
+            state.regUsers.foreach { case (login, pubKey) ⇒
+              users.put(login, pubKey)
             }
             val history = new util.ArrayList[CharSequence]()
             state.recentHistory.entries.foreach(history.add(_))
@@ -233,9 +234,8 @@ object JournalEventsSerializer {
         Using.resource(new ByteArrayOutputStream()) { out ⇒
           Using.resource(EncoderFactory.get.binaryEncoder(out, null)) { enc ⇒
             val users = new java.util.HashMap[CharSequence, CharSequence]()
-            state.regUsers.foreach {
-              case (login, pubKey) ⇒
-                users.put(login, pubKey)
+            state.regUsers.foreach { case (login, pubKey) ⇒
+              users.put(login, pubKey)
             }
             val history = new util.ArrayList[CharSequence]()
             state.recentHistory.entries.foreach(history.add(_))
@@ -404,6 +404,7 @@ final class JournalEventsSerializer2(val system: ExtendedActorSystem)
   private val concurrencyLevel = 1 << 4
 
   private val extraSpace = 1024 * 2
+
   //private val allocator  = new MallocMT((maxFrameSize + extraSpace) * concurrencyLevel, concurrencyLevel)
 
   /*
@@ -476,4 +477,31 @@ final class JournalEventsSerializer2(val system: ExtendedActorSystem)
       }
     }
    */
+
 }
+
+//https://github.com/rsocket/rsocket-transport-akka
+//https://www.lightbend.com/blog/implementing-rsocket-ingress-in-cloudflow-part-3-pluggable-transport
+
+//https://www.youtube.com/watch?v=_rqQtkIeNIQ
+//https://github.com/netifi/akka-demo
+
+//https://www.lightbend.com/blog/implementing-rsocket-ingress-in-cloudflow-part-3-pluggable-transport
+//https://github.com/lightbend/RSocketCloudflow/blob/master/transports/src/main/scala/com/lightbend/rsocket/transport/ipc/RequestResponceIPC.scala
+//https://github.com/lightbend/RSocketCloudflow/blob/master/transports/src/main/scala/com/lightbend/rsocket/transport/ipc/RequestStreamIPC.scala
+
+//https://github.com/brendangregg/perf-tools
+
+/*
+//ByteBufUtil.hexDump(???)
+  val nettyAllocator = ByteBufAllocator.DEFAULT
+    //PooledByteBufAllocator.DEFAULT
+  //if (Integer.bitCount(78) != 1) throw new IllegalArgumentException("Max packets must be a power of 2")
+
+  val byteBuf = nettyAllocator.buffer()
+  byteBuf.writeCharSequence("topicName", CharsetUtil.UTF_8)
+  byteBuf.toString(CharsetUtil.UTF_8)
+  //byteBuf.readBytes()
+  byteBuf.release()
+  //Unpooled.wrappedBuffer(/*data.asByteBuffer*/)
+ */

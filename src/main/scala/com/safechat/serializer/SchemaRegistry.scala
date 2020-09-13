@@ -10,7 +10,6 @@ import org.apache.commons.codec.digest.DigestUtils
 
 import scala.jdk.CollectionConverters._
 
-
 //https://medium.com/data-rocks/schema-evolution-is-not-that-complex-b7cf7eb567ac
 object SchemaRegistry {
 
@@ -23,12 +22,12 @@ object SchemaRegistry {
   private val activeSchemaHash: String = getMD5FromUrl(activeSchema)
 
   private val schemaMap: Map[String, Schema] = Map(
-      activeSchemaHash → getSchemaFromUrl(activeSchema)
-    ) ++ schemaHistory.map { schemaVersion ⇒
-      //val oldSchema = new FileInputStream(schemaVersion)
-      //getClass.getResource(schemaVersion)
-      (getMD5FromUrl(schemaVersion), getSchemaFromUrl(schemaVersion))
-    }
+    activeSchemaHash → getSchemaFromUrl(activeSchema)
+  ) ++ schemaHistory.map { schemaVersion ⇒
+    //val oldSchema = new FileInputStream(schemaVersion)
+    //getClass.getResource(schemaVersion)
+    (getMD5FromUrl(schemaVersion), getSchemaFromUrl(schemaVersion))
+  }
 
   def getMD5FromUrl(in: File): String = DigestUtils.md5Hex(new FileInputStream(in))
 

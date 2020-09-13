@@ -29,10 +29,9 @@ trait Ops {
 
   def applyProperties(args: Array[String]) = {
     val Opt = """-D(\S+)=(\S+)""".r
-    args.toList.foreach {
-      case Opt(key, value) ⇒
-        println(s"Config override: $key = $value")
-        System.setProperty(key, value)
+    args.toList.foreach { case Opt(key, value) ⇒
+      println(s"Config override: $key = $value")
+      System.setProperty(key, value)
     }
   }
 
