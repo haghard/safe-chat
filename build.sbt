@@ -8,6 +8,7 @@ val akkaVersion = "2.6.9"
 val AkkaManagement = "1.0.8"
 
 val akkaHttpVersion = "10.2.0"
+val AkkaPersistenceCassandraVersion = "1.0.3"
 
 promptTheme := ScalapenosTheme
 
@@ -202,7 +203,7 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-persistence-typed"       % akkaVersion,
   "com.typesafe.akka" %% "akka-persistence-query"       % akkaVersion,
 
-  ("com.typesafe.akka" %% "akka-persistence-cassandra" % "1.0.3") //-RC1
+  ("com.typesafe.akka" %% "akka-persistence-cassandra" % AkkaPersistenceCassandraVersion) //-RC1
     .excludeAll(ExclusionRule(organization = "io.netty", name="netty-all")), //to exclude netty-all-4.1.39.Final.jar
 
 
@@ -232,6 +233,8 @@ libraryDependencies ++= Seq(
   "org.scalatest" %% "scalatest" % "3.2.0" % Test,
   "com.typesafe.akka" %% "akka-http-testkit" % akkaHttpVersion % Test,
   "com.typesafe.akka" %% "akka-testkit" % akkaVersion % Test,
+
+  "com.typesafe.akka" %% "akka-persistence-cassandra-launcher" % AkkaPersistenceCassandraVersion,
 
   // li haoyi ammonite repl embed
   ("com.lihaoyi" % "ammonite" % "2.2.0" % "test").cross(CrossVersion.full)

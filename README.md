@@ -400,3 +400,9 @@ https://doc.akka.io/docs/akka/current/typed/cluster-sharding.html
 ### Git
 
 git tag -a v0.2.0 -m "v0.2.0" &&  git push --tags
+
+### TO DO 
+
+Add two roles: endpoint and domain. If the role of the cluster node is “domain” we simply start cluster sharding, 
+otherwise we initialize cluster sharding as a proxy so no shards are hosted by the node and start HTTP endpoints. 
+(See how it's done for  https://www.lightbend.com/blog/how-to-distribute-application-state-with-akka-cluster-part-4-the-source-code)
