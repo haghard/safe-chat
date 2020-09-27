@@ -11,8 +11,6 @@ import akka.actor.ExtendedActorSystem
 import akka.serialization.{ByteBufferSerializer, SerializerWithStringManifest}
 import com.safechat.actors.{ChatRoomEvent, UserDisconnected, UserJoined, UserTextAdded}
 import com.safechat.serializer.SchemaRegistry
-import io.netty.buffer.{ByteBufAllocator, ByteBufUtil, PooledByteBufAllocator, Unpooled}
-import io.netty.util.CharsetUtil
 import org.apache.avro.Schema
 import org.apache.avro.io.{BinaryEncoder, DecoderFactory, EncoderFactory}
 import org.apache.avro.specific.{SpecificDatumReader, SpecificDatumWriter}
@@ -493,9 +491,14 @@ final class JournalEventsSerializer2(val system: ExtendedActorSystem)
 //https://github.com/brendangregg/perf-tools
 
 /*
+
+import io.netty.util.CharsetUtil
+import io.netty.buffer.{ByteBufAllocator, ByteBufUtil, PooledByteBufAllocator, Unpooled}
+
 //ByteBufUtil.hexDump(???)
-  val nettyAllocator = ByteBufAllocator.DEFAULT
-    //PooledByteBufAllocator.DEFAULT
+  val nettyAllocator = PooledByteBufAllocator.DEFAULT
+  //ByteBufAllocator.DEFAULT
+
   //if (Integer.bitCount(78) != 1) throw new IllegalArgumentException("Max packets must be a power of 2")
 
   val byteBuf = nettyAllocator.buffer()

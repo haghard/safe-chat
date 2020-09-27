@@ -2,6 +2,9 @@
 
 package com.safechat.actors
 
+import java.nio.ByteBuffer
+import java.nio.charset.StandardCharsets
+
 import akka.actor.typed.ActorSystem
 import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, Entity}
 import akka.cluster.sharding.typed.ClusterShardingSettings.StateStoreModeDData
@@ -13,26 +16,29 @@ import ShardedChatRooms._
 import akka.actor.typed.scaladsl.AskPattern._
 import akka.cluster.sharding.external.ExternalShardAllocation
 import com.safechat.Server
+import com.safechat.domain.CassandraHash
 
 object ShardedChatRooms {
 
   object ChatRoomsMsgExtractor {
     def apply[T <: UserCmdWithReply](numberOfShards: Int): ShardingMessageExtractor[T, T] =
       new ShardingMessageExtractor[T, T] {
+
         /*
-        val SEED = 512L
         private def hash3_128(entityId: String): Long = {
-          val bts = entityId.getBytes(UTF_8)
-          CassandraHash.hash3_x64_128(ByteBuffer.wrap(bts), 0, bts.length, SEED)(1)
+          val bts = entityId.getBytes(StandardCharsets.UTF_8)
+          CassandraHash.hash3_x64_128(ByteBuffer.wrap(bts), 0, bts.length, 512L)(1)
         }*/
 
         override def entityId(cmd: T): String =
           cmd.chatId
         //hash3_128(cmd.chatId).toHexString
 
-        override def shardId(entityId: String): String =
-          (math.abs(akka.util.Unsafe.fastHash(entityId)) % numberOfShards).toString
-        //(math.abs(hash3_128(entityId)) % numberOfShards).toString
+        override def shardId(entityId: String): String = {
+          //taking the abs value before doing the Modulo can produce a bug if the hashCode happens to be Int.MinValue
+          math.abs(akka.util.Unsafe.fastHash(entityId) % numberOfShards).toString
+          //math.abs(hash3_128(entityId) % numberOfShards).toString
+        }
 
         override def unwrapMessage(cmd: T): T = cmd
       }

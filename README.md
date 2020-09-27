@@ -238,6 +238,12 @@ How to use CQRS in Akka 2.6 https://www.youtube.com/watch?v=6ECsFlNNIAM
 
 Akka typed persistence:  https://www.youtube.com/watch?v=hYucH6dXGSM
 
+https://blog.knoldus.com/introduction-to-akka-cluster-sharding/
+
+https://github.com/jmarin/akka-persistent-entity
+
+https://github.com/jmarin/pixels
+
 ##  Avro
 
 https://avro.apache.org/docs/1.8.2/spec.html#Maps
@@ -387,7 +393,6 @@ curl -w '\n' -X PUT -H 'Content-Type: multipart/form-data' -F operation=down htt
 curl -w '\n' -X PUT -H 'Content-Type: multipart/form-data' -F operation=leave http://localhost:8080/cluster/members/safe-chat@127.0.0.1:2550
 
 
-
 ### Akka-cluster-sharding links 
 
 https://manuel.bernhardt.io/2018/02/26/tour-akka-cluster-cluster-sharding/
@@ -405,7 +410,7 @@ git tag -a v0.2.0 -m "v0.2.0" &&  git push --tags
 
 Add two roles: endpoint and domain. If the role of the cluster node is “domain” we simply start cluster sharding, 
 otherwise we initialize cluster sharding as a proxy so no shards are hosted by the node and start HTTP endpoints. 
-(See how it's done for  https://www.lightbend.com/blog/how-to-distribute-application-state-with-akka-cluster-part-4-the-source-code)
+(See how it's done for https://www.lightbend.com/blog/how-to-distribute-application-state-with-akka-cluster-part-4-the-source-code)
 Use `streamee` to enable streaming from http routes to shard region proxies. 
 
 
