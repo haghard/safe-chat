@@ -14,9 +14,8 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 import ShardedChatRooms._
 import akka.actor.typed.scaladsl.AskPattern._
-import akka.cluster.sharding.external.ExternalShardAllocation
 import com.safechat.Server
-import com.safechat.domain.CassandraHash
+import akka.cluster.sharding.external.ExternalShardAllocation
 
 object ShardedChatRooms {
 
@@ -27,18 +26,17 @@ object ShardedChatRooms {
         /*
         private def hash3_128(entityId: String): Long = {
           val bts = entityId.getBytes(StandardCharsets.UTF_8)
-          CassandraHash.hash3_x64_128(ByteBuffer.wrap(bts), 0, bts.length, 512L)(1)
+          com.safechat.domain.CassandraHash.hash3_x64_128(ByteBuffer.wrap(bts), 0, bts.length, 512L)(1)
         }*/
 
         override def entityId(cmd: T): String =
           cmd.chatId
         //hash3_128(cmd.chatId).toHexString
 
-        override def shardId(entityId: String): String = {
+        override def shardId(entityId: String): String =
           //taking the abs value before doing the Modulo can produce a bug if the hashCode happens to be Int.MinValue
-          math.abs(akka.util.Unsafe.fastHash(entityId) % numberOfShards).toString
-          //math.abs(hash3_128(entityId) % numberOfShards).toString
-        }
+          math.abs(entityId.hashCode % numberOfShards).toString
+        //math.abs(hash3_128(entityId) % numberOfShards).toString
 
         override def unwrapMessage(cmd: T): T = cmd
       }

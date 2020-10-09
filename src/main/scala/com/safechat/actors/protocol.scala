@@ -66,7 +66,7 @@ final case class UserTextAdded(originator: String, recipient: String, content: S
     extends ChatRoomEvent
 final case class UserDisconnected(originator: String) extends ChatRoomEvent
 
-final case class ChatRoomPubSub(sinkHub: Sink[Message, NotUsed], srcHub: Source[Message, NotUsed], ks: UniqueKillSwitch)
+final case class ChatRoomHub(sinkHub: Sink[Message, NotUsed], srcHub: Source[Message, NotUsed], ks: UniqueKillSwitch)
 
 case object Null extends ChatRoomEvent {
   override def originator: String = ""
@@ -76,7 +76,7 @@ final case class ChatRoomState(
   regUsers: Map[String, String] = Map.empty,
   online: Set[String] = Set.empty,
   recentHistory: RingBuffer[String] = new RingBuffer[String](1 << 4),
-  hub: Option[ChatRoomPubSub] = None
+  hub: Option[ChatRoomHub] = None
 ) {
 
   def applyCmd(cmd: UserCmd): ReplyEffect[ChatRoomEvent, ChatRoomState] =

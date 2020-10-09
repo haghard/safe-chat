@@ -33,7 +33,7 @@ object ChatRoomEntity {
   val entityKey: EntityTypeKey[UserCmdWithReply] =
     EntityTypeKey[UserCmdWithReply]("chat-rooms")
 
-  val empty = com.safechat.actors.ChatRoomState()
+  val emptyState = com.safechat.actors.ChatRoomState()
 
   def persist(persistenceId: String, entity: ActorRef[PostText])(implicit
     persistTimeout: Timeout
@@ -137,12 +137,12 @@ object ChatRoomEntity {
     * (dynamic number of producers and new consumers can be added on the fly)
     * The rate of the producer will be automatically adapted to the slowest consumer.
     */
-  def createPubSub(
+  def chatRoomHub(
     persistenceId: String,
     entity: ActorRef[PostText]
   )(implicit
     sys: ActorSystem[Nothing]
-  ): ChatRoomPubSub = {
+  ): ChatRoomHub = {
     implicit val ec = sys.executionContext
 
     val initBs = sys.settings.config.getInt("akka.stream.materializer.initial-input-buffer-size")
@@ -183,7 +183,7 @@ object ChatRoomEntity {
         .toMat(BroadcastHub.sink[Message](initBs))(Keep.both)
         .run()
 
-    ChatRoomPubSub(sinkHub, sourceHub, ks)
+    ChatRoomHub(sinkHub, sourceHub, ks)
   }
 
   def onCommand(ctx: ActorContext[UserCmdWithReply])(state: ChatRoomState, cmd: UserCmdWithReply)(implicit
@@ -249,7 +249,7 @@ object ChatRoomEntity {
             state.copy(
               regUsers = state.regUsers + (login → pubKey),
               online = Set(login),
-              hub = Some(createPubSub(persistenceId, ctx.self.narrow[PostText]))
+              hub = Some(chatRoomHub(persistenceId, ctx.self.narrow[PostText]))
             )
         else
           state.copy(
@@ -266,11 +266,11 @@ object ChatRoomEntity {
 
   def snapshotPredicate(
     ctx: ActorContext[UserCmdWithReply]
-  )(state: ChatRoomState, event: ChatRoomEvent, id: Long): Boolean = {
-    val ifSnap = id > 0 && id % snapshotEveryN == 0
+  )(state: ChatRoomState, event: ChatRoomEvent, sequenceNr: Long): Boolean = {
+    val ifSnap = sequenceNr % snapshotEveryN == 0
 
     if (ifSnap)
-      ctx.log.info(s"Snapshot {}", id)
+      ctx.log.info(s"Snapshot {}", sequenceNr)
 
     ifSnap
   }

@@ -96,7 +96,7 @@ LunaConf 2020 - Akka Persistence Typed by Renato Cavalcanti: https://youtu.be/hY
 https://github.com/renatocaval/akka-persistence-typed-talk
 
 
-## message evolution/versioning
+## Message evolution/versioning
 
 https://www.scala-exercises.org/shapeless/coproducts
 
@@ -240,6 +240,8 @@ Akka typed persistence:  https://www.youtube.com/watch?v=hYucH6dXGSM
 
 https://blog.knoldus.com/introduction-to-akka-cluster-sharding/
 
+https://blog.knoldus.com/implementing-akka-cluster-sharding/ 
+
 https://github.com/jmarin/akka-persistent-entity
 
 https://github.com/jmarin/pixels
@@ -271,13 +273,15 @@ https://www.youtube.com/watch?v=2jKu_E1TZPM
 Managing an Akka Cluster on Kubernetes - Markus Jura: https://www.youtube.com/watch?v=Sz-SE1FyhJE&list=PLLMLOC3WM2r5KDwkSRrLJ1_O6kZqlhhFt&index=22
 
 
-## Gatling example
+## Gatling
 
 https://blog.knoldus.com/gatling-for-websocket-protocol
 
 https://github.com/michael-read/akka-typed-distributed-state-blog/tree/master/gatling
 
 https://github.com/michael-read/akka-typed-distributed-state-blog/blob/master/gatling/src/test/scala/com/lightbend/gatling/ArtifactStateScenario.scala
+
+https://blog.knoldus.com/gatling-with-jenkins/
 
 ### Distributed state blog series 
 
