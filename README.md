@@ -27,6 +27,33 @@ sbt second
 
 ```
 
+### Start message
+
+```
+
+[info] =================================================================================================
+[info] ★ ★ ★   Node 127.0.0.1:2550   ★ ★ ★
+[info] ★ ★ ★   Seed nodes: [akka://safe-chat@127.0.0.1:2550, akka://safe-chat@127.0.0.2:2550]  ★ ★ ★
+[info] ★ ★ ★   Cassandra: 84.201.150.26:9042,84.201.146.112:9042   Journal partition size: 500000 ★ ★ ★
+[info] ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★  Schema mapping ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★
+[info] com.safechat.actors.UserTextAdded -> com.safechat.persistent.domain.UserTextAdded
+[info] com.safechat.actors.UserDisconnected -> com.safechat.persistent.domain.UserDisconnected
+[info] com.safechat.actors.UserJoined -> com.safechat.persistent.domain.UserJoined
+[info] ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★
+[info] ★ ★ ★   Environment: [TZ:Europe/Amsterdam. Start time:2020-10-11T...]  ★ ★ ★
+[info] ★ ★ ★   HTTP server is online: http://127.0.0.1:8080 ★ ★ ★ 
+[info]                                 ___  ____   ___  __   __  ___   ___     ______
+[info]                                / __| | __| | _ \ \ \ / / | __| | _ \    \ \ \ \
+[info]                                \__ \ | _|  |   /  \ V /  | _|  |   /     ) ) ) )
+[info]                                |___/ |___| |_|_\   \_/   |___| |_|_\    /_/_/_/
+[info]         
+[info] ★ ★ ★  Artery: maximum-frame-size: 262144 bytes  ★ ★ ★
+[info] Version:0.3.0-SNAPSHOT at 2020-10-11 17:25:15.310+0200
+[info] Cores:8 Total Memory:268Mb Max Memory:1073Mb Free Memory:197Mb RAM:17179Mb
+[info] =================================================================================================
+
+```
+
 
 ### How to build and publish with docker
 
@@ -481,6 +508,7 @@ CREATE TABLE chat.metadata (
     AND speculative_retry = '99PERCENTILE';
 
 ```
+
 
 ### Git
 
