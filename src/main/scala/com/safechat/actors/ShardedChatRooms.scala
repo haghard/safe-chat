@@ -96,7 +96,9 @@ class ShardedChatRooms(implicit system: ActorSystem[Nothing]) {
     //For any shardId that has not been allocated it will be allocated to the requesting node (like a sticky session)
     //.withAllocationStrategy(new ExternalShardAllocationStrategy(system, ChatRoomEntity.entityKey.name))
     //default AllocationStrategy
-    .withAllocationStrategy(new akka.cluster.sharding.ShardCoordinator.LeastShardAllocationStrategy(1, 3))
+    //.withAllocationStrategy(new akka.cluster.sharding.ShardCoordinator.LeastShardAllocationStrategy(1, 3))
+    //https://doc.akka.io/docs/akka/2.6/typed/cluster-sharding.html?_ga=2.114148035.592677992.1602252039-408157630.1602252039#shard-allocation
+    .withAllocationStrategy(akka.cluster.sharding.ShardCoordinator.leastShardAllocationStrategy(20, 0.5))
     .withEntityProps(akka.actor.typed.Props.empty.withDispatcherFromConfig("shard-dispatcher"))
 
   val chatShardRegion = sharding.init(entity)
