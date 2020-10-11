@@ -83,8 +83,7 @@ case class ChatRoomApi(rooms: ShardedChatRooms)(implicit sys: ActorSystem[Nothin
         }
       }
 
-  /**
-    * As long as at least one connection is opened to the chat room, the associated persistent entity won't be passivated.
+  /** As long as at least one connection is opened to the chat room, the associated persistent entity won't be passivated.
     *
     * Downsides: online users count is wrong ???
     */

@@ -94,8 +94,7 @@ object JournalEventsSerializer {
 
   def illegalArgument(msg: String) = throw new IllegalArgumentException(msg)
 
-  /**
-    * Possible inputs:
+  /** Possible inputs:
     *   com.safechat.actors.ChatRoomEvent
     *   com.safechat.actors.ChatRoomState
     *
@@ -213,8 +212,7 @@ object JournalEventsSerializer {
         )
     }
 
-  /**
-    * Possible inputs:
+  /** Possible inputs:
     *   com.safechat.actors.ChatRoomEvent
     *   com.safechat.actors.ChatRoomState
     *
@@ -297,8 +295,7 @@ object JournalEventsSerializer {
   }
 }
 
-/**
-  * https://doc.akka.io/api/akka/current/akka/serialization/ByteBufferSerializer.html
+/** https://doc.akka.io/api/akka/current/akka/serialization/ByteBufferSerializer.html
   * https://doc.akka.io/docs/akka/current/remoting-artery.html#bytebuffer-based-serialization
   */
 final class JournalEventsSerializer(val system: ExtendedActorSystem) extends SerializerWithStringManifest {
@@ -340,8 +337,7 @@ final class JournalEventsSerializer1(val system: ExtendedActorSystem)
 
   override def manifest(obj: AnyRef): String = JournalEventsSerializer.manifest(obj, activeSchemaHash, mapping)
 
-  /**
-    * Allows the ByteBufferSerializer to directly write into a shared java.nio.ByteBuffer
+  /** Allows the ByteBufferSerializer to directly write into a shared java.nio.ByteBuffer
     * instead of being forced to allocate and return an Array[Byte] for each serialized message.
     * Very useful for apps without persistence.
     */
@@ -422,8 +418,7 @@ final class JournalEventsSerializer2(val system: ExtendedActorSystem)
   private val allocator =
     new FixedSizeAllocator(maxFrameSize + extraSpace, (maxFrameSize + extraSpace) * concurrencyLevel)
 
-  /**
-    * Allows the ByteBufferSerializer to directly write into a shared java.nio.ByteBuffer
+  /** Allows the ByteBufferSerializer to directly write into a shared java.nio.ByteBuffer
     * instead of being forced to allocate and return an Array[Byte] for each serialized message.
     */
   override def toBinary(obj: AnyRef): Array[Byte] = {

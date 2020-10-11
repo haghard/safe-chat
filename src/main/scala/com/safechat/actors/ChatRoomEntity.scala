@@ -57,8 +57,7 @@ object ChatRoomEntity {
     RestartFlow.withBackoff(1.second, 10.seconds, 0.3)(() ⇒ persistFlow)
   }
 
-  /**
-    * Each `ChatRoomEntity` actor is a single source of true, acting as a consistency boundary for the data that is manages.
+  /** Each `ChatRoomEntity` actor is a single source of true, acting as a consistency boundary for the data that is manages.
     *
     * Messages in a single chat define a single total order.
     *
@@ -123,8 +122,7 @@ object ChatRoomEntity {
         )
     }
 
-  /**
-    * Each chat root contains MergeHub and BroadcastHub connected together to form a runnable graph.
+  /** Each chat root contains MergeHub and BroadcastHub connected together to form a runnable graph.
     * Once we materialize this stream, we get back a pair of Source and Sink that together define the publish and subscribe sides of our chat room.
     *
     * Dynamic fan-in and fan-out with MergeHub and BroadcastHub (https://doc.akka.io/docs/akka/current/stream/stream-dynamic.html#combining-dynamic-operators-to-build-a-simple-publish-subscribe-service)

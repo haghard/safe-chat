@@ -60,8 +60,7 @@ class ShardedChatRooms(implicit system: ActorSystem[Nothing]) {
       .withStateStoreMode(StateStoreModeDData)
       .withPassivateIdleEntityAfter(passivationTimeout)
 
-  /**
-    * Aa a example of non persistent but sharded `Entity`.
+  /** Aa a example of non persistent but sharded `Entity`.
     * Note that since this station is not storing its state anywhere else than in JVM memory, if Akka Cluster Sharding
     * rebalances it - moves it to another node because of cluster nodes added removed etc - it will lose all its state.
     * For a sharded entity to have state that survives being stopped and started again it needs to be persistent,
@@ -98,7 +97,9 @@ class ShardedChatRooms(implicit system: ActorSystem[Nothing]) {
     //default AllocationStrategy
     //.withAllocationStrategy(new akka.cluster.sharding.ShardCoordinator.LeastShardAllocationStrategy(1, 3))
     //https://doc.akka.io/docs/akka/2.6/typed/cluster-sharding.html?_ga=2.114148035.592677992.1602252039-408157630.1602252039#shard-allocation
-    .withAllocationStrategy(akka.cluster.sharding.ShardCoordinator.leastShardAllocationStrategy(numberOfShards/2, 0.5))
+    .withAllocationStrategy(
+      akka.cluster.sharding.ShardCoordinator.leastShardAllocationStrategy(numberOfShards / 2, 0.5)
+    )
     .withEntityProps(akka.actor.typed.Props.empty.withDispatcherFromConfig("shard-dispatcher"))
 
   val chatShardRegion = sharding.init(entity)

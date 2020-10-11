@@ -5,8 +5,7 @@ package domain
 
 import scala.collection.mutable
 
-/**
-  * One more interesting implementation is akka.remote.artery.LruBoundedCache
+/** One more interesting implementation is akka.remote.artery.LruBoundedCache
   * https://www.sebastiansylvan.com/post/robin-hood-hashing-should-be-your-default-hash-table-implementation/
   *
   * ZIO stm based LRUCache
