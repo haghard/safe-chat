@@ -525,3 +525,6 @@ Use `streamee` to enable streaming from http routes to shard region proxies.
 Enable replicated-event-sourcing 
 https://doc.akka.io/docs/akka/current/typed/replicated-eventsourcing.html#replicated-event-sourcing
 https://github.com/akka/akka-samples.git akka-sample-persistence-dc-scala
+
+
+Sharding improvements(2.6.10): https://doc.akka.io/docs/akka/2.6/additional/rolling-updates.html

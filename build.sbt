@@ -64,7 +64,7 @@ lazy val root = project
     resolvers ++= Seq("Typesafe Snapshots" at "https://repo.akka.io/snapshots"),
 
     parallelExecution in Test := false,
-    javaOptions ++= Seq("-Xmx1024m", "-XX:MaxMetaspaceSize=900m", "-XX:+UseG1GC"),
+    javaOptions ++= Seq("-Xmx1024m", "-XX:MaxMetaspaceSize=800m", "-XX:+UseG1GC"),
 
     mainClass in assembly := Some("com.safechat.Server"),
     assemblyJarName in assembly := s"$projectName-${version.value}.jar",
