@@ -149,7 +149,7 @@ object Server extends Ops {
     system.log.info(greeting)
 
     // Akka Management hosts the HTTP routes used by bootstrap
-    akka.management.scaladsl.AkkaManagement.get(system).start()
+    akka.management.scaladsl.AkkaManagement(system).start()
 
     // Starting the bootstrap process needs to be done explicitly
     akka.management.cluster.bootstrap.ClusterBootstrap(system.toClassic).start()
