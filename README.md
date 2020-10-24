@@ -74,6 +74,9 @@ docker run --net="host" -d -p 2551:2551 -p 8080:8080 -e HOSTNAME=10.130.0.22 -e 
 ```bash
 
 http 127.0.0.1:8080/cluster/members
+http 127.0.0.1:8558/cluster/members 
+
+http GET 127.0.0.1:8558/bootstrap/seed-nodes
 
 http 127.0.0.1:8080/cluster/shards/chat-rooms //shards on this node (local shards)
 http 127.0.0.2:8080/cluster/shards/chat-rooms //shards on this node (local shards)

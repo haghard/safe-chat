@@ -102,7 +102,7 @@ object Server extends Ops {
         s"""
           |akka.management {
           |  http {
-          |     host = $akkaExternalHostName
+          |     hostname = $akkaExternalHostName
           |     port = 8558
           |  }
           |  cluster {

@@ -10,6 +10,7 @@ import scala.util.{Failure, Success}
 import scala.concurrent.duration._
 import akka.actor.CoordinatedShutdown
 import akka.actor.CoordinatedShutdown.{PhaseActorSystemTerminate, PhaseBeforeServiceUnbind, PhaseServiceRequestsDone, PhaseServiceStop, PhaseServiceUnbind, Reason}
+import akka.management.scaladsl.AkkaManagement
 
 import scala.concurrent.Future
 import akka.stream.scaladsl.Sink
@@ -60,12 +61,12 @@ case class Bootstrap(routes: Route, host: String, port: Int)(implicit
         }
       }
 
-      /*shutdown.addTask(PhaseServiceUnbind, "akka-management.stop") { () =>
-        AkkaManagement(classicSystem).stop().map { done =>
+      shutdown.addTask(PhaseServiceUnbind, "akka-management.stop") { () ⇒
+        AkkaManagement(classicSystem).stop().map { done ⇒
           classicSystem.log.info("CoordinatedShutdown [akka-management.stop]")
           done
         }
-      }*/
+      }
 
       //graceful termination request being handled on this connection
       shutdown.addTask(PhaseServiceRequestsDone, "http-api.terminate") { () ⇒

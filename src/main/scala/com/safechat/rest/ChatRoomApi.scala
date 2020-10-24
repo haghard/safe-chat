@@ -92,9 +92,9 @@ case class ChatRoomApi(rooms: ShardedChatRooms)(implicit sys: ActorSystem[Nothin
       val flow =
         //When ChatRoomEntities get rebalanced, a flow(src, sink) we got once may no longed be valid so we need to restart that transparently for users
         //TODO: When reconnect, filter out recent chat history
-        RestartFlow.withBackoff(ChatRoomEntity.hubInitTimeout, ChatRoomEntity.hubInitTimeout, 0.4)(() ⇒
-          Flow.futureFlow(chatRoomWsFlow(rooms, chatId, user, pubKey))
-        )
+        RestartFlow.withBackoff(
+          akka.stream.RestartSettings(ChatRoomEntity.hubInitTimeout, ChatRoomEntity.hubInitTimeout, 0.4)
+        )(() ⇒ Flow.futureFlow(chatRoomWsFlow(rooms, chatId, user, pubKey)))
       handleWebSocketMessages(flow)
     } ~ ClusterHttpManagementRoutes(akka.cluster.Cluster(sys.toClassic))
 }
