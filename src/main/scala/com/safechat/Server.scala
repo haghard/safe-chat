@@ -98,6 +98,7 @@ object Server extends Ops {
     }
 
     val cfg: Config = {
+      //https://doc.akka.io/docs/akka-management/current/akka-management.html
       val managementConf =
         s"""
           |akka.management {
