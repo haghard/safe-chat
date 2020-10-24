@@ -96,9 +96,10 @@ class ShardedChatRooms(implicit system: ActorSystem[Nothing]) {
     //.withAllocationStrategy(new ExternalShardAllocationStrategy(system, ChatRoomEntity.entityKey.name))
     //default AllocationStrategy
     //.withAllocationStrategy(new akka.cluster.sharding.ShardCoordinator.LeastShardAllocationStrategy(1, 3))
-    //https://doc.akka.io/docs/akka/2.6/typed/cluster-sharding.html?_ga=2.114148035.592677992.1602252039-408157630.1602252039#shard-allocation
+    //https://doc.akka.io/docs/akka/2.6/typed/cluster-sharding.html?_ga=#shard-allocation
     .withAllocationStrategy(
-      akka.cluster.sharding.ShardCoordinator.ShardAllocationStrategy.leastShardAllocationStrategy(numberOfShards / 2, 0.5)
+      akka.cluster.sharding.ShardCoordinator.ShardAllocationStrategy
+        .leastShardAllocationStrategy(numberOfShards / 2, 0.5)
     )
     .withEntityProps(akka.actor.typed.Props.empty.withDispatcherFromConfig("shard-dispatcher"))
 
