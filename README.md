@@ -78,6 +78,11 @@ http 127.0.0.1:8558/cluster/members
 
 http GET 127.0.0.1:8558/bootstrap/seed-nodes
 
+curl -w '\n' -X PUT -H 'Content-Type: multipart/form-data' -F operation=leave http://127.0.0.1:8080/cluster/members/safe-chat@127.0.0.2:2550
+curl -w '\n' -X PUT -H 'Content-Type: multipart/form-data' -F operation=down http://127.0.0.1:8080/cluster/members/safe-chat@127.0.0.2:2550
+
+
+
 http 127.0.0.1:8080/cluster/shards/chat-rooms //shards on this node (local shards)
 http 127.0.0.2:8080/cluster/shards/chat-rooms //shards on this node (local shards)
 

@@ -106,7 +106,7 @@ object Server extends Ops {
           |     hostname = $akkaExternalHostName
           |     port = 8558
           |
-          |     bind-hostname = $dockerAddr
+          |     #bind-hostname = $dockerAddr
           |     bind-port = 8558
           |  }
           |  cluster {

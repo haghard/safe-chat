@@ -63,7 +63,7 @@ case class Bootstrap(routes: Route, host: String, port: Int)(implicit
 
       shutdown.addTask(PhaseServiceUnbind, "akka-management.stop") { () ⇒
         AkkaManagement(classicSystem).stop().map { done ⇒
-          classicSystem.log.info("CoordinatedShutdown [akka-management.stop]")
+          classicSystem.log.info("★ ★ ★ CoordinatedShutdown [akka-management.stop]  ★ ★ ★")
           done
         }
       }
@@ -74,10 +74,10 @@ case class Bootstrap(routes: Route, host: String, port: Int)(implicit
           * Until the `terminationDeadline` all the req that have been accepted will be completed
           * and only than the shutdown will continue
           */
-        binding.terminate(terminationDeadline).map { _ ⇒
+        akka.pattern.after(1.second)(binding.terminate(terminationDeadline).map { _ ⇒
           classicSystem.log.info("★ ★ ★ CoordinatedShutdown [http-api.terminate]  ★ ★ ★")
           Done
-        }
+        })
       }
 
       //forcefully kills connections that are still open
