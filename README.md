@@ -66,23 +66,24 @@ sbt second
 
 docker run --net="host" -d -p 2551:2551 -p 8080:8080 -e HOSTNAME=10.130.0.22 -e HTTP_PORT=8080 -e AKKA_PORT=2551 -e CASSANDRA=84.201.150.26:9042,84.201.146.112:9042 -e SEEDS=10.130.0.22:2551 -e DISCOVERY_METHOD=config -e CAS_USER=... -e CAS_PWS=... -m 700MB haghard/safe-chat:0.1.0
 
-
 ```
 
 ### Management
 
 ```bash
 
-http 127.0.0.1:8080/cluster/members
-http 127.0.0.1:8558/cluster/members 
+Aladdin:OpenSesame - QWxhZGRpbjpPcGVuU2VzYW1l
 
-http GET 127.0.0.1:8558/bootstrap/seed-nodes
+http 127.0.0.1:8080/cluster/members "Authorization:Basic QWxhZGRpbjpPcGVuU2VzYW1l"
+http 127.0.0.1:8558/cluster/members "Authorization:Basic QWxhZGRpbjpPcGVuU2VzYW1l"
 
+http 127.0.0.1:8558/bootstrap/seed-nodes "Authorization:Basic QWxhZGRpbjpPcGVuU2VzYW1l"
 
 
 Leave
 curl -w '\n' -X PUT -H 'Content-Type: multipart/form-data' -F operation=leave http://127.0.0.1:8080/cluster/members/safe-chat@127.0.0.2:2550
 or
+
 http DELETE 127.0.0.1:8080/cluster/members/akka://safe-chat@127.0.0.2:2550
 
 

@@ -7,11 +7,12 @@ import java.lang.management.ManagementFactory
 import java.time.LocalDateTime
 import java.util.TimeZone
 
-import akka.actor.typed.Behavior
+import akka.actor.typed.{ActorSystem, Behavior, DispatcherSelector}
 import akka.actor.typed.scaladsl.Behaviors
 import akka.cluster.typed.{Cluster, SelfUp, Unsubscribe}
 import com.typesafe.config.{Config, ConfigFactory}
 import akka.actor.typed.scaladsl.adapter._
+import akka.http.scaladsl.server.directives.Credentials
 
 import scala.jdk.CollectionConverters._
 import com.safechat.actors.ShardedChatRooms
@@ -19,6 +20,7 @@ import com.safechat.rest.ChatRoomApi
 import com.safechat.serializer.SchemaRegistry
 
 import scala.collection.Map
+import scala.concurrent.Future
 import scala.util.Try
 
 object Server extends Ops {
@@ -153,11 +155,21 @@ object Server extends Ops {
     system.log.info(greeting)
 
     // Akka Management hosts the HTTP routes used by bootstrap
-    akka.management.scaladsl.AkkaManagement(system).start()
+    akka.management.scaladsl.AkkaManagement(system).start(_.withAuth(basicAuth(system)))
 
     // Starting the bootstrap process needs to be done explicitly
     akka.management.cluster.bootstrap.ClusterBootstrap(system.toClassic).start()
   }
+
+  // http 127.0.0.1:8558/cluster/members "Authorization:Basic QWxhZGRpbjpPcGVuU2VzYW1l"
+  private def basicAuth(sys: ActorSystem[Nothing])(credentials: Credentials): Future[Option[String]] =
+    credentials match {
+      case p @ Credentials.Provided(id) ⇒
+        Future {
+          if ((id == "Aladdin") && p.verify("OpenSesame")) Some(id) else None
+        }(sys.dispatchers.lookup(DispatcherSelector.fromConfig("http-dispatcher")))
+      case _ ⇒ Future.successful(None)
+    }
 
   def showGreeting(
     cfg: Config,
