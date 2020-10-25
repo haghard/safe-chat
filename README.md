@@ -78,7 +78,14 @@ http 127.0.0.1:8558/cluster/members
 
 http GET 127.0.0.1:8558/bootstrap/seed-nodes
 
+
+
+Leave
 curl -w '\n' -X PUT -H 'Content-Type: multipart/form-data' -F operation=leave http://127.0.0.1:8080/cluster/members/safe-chat@127.0.0.2:2550
+or
+http DELETE 127.0.0.1:8080/cluster/members/akka://safe-chat@127.0.0.2:2550
+
+
 curl -w '\n' -X PUT -H 'Content-Type: multipart/form-data' -F operation=down http://127.0.0.1:8080/cluster/members/safe-chat@127.0.0.2:2550
 
 
@@ -86,23 +93,15 @@ curl -w '\n' -X PUT -H 'Content-Type: multipart/form-data' -F operation=down htt
 http 127.0.0.1:8080/cluster/shards/chat-rooms //shards on this node (local shards)
 http 127.0.0.2:8080/cluster/shards/chat-rooms //shards on this node (local shards)
 
-http DELETE 127.0.0.1:8080/cluster/members/akka://safe-chat@127.0.0.2:2550
-
 ```
 
 
 ```bash
 
-
-
 ws://188.68.210.125:8080/chat/aaa/user/charley?key=sdfgsdf
 ws://85.119.150.35:8080/chat/aaa/user/charley?key=sdfgsdf
 
 http GET 188.68.210.125:8080/cluster/shards/chat-rooms
-
-Executes leave operation in cluster for the given address
-http DELETE 188.68.210.125:8080/cluster/members/akka://echatter@85.119.150.35:2551
-
 
 ```
 
@@ -247,13 +246,15 @@ Putting Several Event Types in the Same Topic – Revisited:  https://www.conflu
 
 
 
-
 ## Snapshotting
+
 https://doc.akka.io/docs/akka/current/typed/persistence-snapshot.html
 
 
 ## SinkRef serialization/deserialization
+
 https://blog.softwaremill.com/akka-references-serialization-with-protobufs-up-to-akka-2-5-87890c4b6cb0
+
 
 ## Cassandra
 
@@ -384,6 +385,7 @@ DData example:            https://github.com/akka/akka-samples/tree/2.6/akka-sam
 
 CQRS ShoppingCart example: read-side is implemented using Akka Projections: https://github.com/akka/akka-samples/tree/2.6/akka-sample-cqrs-scala
 
+Akka Persistence and MariaDB:  https://medium.com/@matteodipirro/stateful-actors-with-akka-event-sourcing-and-maria-db-d4202c6c599a
 
 
 ```bash
@@ -403,7 +405,8 @@ select persistence_id, partition_nr, sequence_nr, timestamp, ser_id, ser_manifes
 ```
 
 
-Link to read
+### Links to read
+
 https://doc.akka.io/docs/akka/current/typed/actors.html#a-more-complex-example
 https://github.com/akka/akka-samples/tree/2.6/akka-sample-sharding-scala
 
