@@ -26,6 +26,7 @@ import scala.util.Try
 object Server extends Ops {
 
   val Dispatcher     = "akka.actor.default-dispatcher"
+  val HttpDispatcher = "http-dispatcher"
   val AkkaSystemName = "safe-chat"
 
   def guardian(hostName: String, httpPort: Int): Behavior[Nothing] =
@@ -167,7 +168,7 @@ object Server extends Ops {
       case p @ Credentials.Provided(id) ⇒
         Future {
           if ((id == "Aladdin") && p.verify("OpenSesame")) Some(id) else None
-        }(sys.dispatchers.lookup(DispatcherSelector.fromConfig("http-dispatcher")))
+        }(sys.dispatchers.lookup(DispatcherSelector.fromConfig(Server.HttpDispatcher)))
       case _ ⇒ Future.successful(None)
     }
 
