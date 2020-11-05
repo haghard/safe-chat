@@ -12,17 +12,17 @@ import akka.cluster.sharding.typed.scaladsl.{EntityContext, EntityTypeKey}
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
 import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior, ReplyEffect, RetentionCriteria}
 import akka.persistence.typed._
-import akka.stream.scaladsl.{BroadcastHub, Flow, Keep, MergeHub, RestartFlow, Source, StreamRefs}
-import akka.stream.{KillSwitches, StreamRefAttributes}
+import akka.stream.scaladsl.{BroadcastHub, Flow, Keep, MergeHub, RestartFlow, Sink, Source, StreamRefs}
+import akka.stream.{ActorAttributes, Attributes, KillSwitches, StreamRefAttributes, Supervision}
 import akka.util.Timeout
 
+import scala.annotation.implicitNotFound
 import scala.concurrent.duration._
 
 object ChatRoomEntity {
 
-  val snapshotEveryN   = 300       //TODO should be configurable
-  val hubInitTimeout   = 3.seconds //TODO should be configurable
-  val writeParallelism = 1
+  val snapshotEveryN = 300       //TODO should be configurable
+  val hubInitTimeout = 5.seconds //TODO should be configurable
 
   val MSG_SEP = ":"
 
@@ -30,17 +30,19 @@ object ChatRoomEntity {
   val wakeUpEntityName = "dungeon"
   val frmtr            = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss Z")
 
+  val persistTimeout = akka.util.Timeout(1.second) //write to the journal timeout
+
   val entityKey: EntityTypeKey[UserCmdWithReply] =
     EntityTypeKey[UserCmdWithReply]("chat-rooms")
 
   val emptyState = com.safechat.actors.ChatRoomState()
 
-  def persist(persistenceId: String, entity: ActorRef[PostText])(implicit
+  private def persistFlow(persistenceId: String, entity: ActorRef[PostText])(implicit
     persistTimeout: Timeout
   ): Flow[Message, ChatRoomReply, akka.NotUsed] = {
     def persistFlow =
-      akka.stream.typed.scaladsl.ActorFlow.ask[Message, PostText, ChatRoomReply](writeParallelism)(entity) {
-        (msg: Message, replyTo: ActorRef[ChatRoomReply]) ⇒
+      akka.stream.typed.scaladsl.ActorFlow
+        .ask[Message, PostText, ChatRoomReply](1)(entity) { (msg: Message, replyTo: ActorRef[ChatRoomReply]) ⇒
           msg match {
             case TextMessage.Strict(text) ⇒
               val segments = text.split(MSG_SEP)
@@ -51,10 +53,13 @@ object ChatRoomEntity {
             case other ⇒
               throw new Exception(s"Unexpected message type ${other.getClass.getName}")
           }
-      }
+        }
+        .withAttributes(Attributes.inputBuffer(1, 1)) //ActorAttributes.maxFixedBufferSize(1))
+
+    //ActorAttributes.supervisionStrategy({ case _ => Supervision.Resume }).and(Attributes.inputBuffer(1, 1))
 
     //TODO: maybe would be better to fail instead of retrying
-    RestartFlow.withBackoff(1.second, 10.seconds, 0.3)(() ⇒ persistFlow)
+    RestartFlow.withBackoff(akka.stream.RestartSettings(1.second, 3.seconds, 0.3))(() ⇒ persistFlow)
   }
 
   /** Each `ChatRoomEntity` actor is a single source of true, acting as a consistency boundary for the data that is manages.
@@ -141,19 +146,21 @@ object ChatRoomEntity {
   )(implicit
     sys: ActorSystem[Nothing]
   ): ChatRoomHub = {
-    implicit val ec = sys.executionContext
-
     val initBs = sys.settings.config.getInt("akka.stream.materializer.initial-input-buffer-size")
     //val bs1 = sys.settings.config.getInt("akka.stream.materializer.max-input-buffer-size")
 
     sys.log.warn("Create pub-sub for {} chatroom", persistenceId)
 
+    import akka.actor.typed.scaladsl.AskPattern._
     val ((sinkHub, ks), sourceHub) =
       MergeHub
         .source[Message](initBs)
+        //.alsoTo(Sink.foreachAsync(1) { entity.ask[ChatRoomReply](PostText(persistenceId, "", "", "", _))(???, ???) })
+        //.wireTap(Sink.ignore)
+        //.wireTap(m => println(m.toString))
         .via(
           //WsScaffolding.flowWithHeartbeat(30.second).via(persist(persistenceId, entity))
-          persist(persistenceId, entity)(akka.util.Timeout(1.second))
+          persistFlow(persistenceId, entity)(persistTimeout)
             .collect { case r: TextPostedReply ⇒ TextMessage.Strict(s"${r.chatId}:${r.seqNum} - ${r.content}") }
         )
         /*

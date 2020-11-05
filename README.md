@@ -88,11 +88,15 @@ http DELETE 127.0.0.1:8080/cluster/members/akka://safe-chat@127.0.0.2:2550
 
 
 curl -w '\n' -X PUT -H 'Content-Type: multipart/form-data' -F operation=down http://127.0.0.1:8080/cluster/members/safe-chat@127.0.0.2:2550
-
+curl -w '\n' -X PUT -H 'Content-Type: multipart/form-data' -F operation=leave http://127.0.0.1:8080/cluster/members/safe-chat@127.0.0.2:2550
 
 
 http 127.0.0.1:8080/cluster/shards/chat-rooms //shards on this node (local shards)
 http 127.0.0.2:8080/cluster/shards/chat-rooms //shards on this node (local shards)
+
+
+http 127.0.0.1:8080/cluster/members/akka://safe-chat@127.0.0.1:2550
+http 127.0.0.1:8080/cluster/members/safe-chat@127.0.0.1:2550
 
 ```
 
@@ -124,7 +128,7 @@ https://doc.akka.io/docs/akka/current/typed/persistence.html#example
 https://doc.akka.io/docs/akka/current/typed/cluster-sharding.html
 
 
-### Talks
+### Talks about Akka Persistence Typed
 
 LunaConf 2020 - Akka Persistence Typed by Renato Cavalcanti: https://youtu.be/hYucH6dXGSM?list=LLq_6THQ1qPDuFwd-a_O0pxg
 
@@ -345,6 +349,10 @@ https://efekahraman.github.io/2018/04/docker-awareness-in-java
 
 https://www.lightbend.com/blog/cpu-considerations-for-java-applications-running-in-docker-and-kubernetes
 
+
+### On kubernetes
+
+https://blog.softwaremill.com/running-akka-cluster-on-kubernetes-e4cd2913e951
 
 ## Videos
 

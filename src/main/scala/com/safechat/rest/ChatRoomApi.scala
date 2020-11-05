@@ -96,7 +96,7 @@ case class ChatRoomApi(rooms: ShardedChatRooms)(implicit sys: ActorSystem[Nothin
           akka.stream.RestartSettings(ChatRoomEntity.hubInitTimeout, ChatRoomEntity.hubInitTimeout, 0.4)
         )(() ⇒ Flow.futureFlow(chatRoomWsFlow(rooms, chatId, user, pubKey)))
       handleWebSocketMessages(flow)
-    } ~ ClusterHttpManagementRoutes(akka.cluster.Cluster(sys.toClassic))
+    } // ~ ClusterHttpManagementRoutes(akka.cluster.Cluster(sys.toClassic))
 }
 
 /*def auth(credentials: Option[HttpCredentials]): Future[AuthenticationResult[User]] =

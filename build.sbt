@@ -64,7 +64,9 @@ lazy val root = project
     resolvers ++= Seq("Typesafe Snapshots" at "https://repo.akka.io/snapshots"),
 
     parallelExecution in Test := false,
-    javaOptions ++= Seq("-Xmx1024m", "-XX:MaxMetaspaceSize=800m", "-XX:+UseG1GC"),
+
+    //used when Compile / run / fork := false and you run one of the aliases
+    javaOptions ++= Seq("XshowSettings", "-Xmx1G", "-XX:MaxMetaspaceSize=800m", "-XX:+UseG1GC"),
 
     mainClass in assembly := Some("com.safechat.Server"),
     assemblyJarName in assembly := s"$projectName-${version.value}.jar",
@@ -248,7 +250,6 @@ dependencyOverrides += "com.typesafe.akka" %% "akka-cluster-tools"  % akkaVersio
 dependencyOverrides += "com.typesafe.akka" %% "akka-coordination"   % akkaVersion
 
 //comment out for test:run
-
 Compile / run / fork := true
 
 scalafmtOnCompile := true

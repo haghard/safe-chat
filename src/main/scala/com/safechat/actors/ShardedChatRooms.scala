@@ -2,8 +2,8 @@
 
 package com.safechat.actors
 
-import java.nio.ByteBuffer
-import java.nio.charset.StandardCharsets
+//import java.nio.ByteBuffer
+//import java.nio.charset.StandardCharsets
 
 import akka.actor.typed.ActorSystem
 import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, Entity}
@@ -14,8 +14,6 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 import ShardedChatRooms._
 import akka.actor.typed.scaladsl.AskPattern._
-import com.safechat.Server
-import akka.cluster.sharding.external.ExternalShardAllocation
 
 object ShardedChatRooms {
 
@@ -44,17 +42,20 @@ object ShardedChatRooms {
 }
 
 class ShardedChatRooms(implicit system: ActorSystem[Nothing]) {
-  implicit val shardAskTimeout = akka.util.Timeout(ChatRoomEntity.hubInitTimeout)
+  val disName = "shard-dispatcher"
 
   val numberOfShards     = 1 << 8      //TODO: make it configurable
-  val passivationTimeout = 160.seconds //TODO: make it configurable
+  val passivationTimeout = 300.seconds //TODO: make it configurable
   val sharding           = ClusterSharding(system)
+
+  implicit val shardAskTimeout = akka.util.Timeout(ChatRoomEntity.hubInitTimeout)
+
   val settings =
     ClusterShardingSettings(system)
       /*
         rememberEntities == false ensures that a shard entity won't be recreates/restarted automatically on
-        a different `ShardRegion` due to rebalance, crash or graceful exit. That is exactly what we want, because we want lazy
-        start for each ChatRoomEntity.
+        a different `ShardRegion` due to rebalance, crash or leave (graceful exit). That is exactly what we want,
+        because we want lazy start for each ChatRoomEntity.
        */
       .withRememberEntities(false)
       .withStateStoreMode(StateStoreModeDData)
@@ -92,21 +93,25 @@ class ShardedChatRooms(implicit system: ActorSystem[Nothing]) {
     .withMessageExtractor(ChatRoomsMsgExtractor[UserCmdWithReply](numberOfShards))
     .withSettings(settings)
     //https://doc.akka.io/docs/akka/current/typed/cluster-sharding.html
+
     //For any shardId that has not been allocated it will be allocated to the requesting node (like a sticky session)
-    //.withAllocationStrategy(new ExternalShardAllocationStrategy(system, ChatRoomEntity.entityKey.name))
+    .withAllocationStrategy(
+      new akka.cluster.sharding.external.ExternalShardAllocationStrategy(system, ChatRoomEntity.entityKey.name)
+    )
+
     //default AllocationStrategy
     //.withAllocationStrategy(new akka.cluster.sharding.ShardCoordinator.LeastShardAllocationStrategy(1, 3))
     //https://doc.akka.io/docs/akka/2.6/typed/cluster-sharding.html?_ga=#shard-allocation
-    .withAllocationStrategy(
+    /*.withAllocationStrategy(
       akka.cluster.sharding.ShardCoordinator.ShardAllocationStrategy
         .leastShardAllocationStrategy(numberOfShards / 2, 0.5)
-    )
-    .withEntityProps(akka.actor.typed.Props.empty.withDispatcherFromConfig("shard-dispatcher"))
+    )*/
+    .withEntityProps(akka.actor.typed.Props.empty.withDispatcherFromConfig(disName))
 
   val chatShardRegion = sharding.init(entity)
 
   //Example how to use explicit client:  akka.kafka.cluster.sharding.KafkaClusterSharding
-  //val client             = ExternalShardAllocation(system).clientFor(ChatRoomEntity.entityKey.name)
+  //val client             = akka.cluster.sharding.external.ExternalShardAllocation(system).clientFor(ChatRoomEntity.entityKey.name)
   //val done: Future[akka.Done] = client.updateShardLocation("chat0", akka.actor.Address("akka", Server.AkkaSystemName, "127.0.0.1", 2552))
 
   //do not use the ChatRoomsMsgExtractor
