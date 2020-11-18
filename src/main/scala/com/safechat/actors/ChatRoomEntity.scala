@@ -19,6 +19,9 @@ import akka.util.Timeout
 import scala.annotation.implicitNotFound
 import scala.concurrent.duration._
 
+/** https://doc.akka.io/docs/akka/current/typed/persistence-style.html#event-handlers-in-the-state
+  * https://doc.akka.io/docs/akka/current/typed/persistence-fsm.html
+  */
 object ChatRoomEntity {
 
   val snapshotEveryN = 300       //TODO should be configurable
@@ -54,7 +57,7 @@ object ChatRoomEntity {
               throw new Exception(s"Unexpected message type ${other.getClass.getName}")
           }
         }
-        .withAttributes(Attributes.inputBuffer(1, 1)) //ActorAttributes.maxFixedBufferSize(1))
+        .withAttributes(Attributes.inputBuffer(0, 0)) //ActorAttributes.maxFixedBufferSize(1))
 
     //ActorAttributes.supervisionStrategy({ case _ => Supervision.Resume }).and(Attributes.inputBuffer(1, 1))
 

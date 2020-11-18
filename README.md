@@ -324,6 +324,19 @@ https://github.com/michael-read/akka-typed-distributed-state-blog/blob/master/ga
 
 https://blog.knoldus.com/gatling-with-jenkins/
 
+
+### Websocket chats samples
+
+1. Chat app (web socket) 
+ MergeHub.source[String].toMat(BroadcastHub.sink[String])
+https://markatta.com/codemonkey/posts/chat-with-akka-http-websockets/
+
+2. Web socket to shard region: https://github.com/henrikengstrom/sa-2017-akka.git
+
+3. Building a Reactive, Distributed Messaging Server in Scala and Akka with WebSockets:
+https://medium.com/@nnnsadeh/building-a-reactive-distributed-messaging-server-in-scala-and-akka-with-websockets-c70440c494e3
+
+
 ### Distributed state blog series 
 
 https://github.com/michael-read/akka-typed-distributed-state-blog
