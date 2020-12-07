@@ -232,14 +232,14 @@ libraryDependencies ++= Seq(
   //"eu.timepit" %% "refined-shapeless"       % "0.9.14",
 
   "commons-codec" % "commons-codec" % "1.11",
-  "org.scalatest" %% "scalatest" % "3.2.0" % Test,
+  "org.scalatest" %% "scalatest" % "3.2.2" % Test,
   "com.typesafe.akka" %% "akka-http-testkit" % akkaHttpVersion % Test,
   "com.typesafe.akka" %% "akka-testkit" % akkaVersion % Test,
 
   "com.typesafe.akka" %% "akka-persistence-cassandra-launcher" % AkkaPersistenceCassandraVersion,
 
   // li haoyi ammonite repl embed
-  ("com.lihaoyi" % "ammonite" % "2.2.0" % "test").cross(CrossVersion.full)
+  ("com.lihaoyi" % "ammonite" % "2.3.8" % "test").cross(CrossVersion.full)
 
 )
 
