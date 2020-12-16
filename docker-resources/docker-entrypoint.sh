@@ -18,6 +18,7 @@ APP_OPTS="-server \
           -XX:MaxRAMPercentage=70 \
           -XX:MinRAMPercentage=70 \
           -XX:+PreferContainerQuotaForCPUCount \
+          -XX:+PrintCommandLineFlags \
           -XshowSettings \
           -DENV=${ENV} \
           -DHTTP_PORT=${HTTP_PORT} \

@@ -340,7 +340,7 @@ https://medium.com/@nnnsadeh/building-a-reactive-distributed-messaging-server-in
 ### Distributed state blog series 
 
 https://github.com/michael-read/akka-typed-distributed-state-blog
-
+https://github.com/michael-read/akka-typed-distributed-state-blog/blob/master/Blog_Model.png
 
 https://github.com/chbatey/akka-talks/blob/f3babead55fa7e678ce21dcbf780e9423afb7448/http-streams/src/test/scala/info/batey/akka/http/ApplyLoad.scala
 https://whiteprompt.com/scala/stress-test-restful-service-gatling/
@@ -373,7 +373,7 @@ How to use CQRS in Akka 2.6 https://www.youtube.com/watch?v=6ECsFlNNIAM
 
 Introduction To Akka Cluster Sharding https://youtu.be/SrPubnOKJcQ
 
-How to do distributed, stateful processing with #Akka Cluster Sharding and Kafka https://akka.io/blog/news/2020/03/18/akka-sharding-kafka-video
+How to do distribute, stateful processing with #Akka Cluster Sharding and Kafka https://akka.io/blog/news/2020/03/18/akka-sharding-kafka-video
 
 Stateful OR Stateless Applications: To Akka Cluster, Or Not https://www.youtube.com/watch?v=CiVsKjZV-Ys
 
@@ -388,9 +388,20 @@ sbt '; set javaOptions += "-Dconfig.resource=cluster-application.conf" ; run’
 
 sbt -J-XX:MaxMetaspaceSize=512M -J-XX:+PrintCommandLineFlags -J-XshowSettings
 
-sbt -J-Xms512M -J-XX:+PrintCommandLineFlags -J-XX:NativeMemoryTracking=summary -J-XshowSettings
+sbt -J-Xms256M -J-Xmx512M -J-XX:+UseG1GC -J-XX:+PrintCommandLineFlags  -J-XshowSettings
+
+
+sbt -J-Xms256M -J-Xmx512M -J-XX:MaxMetaspaceSize=368M -J-XX:+UseG1GC -J-XX:+PrintCommandLineFlags -J-XshowSettings
+
+sbt -J-Xss2M -J-Xms256M -J-Xmx512M -J-XX:MaxMetaspaceSize=368M -J-XX:+UseG1GC -J-XX:+PrintCommandLineFlags -J-XshowSettings
+
+sbt -J-XX:ThreadStackSize=2024 -J-XX:InitialHeapSize=268435456 -J-XX:-XX:MaxHeapSize=536870912 -J-XX:+UseG1GC -J-XX:+PrintCommandLineFlags
+
+sbt -J-Xms256M -J-Xmx512M -J-XX:+PrintCommandLineFlags -J-XX:NativeMemoryTracking=summary -J-XshowSettings
 
 ```
+
+
 
 OR
 
@@ -464,6 +475,8 @@ https://manuel.bernhardt.io/2018/02/26/tour-akka-cluster-cluster-sharding/
 https://www.youtube.com/watch?v=SrPubnOKJcQ
 
 https://doc.akka.io/docs/akka/current/typed/cluster-sharding.html
+
+https://github.com/michael-read/akka-typed-distributed-state-blog/blob/master/Blog_Model.png
 
 
 ### Cassandra journal schema

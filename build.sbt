@@ -7,7 +7,7 @@ val Version       = "0.3.0-SNAPSHOT"
 val akkaVersion = "2.6.10"
 val AkkaManagement = "1.0.9"
 
-val akkaHttpVersion = "10.2.1"
+val akkaHttpVersion = "10.2.2"
 val AkkaPersistenceCassandraVersion = "1.0.3"
 
 promptTheme := ScalapenosTheme
@@ -65,8 +65,11 @@ lazy val root = project
 
     parallelExecution in Test := false,
 
-    //used when Compile / run / fork := false and you run one of the aliases
-    javaOptions ++= Seq("XshowSettings", "-Xmx1G", "-XX:MaxMetaspaceSize=800m", "-XX:+UseG1GC"),
+    //These setting is used when
+    // Compile / run / fork := true and you run one of the aliases,
+    //overwise use
+    // sbt -J-Xmx1024M -J-XX:MaxMetaspaceSize=850M -J-XX:+UseG1GC -J-XX:+PrintCommandLineFlags -J-XshowSettings
+    javaOptions ++= Seq("-Xmx1024M", "-XX:MaxMetaspaceSize=850m", "-XX:+UseG1GC", "-XX:+PrintCommandLineFlags", "-XshowSettings"),
 
     mainClass in assembly := Some("com.safechat.Server"),
     assemblyJarName in assembly := s"$projectName-${version.value}.jar",
