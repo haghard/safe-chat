@@ -61,7 +61,11 @@ lazy val root = project
     buildInfoPackage := "com.safechat",
     buildInfoOptions += BuildInfoOption.BuildTime,
 
-    resolvers ++= Seq("Typesafe Snapshots" at "https://repo.akka.io/snapshots"),
+    resolvers ++= Seq(
+      Resolver.typesafeRepo("releases")
+      //Resolver.typesafeRepo("snapshots"),
+      //Resolver.mavenLocal
+    ),
 
     parallelExecution in Test := false,
 
@@ -149,7 +153,7 @@ lazy val root = project
       val appDevConfTarget  = s"$imageAppBaseDir/$configDir/development.conf"
 
       new sbtdocker.mutable.Dockerfile {
-        from("adoptopenjdk:11")
+        from("adoptopenjdk:14")
         //from("adoptopenjdk/openjdk12:x86_64-ubuntu-jre-12.0.2_10")
 
         //from("adoptopenjdk:11.0.6_10-jdk-hotspot")
@@ -241,6 +245,9 @@ libraryDependencies ++= Seq(
 
   "com.typesafe.akka" %% "akka-persistence-cassandra-launcher" % AkkaPersistenceCassandraVersion,
 
+  //https://github.com/typelevel/algebra/blob/46722cd4aa4b01533bdd01f621c0f697a3b11040/docs/docs/main/tut/typeclasses/overview.md
+  "org.typelevel" %% "algebra" % "2.1.0",
+
   // li haoyi ammonite repl embed
   ("com.lihaoyi" % "ammonite" % "2.3.8" % "test").cross(CrossVersion.full)
 
@@ -253,7 +260,7 @@ dependencyOverrides += "com.typesafe.akka" %% "akka-cluster-tools"  % akkaVersio
 dependencyOverrides += "com.typesafe.akka" %% "akka-coordination"   % akkaVersion
 
 //comment out for test:run
-Compile / run / fork := true
+//Compile / run / fork := true
 
 scalafmtOnCompile := true
 

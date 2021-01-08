@@ -226,14 +226,14 @@ object Server extends Ops {
 
     val memorySize = ManagementFactory.getOperatingSystemMXBean
       .asInstanceOf[com.sun.management.OperatingSystemMXBean]
-      .getTotalPhysicalMemorySize
+      .getTotalMemorySize()
     val runtimeInfo = new StringBuilder()
       .append('\n')
       .append(s"Cores:${Runtime.getRuntime.availableProcessors}")
       .append(" Total Memory:" + Runtime.getRuntime.totalMemory / 1000000 + "Mb")
       .append(" Max Memory:" + Runtime.getRuntime.maxMemory / 1000000 + "Mb")
       .append(" Free Memory:" + Runtime.getRuntime.freeMemory / 1000000 + "Mb")
-      .append(" RAM:" + memorySize / 1000000 + "Mb")
+      .append(" Total :" + memorySize / 1000000 + "Mb")
       .append('\n')
       .append("=================================================================================================")
 

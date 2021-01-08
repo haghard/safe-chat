@@ -350,6 +350,10 @@ https://github.com/satyriasizz/gatling2-load-test-example
 
 ## Jvm inside a docker container
 
+https://merikan.com/2019/04/jvm-in-a-container/
+https://www.lightbend.com/blog/cpu-considerations-for-java-applications-running-in-docker-and-kubernetes
+
+
 https://blog.csanchez.org/2017/05/31/running-a-jvm-in-a-container-without-getting-killed/
 https://blog.csanchez.org/2018/06/21/running-a-jvm-in-a-container-without-getting-killed-ii/
 
@@ -357,6 +361,16 @@ http://www.batey.info/docker-jvm-k8s.html
 https://github.com/chbatey/docker-jvm-akka
 https://blog.docker.com/2018/12/top-5-post-docker-container-java/
 https://efekahraman.github.io/2018/04/docker-awareness-in-java
+
+
+```
+
+docker run -it --cpu-shares 2048 openjdk:11-jdk
+jshell> Runtime.getRuntime().availableProcessors()
+$1 ==> 2
+
+```
+
 
 ### CPU considerations for Java applications running in Docker and Kubernetes
 
@@ -388,8 +402,7 @@ sbt '; set javaOptions += "-Dconfig.resource=cluster-application.conf" ; run’
 
 sbt -J-XX:MaxMetaspaceSize=512M -J-XX:+PrintCommandLineFlags -J-XshowSettings
 
-sbt -J-Xms256M -J-Xmx512M -J-XX:+UseG1GC -J-XX:+PrintCommandLineFlags  -J-XshowSettings
-
+sbt -J-Xms256M -J-Xmx512M -J-XX:+UseG1GC -J-XX:+PrintCommandLineFlags -J-XshowSettings
 
 sbt -J-Xms256M -J-Xmx512M -J-XX:MaxMetaspaceSize=368M -J-XX:+UseG1GC -J-XX:+PrintCommandLineFlags -J-XshowSettings
 
