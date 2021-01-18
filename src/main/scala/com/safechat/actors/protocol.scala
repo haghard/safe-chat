@@ -37,6 +37,7 @@ final case class TextPostedReply(chatId: String, seqNum: Long, content: String) 
 final case class DisconnectedReply(chatId: String, user: String) extends Reply
 
 /*
+Option 1.
 
 sealed trait Command0[+R <: Reply] {
   def chatId: String
@@ -48,6 +49,30 @@ final case class JoinUser0(
   pubKey: String, replyTo: ActorRef[Reply]
 ) extends Command0[JoinReply]
 
+ */
+
+/*
+Option 2.
+
+trait ReplyModule {
+  type Reply
+}
+
+sealed trait Command0[M <: ReplyModule] {
+  def chatId: String
+  def replyTo: ActorRef[M#Reply]
+}
+
+abstract sealed trait JRM extends ReplyModule {
+  override type Reply = JoinReply
+}
+
+final case class JoinUser0(
+  chatId: String,
+  user: String,
+  pubKey: String,
+  replyTo: ActorRef[JRM#Reply]
+) extends Command0[JRM]
  */
 
 sealed trait Command {
