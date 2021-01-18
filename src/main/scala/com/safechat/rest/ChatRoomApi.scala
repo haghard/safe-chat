@@ -10,7 +10,7 @@ import akka.stream.scaladsl.{Flow, RestartFlow}
 import akka.actor.typed.ActorSystem
 import akka.management.cluster.scaladsl.ClusterHttpManagementRoutes
 import akka.stream.{ActorAttributes, OverflowStrategy}
-import com.safechat.actors.{ChatRoomEntity, ChatRoomReply, JoinReply, ShardedChatRooms}
+import com.safechat.actors.{ChatRoomEntity, JoinReply, JoinReplyFailure, JoinReplySuccess, Reply, ShardedChatRooms}
 
 import scala.concurrent.duration._
 import scala.concurrent.Future
@@ -29,7 +29,7 @@ case class ChatRoomApi(rooms: ShardedChatRooms)(implicit sys: ActorSystem[Nothin
         () ⇒
           rooms
             .enter(ChatRoomEntity.wakeUpEntityName, ChatRoomEntity.wakeUpUserName, "fake-pub-key")
-            .mapTo[ChatRoomReply]
+            .mapTo[Reply]
             .flatMap(_ ⇒ rooms.disconnect(ChatRoomEntity.wakeUpEntityName, ChatRoomEntity.wakeUpUserName)),
         3,
         1.second
@@ -69,17 +69,22 @@ case class ChatRoomApi(rooms: ShardedChatRooms)(implicit sys: ActorSystem[Nothin
           val buf = attr.get[akka.stream.Attributes.InputBuffer].get
           //println("attributes: " + attr.attributeList.mkString(","))
 
-          Flow
-            .fromSinkAndSourceCoupled(reply.sinkRef.sink, reply.sourceRef.source)
-            .buffer(buf.max, OverflowStrategy.backpressure)
-            .backpressureTimeout(3.seconds) //automatic cleanup for very slow subscribers.
-            .watchTermination() { (_, c) ⇒
-              c.flatMap { _ ⇒
-                sys.log.info("{}@{}: ws-con has been terminated", user, chatId)
-                rooms.disconnect(chatId, user)
-              }
-              NotUsed
-            }
+          reply match {
+            case JoinReplySuccess(chatId, user, sinkRef, sourceRef) ⇒
+              Flow
+                .fromSinkAndSourceCoupled(sinkRef.sink, sourceRef.source)
+                .buffer(buf.max, OverflowStrategy.backpressure)
+                .backpressureTimeout(3.seconds) //automatic cleanup for very slow subscribers.
+                .watchTermination() { (_, c) ⇒
+                  c.flatMap { _ ⇒
+                    sys.log.info("{}@{}: ws-con has been terminated", user, chatId)
+                    rooms.disconnect(chatId, user)
+                  }
+                  NotUsed
+                }
+            case JoinReplyFailure(chatId, user) ⇒
+              throw new Exception("JoinReplyFailure !!!")
+          }
         }
       }
 

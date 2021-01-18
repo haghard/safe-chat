@@ -2,9 +2,6 @@
 
 package com.safechat.actors
 
-//import java.nio.ByteBuffer
-//import java.nio.charset.StandardCharsets
-
 import akka.actor.typed.ActorSystem
 import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, Entity}
 import akka.cluster.sharding.typed.ClusterShardingSettings.StateStoreModeDData
@@ -18,7 +15,7 @@ import akka.actor.typed.scaladsl.AskPattern._
 object ShardedChatRooms {
 
   object ChatRoomsMsgExtractor {
-    def apply[T <: UserCmdWithReply](numberOfShards: Int): ShardingMessageExtractor[T, T] =
+    def apply[T <: Command](numberOfShards: Int): ShardingMessageExtractor[T, T] =
       new ShardingMessageExtractor[T, T] {
 
         /*
@@ -90,7 +87,7 @@ class ShardedChatRooms(implicit system: ActorSystem[Nothing]) {
 
   val entity = Entity(ChatRoomEntity.entityKey)(ChatRoomEntity(_))
     //ShardingMessageExtractor[UserCmd](512)
-    .withMessageExtractor(ChatRoomsMsgExtractor[UserCmdWithReply](numberOfShards))
+    .withMessageExtractor(ChatRoomsMsgExtractor[Command](numberOfShards))
     .withSettings(settings)
     //https://doc.akka.io/docs/akka/current/typed/cluster-sharding.html
 
@@ -128,9 +125,9 @@ class ShardedChatRooms(implicit system: ActorSystem[Nothing]) {
       .ask[ChatRoomReply](DisconnectUser(chatId, user, _))
    */
 
-  def disconnect(chatId: String, user: String): Future[ChatRoomReply] =
-    chatShardRegion.ask[ChatRoomReply](DisconnectUser(chatId, user, _))
+  def disconnect(chatId: String, user: String): Future[Reply] =
+    chatShardRegion.ask[Reply](Command.DisconnectUser(chatId, user, _))
 
-  def enter(chatId: String, login: String, pubKey: String): Future[ChatRoomReply] =
-    chatShardRegion.ask[ChatRoomReply](JoinUser(chatId, login, pubKey, _))
+  def enter(chatId: String, login: String, pubKey: String): Future[Reply] =
+    chatShardRegion.ask[Reply](Command.JoinUser(chatId, login, pubKey, _))
 }

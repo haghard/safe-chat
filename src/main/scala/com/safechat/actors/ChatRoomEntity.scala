@@ -12,11 +12,11 @@ import akka.cluster.sharding.typed.scaladsl.{EntityContext, EntityTypeKey}
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
 import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior, ReplyEffect, RetentionCriteria}
 import akka.persistence.typed._
-import akka.stream.scaladsl.{BroadcastHub, Flow, Keep, MergeHub, RestartFlow, Sink, Source, StreamRefs}
-import akka.stream.{ActorAttributes, Attributes, KillSwitches, StreamRefAttributes, Supervision}
+import akka.stream.scaladsl.{BroadcastHub, Flow, Keep, MergeHub, RestartFlow, Source, StreamRefs}
+import akka.stream.{Attributes, KillSwitches, StreamRefAttributes}
 import akka.util.Timeout
+import Command._
 
-import scala.annotation.implicitNotFound
 import scala.concurrent.duration._
 
 /** https://doc.akka.io/docs/akka/current/typed/persistence-style.html#event-handlers-in-the-state
@@ -35,24 +35,25 @@ object ChatRoomEntity {
 
   val persistTimeout = akka.util.Timeout(1.second) //write to the journal timeout
 
-  val entityKey: EntityTypeKey[UserCmdWithReply] =
-    EntityTypeKey[UserCmdWithReply]("chat-rooms")
+  val entityKey: EntityTypeKey[Command] =
+    EntityTypeKey[Command]("chat-rooms")
 
   val emptyState = com.safechat.actors.ChatRoomState()
 
   private def persistFlow(persistenceId: String, entity: ActorRef[PostText])(implicit
     persistTimeout: Timeout
-  ): Flow[Message, ChatRoomReply, akka.NotUsed] = {
+  ): Flow[Message, Reply, akka.NotUsed] = {
     def persistFlow =
       akka.stream.typed.scaladsl.ActorFlow
-        .ask[Message, PostText, ChatRoomReply](1)(entity) { (msg: Message, replyTo: ActorRef[ChatRoomReply]) ⇒
+        .ask[Message, PostText, Reply](1)(entity) { (msg: Message, reply: ActorRef[Reply]) ⇒
           msg match {
             case TextMessage.Strict(text) ⇒
               val segments = text.split(MSG_SEP)
               if (text.split(MSG_SEP).size == 3)
-                PostText(persistenceId, segments(0).trim, segments(1).trim, segments(2).trim, replyTo)
+                PostText(persistenceId, segments(0).trim, segments(1).trim, segments(2).trim, reply)
               else
-                PostText(persistenceId, "null", "null", s"Message error. Wrong format $text", replyTo)
+                PostText(persistenceId, "null", "null", s"Message error. Wrong format $text", reply)
+
             case other ⇒
               throw new Exception(s"Unexpected message type ${other.getClass.getName}")
           }
@@ -73,7 +74,7 @@ object ChatRoomEntity {
     *
     * Causal consistency is maintained as we always write to the journal with parallelism == 1
     */
-  def apply(entityCtx: EntityContext[UserCmdWithReply]): Behavior[UserCmdWithReply] =
+  def apply(entityCtx: EntityContext[Command]): Behavior[Command] =
     //com.safechat.LoggingBehaviorInterceptor(ctx.log) {
     Behaviors.setup { ctx ⇒
       implicit val sys      = ctx.system
@@ -88,11 +89,12 @@ object ChatRoomEntity {
       )*/
 
       EventSourcedBehavior
-        .withEnforcedReplies[UserCmdWithReply, ChatRoomEvent, ChatRoomState](
+        .withEnforcedReplies[Command, ChatRoomEvent, ChatRoomState](
           //PersistenceId.ofUniqueId(entityId),
           PersistenceId(entityCtx.entityTypeKey.name, entityCtx.entityId),
           ChatRoomState(),
           onCommand(ctx),
+          //commandHandler,
           onEvent(ctx.self.path.name)
         )
         /*.withTagger {
@@ -194,23 +196,27 @@ object ChatRoomEntity {
     ChatRoomHub(sinkHub, sourceHub, ks)
   }
 
-  def onCommand(ctx: ActorContext[UserCmdWithReply])(state: ChatRoomState, cmd: UserCmdWithReply)(implicit
+  /*val commandHandler: (ChatRoomState, Command[Reply]) ⇒ ReplyEffect[ChatRoomEvent, ChatRoomState] = { (state, cmd) ⇒
+    ???
+  }*/
+
+  def onCommand(
+    ctx: ActorContext[_]
+  )(state: ChatRoomState, cmd: Command)(implicit
     sys: ActorSystem[Nothing]
   ): ReplyEffect[ChatRoomEvent, ChatRoomState] =
     cmd match {
       case cmd: JoinUser ⇒
         Effect
           .persist(UserJoined(cmd.user, cmd.pubKey))
-          .thenReply(cmd.replyTo) { updateState: ChatRoomState ⇒ //That's new state after applying the event
-            //ctx.log.info("JoinUser attempt {}", m.user)
+          .thenReply[JoinReply](cmd.replyTo) { updateState: ChatRoomState ⇒ //That's new state after applying the event
 
             val settings =
               StreamRefAttributes.subscriptionTimeout(hubInitTimeout) //.and(akka.stream.Attributes.inputBuffer(bs, bs))
 
-            updateState.hub
-              .map { hub ⇒
+            updateState.hub match {
+              case Some(hub) ⇒
                 val chatHistory = updateState.recentHistory.entries.mkString("\n")
-
                 //Add new producer on the fly
                 //If the consumer cannot keep up then all of the producers are backpressured
                 val srcRefF = (Source.single[Message](TextMessage(chatHistory)) ++ hub.srcHub)
@@ -219,9 +225,10 @@ object ChatRoomEntity {
                 //Add new consumers on the fly
                 //The rate of the producer will be automatically adapted to the slowest consumer
                 val sinkRefF = hub.sinkHub.runWith(StreamRefs.sinkRef[Message].addAttributes(settings))
-                JoinReply(cmd.chatId, cmd.user, sinkRefF, srcRefF)
-              }
-              .getOrElse(JoinReplyFailure(cmd.chatId, cmd.user))
+                JoinReplySuccess(cmd.chatId, cmd.user, sinkRefF, srcRefF)
+              case None ⇒
+                JoinReplyFailure(cmd.chatId, cmd.user)
+            }
           }
 
       case cmd: PostText ⇒
@@ -246,7 +253,7 @@ object ChatRoomEntity {
 
   def onEvent(persistenceId: String)(state: ChatRoomState, event: ChatRoomEvent)(implicit
     sys: ActorSystem[Nothing],
-    ctx: ActorContext[UserCmdWithReply]
+    ctx: ActorContext[Command]
   ): ChatRoomState =
     event match {
       case UserJoined(login, pubKey) ⇒
@@ -273,7 +280,7 @@ object ChatRoomEntity {
     }
 
   def snapshotPredicate(
-    ctx: ActorContext[UserCmdWithReply]
+    ctx: ActorContext[Command]
   )(state: ChatRoomState, event: ChatRoomEvent, sequenceNr: Long): Boolean = {
     val ifSnap = sequenceNr % snapshotEveryN == 0
 

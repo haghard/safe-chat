@@ -10,6 +10,8 @@ import scala.collection.mutable
   *
   * ZIO stm based LRUCache
   * https://scalac.io/how-to-write-a-completely-lock-free-concurrent-lru-cache-with-zio-stm/
+  *
+  * Check them both out
   */
 object LRUCache {
 
@@ -69,7 +71,20 @@ object LRUCache {
     }
   }*/
 
-  //https://www.codewalk.com/2012/04/least-recently-used-lru-cache-implementation-java.html
+  /*
+      Synchronization at Object level.
+      Every read/write operation needs to acquire lock. Locking the entire collection is a performance overhead.
+      This essentially gives access to only one thread to the entire map & blocks all the other threads.
+      It may cause contention.
+      SynchronizedHashMap returns Iterator, which fails-fast on concurrent modification.
+
+      https://medium.com/@itsromiljain/curious-case-of-concurrenthashmap-90249632d335
+
+      https://www.codewalk.com/2012/04/least-recently-used-lru-cache-implementation-java.html
+
+      Concurrent version
+      java.util.Collections.synchronizedMap(new LRULinkedHashMapCache[String, Int](1 << 3))
+   */
   final class LRULinkedHashMapCache[K, V](capacity: Int) extends java.util.LinkedHashMap[K, V](capacity, 1.0f, true) {
 
     def +=(key: K, value: V): Unit =
@@ -90,19 +105,8 @@ object LRUCache {
     }
   }
 
-  /*
-    Synchronization at Object level.
-    Every read/write operation needs to acquire lock. Locking the entire collection is a performance overhead.
-    This essentially gives access to only one thread to the entire map & blocks all the other threads.
-    It may cause contention.
-    SynchronizedHashMap returns Iterator, which fails-fast on concurrent modification.
-
-    https://medium.com/@itsromiljain/curious-case-of-concurrenthashmap-90249632d335
-   */
-  //java.util.Collections.synchronizedMap(new LRULinkedHashMapCache[String, Int](1 << 3))
-
   class Node[K, V](
-    var previous: Node[K, V] = null,
+    var previous: Node[K, V] = null, // Option[Node[K, V]]
     var next: Node[K, V] = null,
     val key: K = null.asInstanceOf[K],
     val value: V = null.asInstanceOf[V]
@@ -115,6 +119,10 @@ object LRUCache {
     }
   }
 
+  /** For implementing an efficient LRU Cache (meaning get and put operations are executed in O(1) time), we could use two data structures:
+    * Hash Map: containing (key, value) pairs.
+    * Doubly linked list: which will contain the history of referenced keys. The Most Recently Used key will be at the start of the list, and the Least Recently Used one will be at the end.
+    */
   class LRUCache[K, V](
     capacity: Int,
     nodes: java.util.Map[K, Node[K, V]],
