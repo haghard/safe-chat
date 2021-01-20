@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020 Vadim Bondarev. All rights reserved.
+// Copyright (c) 2019-2021 Vadim Bondarev. All rights reserved.
 
 package com.safechat
 package crypto

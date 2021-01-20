@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2019-2021 Vadim Bondarev. All rights reserved.
+ */
+
 package com.safechat.domain;
 
 import java.nio.ByteBuffer;

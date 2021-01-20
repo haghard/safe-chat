@@ -7,7 +7,7 @@ val Version       = "0.3.0-SNAPSHOT"
 val akkaVersion = "2.6.11"
 val AkkaManagement = "1.0.9"
 
-val akkaHttpVersion = "10.2.2"
+val akkaHttpVersion = "10.2.3"
 val AkkaPersistenceCassandraVersion = "1.0.3"
 
 promptTheme := ScalapenosTheme
@@ -87,7 +87,7 @@ lazy val commonSettings = Seq(
   licenses += ("Apache-2.0", new URL("https://www.apache.org/licenses/LICENSE-2.0.txt")),
   scalaVersion := "2.13.3",
   headerMappings := headerMappings.value + (HeaderFileType.scala -> HeaderCommentStyle.cppStyleLineComment),
-  headerLicense  := Some(HeaderLicense.Custom("Copyright (c) 2019-2020 Vadim Bondarev. All rights reserved."))
+  headerLicense  := Some(HeaderLicense.Custom("Copyright (c) 2019-2021 Vadim Bondarev. All rights reserved."))
 )
 
 lazy val root = project

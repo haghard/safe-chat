@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020 Vadim Bondarev. All rights reserved.
+// Copyright (c) 2019-2021 Vadim Bondarev. All rights reserved.
 
 package com.safechat.rest
 
@@ -28,9 +28,9 @@ case class ChatRoomApi(rooms: ShardedChatRooms)(implicit sys: ActorSystem[Nothin
       akka.pattern.retry(
         () ⇒
           rooms
-            .enter(ChatRoomEntity.wakeUpEntityName, ChatRoomEntity.wakeUpUserName, "fake-pub-key")
+            .join(ChatRoomEntity.wakeUpEntityName, ChatRoomEntity.wakeUpUserName, "fake-pub-key")
             .mapTo[Reply]
-            .flatMap(_ ⇒ rooms.disconnect(ChatRoomEntity.wakeUpEntityName, ChatRoomEntity.wakeUpUserName)),
+            .flatMap(_ ⇒ rooms.leave(ChatRoomEntity.wakeUpEntityName, ChatRoomEntity.wakeUpUserName)),
         3,
         1.second
       )
@@ -51,7 +51,7 @@ case class ChatRoomApi(rooms: ShardedChatRooms)(implicit sys: ActorSystem[Nothin
     pubKey: String
   ): Future[JoinReply] =
     rooms
-      .enter(chatId, user, pubKey)
+      .join(chatId, user, pubKey)
       .mapTo[JoinReply]
       .recoverWith(_ ⇒ getChatRoomFlow(rooms, chatId, user, pubKey))
 
@@ -78,7 +78,7 @@ case class ChatRoomApi(rooms: ShardedChatRooms)(implicit sys: ActorSystem[Nothin
                 .watchTermination() { (_, c) ⇒
                   c.flatMap { _ ⇒
                     sys.log.info("{}@{}: ws-con has been terminated", user, chatId)
-                    rooms.disconnect(chatId, user)
+                    rooms.leave(chatId, user)
                   }
                   NotUsed
                 }

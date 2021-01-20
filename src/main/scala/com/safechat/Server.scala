@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020 Vadim Bondarev. All rights reserved.
+// Copyright (c) 2019-2021 Vadim Bondarev. All rights reserved.
 
 package com.safechat
 
@@ -25,8 +25,8 @@ import scala.util.Try
 
 object Server extends Ops {
 
-  val Dispatcher     = "akka.actor.default-dispatcher"
-  val HttpDispatcher = "http-dispatcher"
+  //val Dispatcher     = "akka.actor.default-dispatcher"
+
   val AkkaSystemName = "safe-chat"
 
   def guardian(hostName: String, httpPort: Int): Behavior[Nothing] =
@@ -138,7 +138,7 @@ object Server extends Ops {
     }
 
     //check dispatcher name
-    cfg.getObject(Dispatcher)
+    //cfg.getObject(Dispatcher)
 
     val eventMapping =
       SchemaRegistry.eventTypesMapping(cfg.getConfig("akka.actor.serialization-bindings"))
@@ -168,7 +168,7 @@ object Server extends Ops {
       case p @ Credentials.Provided(id) ⇒
         Future {
           if ((id == "Aladdin") && p.verify("OpenSesame")) Some(id) else None
-        }(sys.dispatchers.lookup(DispatcherSelector.fromConfig(Server.HttpDispatcher)))
+        }(sys.executionContext) /*(sys.dispatchers.lookup(DispatcherSelector.fromConfig(Server.HttpDispatcher)))*/
       case _ ⇒ Future.successful(None)
     }
 

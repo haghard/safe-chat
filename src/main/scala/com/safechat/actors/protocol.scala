@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020 Vadim Bondarev. All rights reserved.
+// Copyright (c) 2019-2021 Vadim Bondarev. All rights reserved.
 
 package com.safechat.actors
 
@@ -8,7 +8,7 @@ import akka.http.scaladsl.model.ws.Message
 import akka.persistence.typed.scaladsl.{Effect, ReplyEffect}
 import akka.stream.scaladsl.{Sink, Source}
 import akka.stream.{SinkRef, SourceRef, UniqueKillSwitch}
-import com.safechat.actors.Command.{DisconnectUser, JoinUser, PostText}
+import com.safechat.actors.Command.{JoinUser, Leave, PostText}
 import com.safechat.domain.RingBuffer
 
 sealed trait Reply {
@@ -34,7 +34,7 @@ final case class JoinReplyFailure(chatId: String, user: String) extends JoinRepl
 
 final case class TextPostedReply(chatId: String, seqNum: Long, content: String) extends Reply
 
-final case class DisconnectedReply(chatId: String, user: String) extends Reply
+final case class LeaveReply(chatId: String, user: String) extends Reply
 
 /*
 Option 1.
@@ -75,6 +75,9 @@ final case class JoinUser0(
 ) extends Command0[JRM]
  */
 
+/*
+Option 3
+
 sealed trait Command {
   type R <: Reply
 
@@ -111,6 +114,39 @@ object Command {
     override type R = DisconnectedReply
   }
 }
+ */
+
+sealed trait Command[+T <: Reply] {
+  type Reply <: T
+
+  def chatId: String
+  def replyTo: ActorRef[Reply]
+}
+
+object Command {
+
+  final case class JoinUser(
+    chatId: String,
+    user: String,
+    pubKey: String,
+    replyTo: ActorRef[JoinReply]
+  ) extends Command[JoinReply]
+
+  final case class PostText(
+    chatId: String,
+    sender: String,
+    receiver: String,
+    content: String,
+    replyTo: ActorRef[TextPostedReply]
+  ) extends Command[TextPostedReply]
+
+  final case class Leave(
+    chatId: String,
+    user: String,
+    replyTo: ActorRef[LeaveReply]
+  ) extends Command[LeaveReply]
+
+}
 
 sealed trait ChatRoomEvent {
   def originator: String
@@ -134,11 +170,11 @@ final case class ChatRoomState(
   hub: Option[ChatRoomHub] = None
 ) {
 
-  def applyCmd(cmd: Command): ReplyEffect[ChatRoomEvent, ChatRoomState] =
+  def applyCmd(cmd: Command[Reply]): ReplyEffect[ChatRoomEvent, ChatRoomState] =
     cmd match {
-      case c: JoinUser       ⇒ Effect.persist(UserJoined(c.user, c.pubKey)).thenNoReply()
-      case _: PostText       ⇒ Effect.noReply
-      case _: DisconnectUser ⇒ Effect.noReply
+      case c: JoinUser ⇒ Effect.persist(UserJoined(c.user, c.pubKey)).thenNoReply()
+      case _: PostText ⇒ Effect.noReply
+      case _: Leave    ⇒ Effect.noReply
     }
 
   def applyEvn(event: ChatRoomEvent): ChatRoomState =

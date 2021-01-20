@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020 Vadim Bondarev. All rights reserved.
+// Copyright (c) 2019-2021 Vadim Bondarev. All rights reserved.
 
 package com.safechat.actors
 
@@ -35,8 +35,8 @@ object ChatRoomEntity {
 
   val persistTimeout = akka.util.Timeout(1.second) //write to the journal timeout
 
-  val entityKey: EntityTypeKey[Command] =
-    EntityTypeKey[Command]("chat-rooms")
+  val entityKey: EntityTypeKey[Command[Reply]] =
+    EntityTypeKey[Command[Reply]]("chat-rooms")
 
   val emptyState = com.safechat.actors.ChatRoomState()
 
@@ -74,7 +74,7 @@ object ChatRoomEntity {
     *
     * Causal consistency is maintained as we always write to the journal with parallelism == 1
     */
-  def apply(entityCtx: EntityContext[Command]): Behavior[Command] =
+  def apply(entityCtx: EntityContext[Command[Reply]]): Behavior[Command[Reply]] =
     //com.safechat.LoggingBehaviorInterceptor(ctx.log) {
     Behaviors.setup { ctx ⇒
       implicit val sys      = ctx.system
@@ -89,7 +89,7 @@ object ChatRoomEntity {
       )*/
 
       EventSourcedBehavior
-        .withEnforcedReplies[Command, ChatRoomEvent, ChatRoomState](
+        .withEnforcedReplies[Command[Reply], ChatRoomEvent, ChatRoomState](
           //PersistenceId.ofUniqueId(entityId),
           PersistenceId(entityCtx.entityTypeKey.name, entityCtx.entityId),
           ChatRoomState(),
@@ -202,7 +202,7 @@ object ChatRoomEntity {
 
   def onCommand(
     ctx: ActorContext[_]
-  )(state: ChatRoomState, cmd: Command)(implicit
+  )(state: ChatRoomState, cmd: Command[Reply])(implicit
     sys: ActorSystem[Nothing]
   ): ReplyEffect[ChatRoomEvent, ChatRoomState] =
     cmd match {
@@ -242,18 +242,18 @@ object ChatRoomEntity {
             TextPostedReply(cmd.chatId, num, s"[from:${cmd.sender} -> to:${cmd.receiver}] - ${cmd.content}")
           }
 
-      case cmd: DisconnectUser ⇒
+      case cmd: Leave ⇒
         Effect
           .persist(UserDisconnected(cmd.user))
           .thenReply(cmd.replyTo) { updatedState: ChatRoomState ⇒
             ctx.log.info("{} disconnected - online:[{}]", cmd.user, updatedState.online.mkString(""))
-            DisconnectedReply(cmd.chatId, cmd.user)
+            LeaveReply(cmd.chatId, cmd.user)
           }
     }
 
   def onEvent(persistenceId: String)(state: ChatRoomState, event: ChatRoomEvent)(implicit
     sys: ActorSystem[Nothing],
-    ctx: ActorContext[Command]
+    ctx: ActorContext[Command[Reply]]
   ): ChatRoomState =
     event match {
       case UserJoined(login, pubKey) ⇒
@@ -280,7 +280,7 @@ object ChatRoomEntity {
     }
 
   def snapshotPredicate(
-    ctx: ActorContext[Command]
+    ctx: ActorContext[Command[Reply]]
   )(state: ChatRoomState, event: ChatRoomEvent, sequenceNr: Long): Boolean = {
     val ifSnap = sequenceNr % snapshotEveryN == 0
 

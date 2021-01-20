@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020 Vadim Bondarev. All rights reserved.
+// Copyright (c) 2019-2021 Vadim Bondarev. All rights reserved.
 
 package com.safechat.actors
 
@@ -15,7 +15,7 @@ import akka.actor.typed.scaladsl.AskPattern._
 object ShardedChatRooms {
 
   object ChatRoomsMsgExtractor {
-    def apply[T <: Command](numberOfShards: Int): ShardingMessageExtractor[T, T] =
+    def apply[T <: Command[Reply]](numberOfShards: Int): ShardingMessageExtractor[T, T] =
       new ShardingMessageExtractor[T, T] {
 
         /*
@@ -39,7 +39,6 @@ object ShardedChatRooms {
 }
 
 class ShardedChatRooms(implicit system: ActorSystem[Nothing]) {
-  val disName = "shard-dispatcher"
 
   val numberOfShards     = 1 << 8      //TODO: make it configurable
   val passivationTimeout = 300.seconds //TODO: make it configurable
@@ -87,7 +86,7 @@ class ShardedChatRooms(implicit system: ActorSystem[Nothing]) {
 
   val entity = Entity(ChatRoomEntity.entityKey)(ChatRoomEntity(_))
     //ShardingMessageExtractor[UserCmd](512)
-    .withMessageExtractor(ChatRoomsMsgExtractor[Command](numberOfShards))
+    .withMessageExtractor(ChatRoomsMsgExtractor[Command[Reply]](numberOfShards))
     .withSettings(settings)
     //https://doc.akka.io/docs/akka/current/typed/cluster-sharding.html
 
@@ -96,14 +95,14 @@ class ShardedChatRooms(implicit system: ActorSystem[Nothing]) {
       new akka.cluster.sharding.external.ExternalShardAllocationStrategy(system, ChatRoomEntity.entityKey.name)
     )
 
-    //default AllocationStrategy
-    //.withAllocationStrategy(new akka.cluster.sharding.ShardCoordinator.LeastShardAllocationStrategy(1, 3))
-    //https://doc.akka.io/docs/akka/2.6/typed/cluster-sharding.html?_ga=#shard-allocation
-    /*.withAllocationStrategy(
+  //default AllocationStrategy
+  //.withAllocationStrategy(new akka.cluster.sharding.ShardCoordinator.LeastShardAllocationStrategy(1, 3))
+  //https://doc.akka.io/docs/akka/2.6/typed/cluster-sharding.html?_ga=#shard-allocation
+  /*.withAllocationStrategy(
       akka.cluster.sharding.ShardCoordinator.ShardAllocationStrategy
         .leastShardAllocationStrategy(numberOfShards / 2, 0.5)
     )*/
-    .withEntityProps(akka.actor.typed.Props.empty.withDispatcherFromConfig(disName))
+  //.withEntityProps(akka.actor.typed.Props.empty.withDispatcherFromConfig(disName))
 
   val chatShardRegion = sharding.init(entity)
 
@@ -125,9 +124,9 @@ class ShardedChatRooms(implicit system: ActorSystem[Nothing]) {
       .ask[ChatRoomReply](DisconnectUser(chatId, user, _))
    */
 
-  def disconnect(chatId: String, user: String): Future[Reply] =
-    chatShardRegion.ask[Reply](Command.DisconnectUser(chatId, user, _))
+  def leave(chatId: String, user: String): Future[Reply] =
+    chatShardRegion.ask[LeaveReply](Command.Leave(chatId, user, _))
 
-  def enter(chatId: String, login: String, pubKey: String): Future[Reply] =
-    chatShardRegion.ask[Reply](Command.JoinUser(chatId, login, pubKey, _))
+  def join(chatId: String, login: String, pubKey: String): Future[JoinReply] =
+    chatShardRegion.ask[JoinReply](Command.JoinUser(chatId, login, pubKey, _))
 }
