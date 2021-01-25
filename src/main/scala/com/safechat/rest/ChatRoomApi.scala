@@ -2,18 +2,17 @@
 
 package com.safechat.rest
 
+import akka.NotUsed
+import akka.actor.typed.ActorSystem
+import akka.actor.typed.scaladsl.adapter._
 import akka.http.scaladsl.model.ws.Message
 import akka.http.scaladsl.server._
-import akka.actor.typed.scaladsl.adapter._
-import akka.NotUsed
+import akka.stream.OverflowStrategy
 import akka.stream.scaladsl.{Flow, RestartFlow}
-import akka.actor.typed.ActorSystem
-import akka.management.cluster.scaladsl.ClusterHttpManagementRoutes
-import akka.stream.{ActorAttributes, OverflowStrategy}
-import com.safechat.actors.{ChatRoomEntity, JoinReply, JoinReplyFailure, JoinReplySuccess, Reply, ShardedChatRooms}
+import com.safechat.actors._
 
-import scala.concurrent.duration._
 import scala.concurrent.Future
+import scala.concurrent.duration._
 
 case class ChatRoomApi(rooms: ShardedChatRooms)(implicit sys: ActorSystem[Nothing]) extends Directives {
   implicit val cx         = sys.executionContext
@@ -61,32 +60,29 @@ case class ChatRoomApi(rooms: ShardedChatRooms)(implicit sys: ActorSystem[Nothin
     user: String,
     pubKey: String
   ): Future[Flow[Message, Message, Future[NotUsed]]] =
-    getChatRoomFlow(rooms, chatId, user, pubKey)
-      .map { reply ⇒
+    getChatRoomFlow(rooms, chatId, user, pubKey).map {
+      case JoinReplySuccess(chatId, user, sinkRef, sourceRef) ⇒
         Flow.fromMaterializer { (mat, attr) ⇒
           //val ec: ExecutionContextExecutor = mat.executionContext
           //val disp                        = attr.get[ActorAttributes.Dispatcher].get
           val buf = attr.get[akka.stream.Attributes.InputBuffer].get
           //println("attributes: " + attr.attributeList.mkString(","))
 
-          reply match {
-            case JoinReplySuccess(chatId, user, sinkRef, sourceRef) ⇒
-              Flow
-                .fromSinkAndSourceCoupled(sinkRef.sink, sourceRef.source)
-                .buffer(buf.max, OverflowStrategy.backpressure)
-                .backpressureTimeout(3.seconds) //automatic cleanup for very slow subscribers.
-                .watchTermination() { (_, c) ⇒
-                  c.flatMap { _ ⇒
-                    sys.log.info("{}@{}: ws-con has been terminated", user, chatId)
-                    rooms.leave(chatId, user)
-                  }
-                  NotUsed
-                }
-            case JoinReplyFailure(chatId, user) ⇒
-              throw new Exception("JoinReplyFailure !!!")
-          }
+          Flow
+            .fromSinkAndSourceCoupled(sinkRef.sink, sourceRef.source)
+            .buffer(buf.max, OverflowStrategy.backpressure)
+            .backpressureTimeout(3.seconds) //automatic cleanup for very slow subscribers.
+            .watchTermination() { (_, c) ⇒
+              c.flatMap { _ ⇒
+                sys.log.info("{}@{}: ws-con has been terminated", user, chatId)
+                rooms.leave(chatId, user)
+              }
+              NotUsed
+            }
         }
-      }
+      case JoinReplyFailure(chatId, user) ⇒
+        throw new Exception("JoinReplyFailure !!!")
+    }
 
   /** As long as at least one connection is opened to the chat room, the associated persistent entity won't be passivated.
     *
@@ -101,7 +97,7 @@ case class ChatRoomApi(rooms: ShardedChatRooms)(implicit sys: ActorSystem[Nothin
           akka.stream.RestartSettings(ChatRoomEntity.hubInitTimeout, ChatRoomEntity.hubInitTimeout, 0.4)
         )(() ⇒ Flow.futureFlow(chatRoomWsFlow(rooms, chatId, user, pubKey)))
       handleWebSocketMessages(flow)
-    } // ~ ClusterHttpManagementRoutes(akka.cluster.Cluster(sys.toClassic))
+    }
 }
 
 /*def auth(credentials: Option[HttpCredentials]): Future[AuthenticationResult[User]] =
@@ -118,8 +114,6 @@ case class ChatRoomApi(rooms: ShardedChatRooms)(implicit sys: ActorSystem[Nothin
 //https://gist.github.com/johanandren/964672acc37b84caca40
 //https://discuss.lightbend.com/t/authentication-in-websocket-connections/4174
 //https://stackoverflow.com/questions/22383089/is-it-possible-to-use-bearer-authentication-for-websocket-upgrade-requests
-//TODO: try it out
-
 /*get {
   extractRequest { req ⇒
     //authorizeAsync(reqCtx ⇒ ???)
