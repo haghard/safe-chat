@@ -36,47 +36,64 @@ final case class TextPostedReply(chatId: String, seqNum: Long, content: String) 
 
 final case class LeaveReply(chatId: String, user: String) extends Reply
 
-/*
-Option 1.
 
-sealed trait Command0[+R <: Reply] {
+sealed trait Command {
   def chatId: String
   def replyTo: ActorRef[Reply]
 }
 
-final case class JoinUser0(
-  chatId: String, user: String,
-  pubKey: String, replyTo: ActorRef[Reply]
-) extends Command0[JoinReply]
+object Command {
 
- */
+  final case class JoinUser(
+    chatId: String,
+    user: String,
+    pubKey: String,
+    replyTo: ActorRef[Reply]
+  ) extends Command
+
+  final case class PostText(
+    chatId: String,
+    sender: String,
+    receiver: String,
+    content: String,
+    replyTo: ActorRef[Reply]
+  ) extends Command
+
+  final case class Leave(
+    chatId: String,
+    user: String,
+    replyTo: ActorRef[Reply]
+  ) extends Command
+}
 
 /*
-Option 2.
 
-trait ReplyModule {
-  type Reply
-}
+//Option 1.
 
-sealed trait Command0[M <: ReplyModule] {
+sealed trait Cmd[M <: ReplyModule] {
   def chatId: String
-  def replyTo: ActorRef[M#Reply]
+  def replyTo: ActorRef[M#R]
 }
 
-abstract sealed trait JRM extends ReplyModule {
-  override type Reply = JoinReply
+sealed trait ReplyModule {
+  type R <: Reply
+}
+
+abstract sealed trait JoinR extends ReplyModule {
+  override type R = JoinReply
 }
 
 final case class JoinUser0(
   chatId: String,
   user: String,
   pubKey: String,
-  replyTo: ActorRef[JRM#Reply]
-) extends Command0[JRM]
+  replyTo: ActorRef[JoinR#R]
+) extends Cmd[JoinR]
  */
 
 /*
-Option 3
+
+//Option 2
 
 sealed trait Command {
   type R <: Reply
@@ -114,7 +131,13 @@ object Command {
     override type R = DisconnectedReply
   }
 }
- */
+*/
+
+
+/*
+
+// Option 3
+//type T in covariant position here allows for Command[Reply] <: Command[TextPostedReply]
 
 sealed trait Command[+T <: Reply] {
   type Reply <: T
@@ -147,14 +170,17 @@ object Command {
   ) extends Command[LeaveReply]
 
 }
+*/
 
 sealed trait ChatRoomEvent {
   def originator: String
 }
 
 final case class UserJoined(originator: String, pubKey: String) extends ChatRoomEvent
+
 final case class UserTextAdded(originator: String, recipient: String, content: String, when: Long, tz: String)
     extends ChatRoomEvent
+
 final case class UserDisconnected(originator: String) extends ChatRoomEvent
 
 final case class ChatRoomHub(sinkHub: Sink[Message, NotUsed], srcHub: Source[Message, NotUsed], ks: UniqueKillSwitch)
@@ -170,14 +196,14 @@ final case class ChatRoomState(
   hub: Option[ChatRoomHub] = None
 ) {
 
-  def applyCmd(cmd: Command[Reply]): ReplyEffect[ChatRoomEvent, ChatRoomState] =
+  def applyCmd(cmd: Command): ReplyEffect[ChatRoomEvent, ChatRoomState] =
     cmd match {
       case c: JoinUser ⇒ Effect.persist(UserJoined(c.user, c.pubKey)).thenNoReply()
       case _: PostText ⇒ Effect.noReply
       case _: Leave    ⇒ Effect.noReply
     }
 
-  def applyEvn(event: ChatRoomEvent): ChatRoomState =
+  def applyEvent(event: ChatRoomEvent): ChatRoomState =
     event match {
       case _: UserJoined       ⇒ ???
       case _: UserTextAdded    ⇒ ???

@@ -15,7 +15,7 @@ import akka.actor.typed.scaladsl.AskPattern._
 object ShardedChatRooms {
 
   object ChatRoomsMsgExtractor {
-    def apply[T <: Command[Reply]](numberOfShards: Int): ShardingMessageExtractor[T, T] =
+    def apply[T <: Command](numberOfShards: Int): ShardingMessageExtractor[T, T] =
       new ShardingMessageExtractor[T, T] {
 
         /*
@@ -86,7 +86,7 @@ class ShardedChatRooms(implicit system: ActorSystem[Nothing]) {
 
   val entity = Entity(ChatRoomEntity.entityKey)(ChatRoomEntity(_))
     //ShardingMessageExtractor[UserCmd](512)
-    .withMessageExtractor(ChatRoomsMsgExtractor[Command[Reply]](numberOfShards))
+    .withMessageExtractor(ChatRoomsMsgExtractor[Command](numberOfShards))
     .withSettings(settings)
     //https://doc.akka.io/docs/akka/current/typed/cluster-sharding.html
 
@@ -125,8 +125,10 @@ class ShardedChatRooms(implicit system: ActorSystem[Nothing]) {
    */
 
   def leave(chatId: String, user: String): Future[Reply] =
-    chatShardRegion.ask[LeaveReply](Command.Leave(chatId, user, _))
+    //chatShardRegion.ask[LeaveReply](Command.Leave(chatId, user, _))
+    chatShardRegion.ask[Reply](Command.Leave(chatId, user, _))
 
-  def join(chatId: String, login: String, pubKey: String): Future[JoinReply] =
-    chatShardRegion.ask[JoinReply](Command.JoinUser(chatId, login, pubKey, _))
+  def join(chatId: String, login: String, pubKey: String): Future[Reply] =
+    //chatShardRegion.ask[JoinReply](Command.JoinUser(chatId, login, pubKey, _))
+    chatShardRegion.ask[Reply](Command.JoinUser(chatId, login, pubKey, _))
 }

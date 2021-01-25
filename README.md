@@ -573,17 +573,23 @@ CREATE TABLE chat.metadata (
 
 git tag -a v0.2.0 -m "v0.2.0" &&  git push --tags
 
-### TO DO 
 
-Add two roles: endpoint and domain. If the role of the cluster node is “domain” we simply start cluster sharding, 
-otherwise we initialize cluster sharding as a proxy so no shards are hosted by the node and start HTTP endpoints. 
-(See how it's done for https://www.lightbend.com/blog/how-to-distribute-application-state-with-akka-cluster-part-4-the-source-code)
-Use `streamee` to enable streaming from http routes to shard region proxies. 
-
-
-Enable replicated-event-sourcing 
-https://doc.akka.io/docs/akka/current/typed/replicated-eventsourcing.html#replicated-event-sourcing
-https://github.com/akka/akka-samples.git akka-sample-persistence-dc-scala
-
+### Improvements
 
 Sharding improvements(2.6.10): https://doc.akka.io/docs/akka/2.6/additional/rolling-updates.html
+
+
+
+### TO DO 
+
+1. Add two roles: endpoint and domain. If the role of the cluster node is “domain” we simply start cluster sharding, 
+otherwise we initialize cluster sharding proxy so no shards are hosted by the node and start HTTP endpoints.
+(See how it's done for https://www.lightbend.com/blog/how-to-distribute-application-state-with-akka-cluster-part-4-the-source-code)
+
+2. Use `streamee` to enable streaming from http routes to shard region proxies. 
+
+3. Make use of `askWithStatus` Example: https://developer.lightbend.com/docs/akka-platform-guide/microservices-tutorial/entity.html
+
+4. Try replicated-event-sourcing 
+https://doc.akka.io/docs/akka/current/typed/replicated-eventsourcing.html#replicated-event-sourcing
+https://github.com/akka/akka-samples.git akka-sample-persistence-dc-scala

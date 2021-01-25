@@ -35,8 +35,8 @@ object ChatRoomEntity {
 
   val persistTimeout = akka.util.Timeout(1.second) //write to the journal timeout
 
-  val entityKey: EntityTypeKey[Command[Reply]] =
-    EntityTypeKey[Command[Reply]]("chat-rooms")
+  val entityKey: EntityTypeKey[Command] =
+    EntityTypeKey[Command]("chat-rooms")
 
   val emptyState = com.safechat.actors.ChatRoomState()
 
@@ -74,7 +74,7 @@ object ChatRoomEntity {
     *
     * Causal consistency is maintained as we always write to the journal with parallelism == 1
     */
-  def apply(entityCtx: EntityContext[Command[Reply]]): Behavior[Command[Reply]] =
+  def apply(entityCtx: EntityContext[Command]): Behavior[Command] =
     //com.safechat.LoggingBehaviorInterceptor(ctx.log) {
     Behaviors.setup { ctx ⇒
       implicit val sys      = ctx.system
@@ -89,7 +89,7 @@ object ChatRoomEntity {
       )*/
 
       EventSourcedBehavior
-        .withEnforcedReplies[Command[Reply], ChatRoomEvent, ChatRoomState](
+        .withEnforcedReplies[Command, ChatRoomEvent, ChatRoomState](
           //PersistenceId.ofUniqueId(entityId),
           PersistenceId(entityCtx.entityTypeKey.name, entityCtx.entityId),
           ChatRoomState(),
@@ -156,7 +156,7 @@ object ChatRoomEntity {
 
     sys.log.warn("Create pub-sub for {} chatroom", persistenceId)
 
-    import akka.actor.typed.scaladsl.AskPattern._
+    //import akka.actor.typed.scaladsl.AskPattern._
     val ((sinkHub, ks), sourceHub) =
       MergeHub
         .source[Message](initBs)
@@ -202,7 +202,7 @@ object ChatRoomEntity {
 
   def onCommand(
     ctx: ActorContext[_]
-  )(state: ChatRoomState, cmd: Command[Reply])(implicit
+  )(state: ChatRoomState, cmd: Command)(implicit
     sys: ActorSystem[Nothing]
   ): ReplyEffect[ChatRoomEvent, ChatRoomState] =
     cmd match {
@@ -253,7 +253,7 @@ object ChatRoomEntity {
 
   def onEvent(persistenceId: String)(state: ChatRoomState, event: ChatRoomEvent)(implicit
     sys: ActorSystem[Nothing],
-    ctx: ActorContext[Command[Reply]]
+    ctx: ActorContext[Command]
   ): ChatRoomState =
     event match {
       case UserJoined(login, pubKey) ⇒
@@ -280,7 +280,7 @@ object ChatRoomEntity {
     }
 
   def snapshotPredicate(
-    ctx: ActorContext[Command[Reply]]
+    ctx: ActorContext[Command]
   )(state: ChatRoomState, event: ChatRoomEvent, sequenceNr: Long): Boolean = {
     val ifSnap = sequenceNr % snapshotEveryN == 0
 
