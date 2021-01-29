@@ -281,6 +281,10 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-http-testkit" % akkaHttpVersion % Test,
   "com.typesafe.akka" %% "akka-testkit" % akkaVersion % Test,
 
+  //https://github.com/chatwork/akka-guard
+  "com.chatwork" %% "akka-guard-http-typed" % "1.5.3-SNAPSHOT",
+
+
   "com.typesafe.akka" %% "akka-persistence-cassandra-launcher" % AkkaPersistenceCassandraVersion,
 
   //https://github.com/typelevel/algebra/blob/46722cd4aa4b01533bdd01f621c0f697a3b11040/docs/docs/main/tut/typeclasses/overview.md

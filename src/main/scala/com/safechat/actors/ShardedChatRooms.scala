@@ -2,8 +2,8 @@
 
 package com.safechat.actors
 
-import akka.actor.typed.ActorSystem
-import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, Entity}
+import akka.actor.typed.{ActorSystem, Behavior}
+import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, Entity, EntityContext}
 import akka.cluster.sharding.typed.ClusterShardingSettings.StateStoreModeDData
 import akka.cluster.sharding.typed.{ClusterShardingSettings, ShardingMessageExtractor}
 
@@ -83,6 +83,19 @@ class ShardedChatRooms(implicit system: ActorSystem[Nothing]) {
       .withEntityProps(akka.actor.typed.Props.empty.withDispatcherFromConfig("shard-dispatcher"))
       .withAllocationStrategy(new ExternalShardAllocationStrategy(system, ChatRoomEntity.entityKey.name))
   )*/
+
+  /*
+  Another way to initialize and get ref to shardRegion
+
+  val tags = Vector.tabulate(5)(i => s"room-$i")
+  val behaviorFactory: EntityContext[Command] => Behavior[Command] = {
+    entityContext =>
+      val i = math.abs(entityContext.entityId.hashCode % tags.size)
+      val selectedTag = tags(i)
+      ChatRoomEntity(entityContext/*, selectedTag*/)
+  }
+  val chatShardRegion = ClusterSharding(system).init(Entity(ChatRoomEntity.entityKey)(behaviorFactory))
+  */
 
   val entity = Entity(ChatRoomEntity.entityKey)(ChatRoomEntity(_))
     //ShardingMessageExtractor[UserCmd](512)

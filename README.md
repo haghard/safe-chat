@@ -135,19 +135,6 @@ LunaConf 2020 - Akka Persistence Typed by Renato Cavalcanti: https://youtu.be/hY
 https://github.com/renatocaval/akka-persistence-typed-talk
 
 
-## Message evolution/versioning
-
-https://www.scala-exercises.org/shapeless/coproducts
-
-https://github.com/Keenworks/akka-avro-evolution.git
-
-https://softwaremill.com/schema-registry-and-topic-with-multiple-message-types/
-
-https://blog.softwaremill.com/the-best-serialization-strategy-for-event-sourcing-9321c299632b
-
-https://github.com/IainHull/akka-persistence-message-bug
-
-
 ## Akka
 
 https://doc.akka.io/docs/akka/2.6/index.html
@@ -207,6 +194,7 @@ Sample project: https://github.com/mckeeh3/akka-typed-java-cluster.git
 
 https://doc.akka.io/docs/akka/current/typed/extending.html
 
+
 ## Schema evolution/versioning
 
 https://www.scala-exercises.org/shapeless/coproducts
@@ -219,7 +207,19 @@ http://martin.kleppmann.com/2012/12/05/schema-evolution-in-avro-protocol-buffers
 
 https://www.programcreek.com/java-api-examples/?code=rkluszczynski/avro-cli/avro-cli-master/src/main/java/io/github/rkluszczynski/avro/cli/command/conversion/RawConverterUtil.java
 
-Schema Management at Depop: https://youtu.be/ztkyVHPaPgY
+https://doc.akka.io/docs/akka/current/persistence-schema-evolution.html?language=scala
+
+https://www.scala-exercises.org/shapeless/coproducts
+
+https://github.com/Keenworks/akka-avro-evolution.git
+
+https://github.com/calvinlfer/Akka-Persistence-Schema-Evolution-Example (Event Adapters) 
+
+https://softwaremill.com/schema-registry-and-topic-with-multiple-message-types/
+
+https://blog.softwaremill.com/the-best-serialization-strategy-for-event-sourcing-9321c299632b
+
+Schema Management at Depop talk: https://youtu.be/ztkyVHPaPgY
 
 https://pulsar.apache.org/docs/en/concepts-schema-registry/
 
@@ -245,9 +245,12 @@ https://developer.confluent.io/podcast/introducing-json-and-protobuf-support-ft-
 
 ### Schema registry
 
-Schema registry:    https://www.confluent.io/blog/author/robert-yokota/
+Schema registry: https://www.confluent.io/blog/author/robert-yokota/
+                  
 
-Putting Several Event Types in the Same Topic – Revisited:  https://www.confluent.io/blog/multiple-event-types-in-the-same-kafka-topic
+Putting Several Event Types in the Same Topic              https://www.confluent.io/blog/put-several-event-types-kafka-topic/
+
+Putting Several Event Types in the Same Topic – Revisited: https://www.confluent.io/blog/multiple-event-types-in-the-same-kafka-topic
 
 
 
