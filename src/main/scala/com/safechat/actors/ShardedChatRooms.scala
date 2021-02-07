@@ -2,8 +2,8 @@
 
 package com.safechat.actors
 
-import akka.actor.typed.{ActorSystem, Behavior}
-import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, Entity, EntityContext}
+import akka.actor.typed.ActorSystem
+import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, Entity}
 import akka.cluster.sharding.typed.ClusterShardingSettings.StateStoreModeDData
 import akka.cluster.sharding.typed.{ClusterShardingSettings, ShardingMessageExtractor}
 
@@ -143,5 +143,5 @@ class ShardedChatRooms(implicit system: ActorSystem[Nothing]) {
 
   def join(chatId: String, login: String, pubKey: String): Future[Reply] =
     //chatShardRegion.ask[JoinReply](Command.JoinUser(chatId, login, pubKey, _))
-    chatShardRegion.ask[Reply](Command.JoinUser(chatId, login, pubKey, _))
+    chatShardRegion.ask[LeaveReply](r=>Command.JoinUser(chatId, login, pubKey, r.narrow[Reply]))
 }

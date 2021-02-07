@@ -11,6 +11,15 @@ import akka.stream.{SinkRef, SourceRef, UniqueKillSwitch}
 import com.safechat.actors.Command.{JoinUser, Leave, PostText}
 import com.safechat.domain.RingBuffer
 
+/*
+  Making T contravariant in ActorRef implies that
+  for two types JoinReply and Reply where JoinReply is a subtype of Reply, ActorRef[Reply] is a subtype of ActorRef[JoinReply]
+  Which means, whenever you see ActorRef[Reply] you can pass ActorRef[JoinReply] in.
+
+  val a: ActorRef[JoinReply] = null.asInstanceOf[ActorRef[Reply]]
+  val b: ActorRef[Reply] = null.asInstanceOf[ActorRef[JoinReply]] //error unless .narrow[Reply]
+
+ */
 sealed trait Reply {
   def chatId: String
 }
