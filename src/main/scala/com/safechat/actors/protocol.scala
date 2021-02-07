@@ -24,30 +24,26 @@ sealed trait Reply {
   def chatId: String
 }
 
-sealed trait JoinReply extends Reply
-
 final case class ReconnectReply(
   chatId: String,
   user: String,
   sinkRef: SinkRef[Message]
 ) extends Reply
 
-final case class JoinReplySuccess(
+final case class JoinReply(
   chatId: String,
   user: String,
-  sinkRef: SinkRef[Message],
-  sourceRef: SourceRef[Message]
-) extends JoinReply
-
-final case class JoinReplyFailure(chatId: String, user: String) extends JoinReply
+  sinkSourceRef: Option[(SinkRef[Message], SourceRef[Message])]
+) extends Reply
 
 final case class TextPostedReply(chatId: String, seqNum: Long, content: String) extends Reply
 
 final case class LeaveReply(chatId: String, user: String) extends Reply
 
-sealed trait Command {
+sealed trait Command[+R <: Reply] {
+  type T <: R
   def chatId: String
-  def replyTo: ActorRef[Reply]
+  def replyTo: ActorRef[T]
 }
 
 object Command {
@@ -56,22 +52,22 @@ object Command {
     chatId: String,
     user: String,
     pubKey: String,
-    replyTo: ActorRef[Reply]
-  ) extends Command
+    replyTo: ActorRef[JoinReply]
+  ) extends Command[JoinReply]
 
   final case class PostText(
     chatId: String,
     sender: String,
     receiver: String,
     content: String,
-    replyTo: ActorRef[Reply]
-  ) extends Command
+    replyTo: ActorRef[TextPostedReply]
+  ) extends Command[TextPostedReply]
 
   final case class Leave(
     chatId: String,
     user: String,
-    replyTo: ActorRef[Reply]
-  ) extends Command
+    replyTo: ActorRef[LeaveReply]
+  ) extends Command[LeaveReply]
 }
 
 /*
@@ -144,11 +140,8 @@ object Command {
 /*
 
 // Option 3
-//type T in covariant position here allows for Command[Reply] <: Command[TextPostedReply]
 
-sealed trait Command[+T <: Reply] {
-  type Reply <: T
-
+sealed trait Command {
   def chatId: String
   def replyTo: ActorRef[Reply]
 }
@@ -159,22 +152,23 @@ object Command {
     chatId: String,
     user: String,
     pubKey: String,
-    replyTo: ActorRef[JoinReply]
-  ) extends Command[JoinReply]
+    replyTo: ActorRef[Reply]
+  ) extends Command
 
   final case class PostText(
     chatId: String,
     sender: String,
     receiver: String,
     content: String,
-    replyTo: ActorRef[TextPostedReply]
-  ) extends Command[TextPostedReply]
+    replyTo: ActorRef[Reply]
+  ) extends Command
 
   final case class Leave(
     chatId: String,
     user: String,
-    replyTo: ActorRef[LeaveReply]
-  ) extends Command[LeaveReply]
+    replyTo: ActorRef[Reply]
+  ) extends Command
+}
 
 }
  */
@@ -192,10 +186,11 @@ final case class UserDisconnected(originator: String) extends ChatRoomEvent
 
 final case class ChatRoomHub(sinkHub: Sink[Message, NotUsed], srcHub: Source[Message, NotUsed], ks: UniqueKillSwitch)
 
-case object Null extends ChatRoomEvent {
+/*case object Null extends ChatRoomEvent {
   override def originator: String = ""
-}
+}*/
 
+//https://doc.akka.io/docs/akka/current/typed/style-guide.html#functional-versus-object-oriented-style
 final case class ChatRoomState(
   regUsers: Map[String, String] = Map.empty,
   online: Set[String] = Set.empty,
@@ -203,7 +198,7 @@ final case class ChatRoomState(
   hub: Option[ChatRoomHub] = None
 ) {
 
-  def applyCmd(cmd: Command): ReplyEffect[ChatRoomEvent, ChatRoomState] =
+  def applyCmd(cmd: Command[Reply]): ReplyEffect[ChatRoomEvent, ChatRoomState] =
     cmd match {
       case c: JoinUser ⇒ Effect.persist(UserJoined(c.user, c.pubKey)).thenNoReply()
       case _: PostText ⇒ Effect.noReply
@@ -215,6 +210,6 @@ final case class ChatRoomState(
       case _: UserJoined       ⇒ ???
       case _: UserTextAdded    ⇒ ???
       case _: UserDisconnected ⇒ ???
-      case Null                ⇒ ???
+      //case Null                ⇒ ???
     }
 }

@@ -113,6 +113,16 @@ lazy val root = project
     // sbt -J-Xmx1024M -J-XX:MaxMetaspaceSize=850M -J-XX:+UseG1GC -J-XX:+PrintCommandLineFlags -J-XshowSettings
     javaOptions ++= Seq("-Xmx1024M", "-XX:MaxMetaspaceSize=850m", "-XX:+UseG1GC", "-XX:+PrintCommandLineFlags", "-XshowSettings"),
 
+
+    //TODO: Check this out
+    //https://github.com/zhao258147/personalization-demo/blob/d94eb38766a1ce374b7762a6ec26de2074af1a87/build.sbt#L75
+    /*javaOptions in Universal ++= Seq(
+      "-XX:+UnlockExperimentalVMOptions",
+      "-XX:+UseCGroupMemoryLimitForHeap",
+      "-XshowSettings:vm"
+    ),*/
+
+
     mainClass in assembly := Some("com.safechat.Server"),
     assemblyJarName in assembly := s"$projectName-${version.value}.jar",
 

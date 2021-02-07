@@ -61,27 +61,31 @@ case class ChatRoomApi(rooms: ShardedChatRooms)(implicit sys: ActorSystem[Nothin
     pubKey: String
   ): Future[Flow[Message, Message, Future[NotUsed]]] =
     getChatRoomFlow(rooms, chatId, user, pubKey).map {
-      case JoinReplySuccess(chatId, user, sinkRef, sourceRef) ⇒
-        Flow.fromMaterializer { (mat, attr) ⇒
-          //val ec: ExecutionContextExecutor = mat.executionContext
-          //val disp                        = attr.get[ActorAttributes.Dispatcher].get
-          val buf = attr.get[akka.stream.Attributes.InputBuffer].get
-          //println("attributes: " + attr.attributeList.mkString(","))
+      //case JoinReplySuccess(chatId, user, sinkRef, sourceRef) ⇒
+      case JoinReply(chatId, user, sinkSourceRef) ⇒
+        sinkSourceRef match {
+          case Some((sinkRef, sourceRef)) ⇒
+            Flow.fromMaterializer { (mat, attr) ⇒
+              //val ec: ExecutionContextExecutor = mat.executionContext
+              //val disp                        = attr.get[ActorAttributes.Dispatcher].get
+              val buf = attr.get[akka.stream.Attributes.InputBuffer].get
+              //println("attributes: " + attr.attributeList.mkString(","))
 
-          Flow
-            .fromSinkAndSourceCoupled(sinkRef.sink, sourceRef.source)
-            .buffer(buf.max, OverflowStrategy.backpressure)
-            .backpressureTimeout(3.seconds) //automatic cleanup for very slow subscribers.
-            .watchTermination() { (_, c) ⇒
-              c.flatMap { _ ⇒
-                sys.log.info("{}@{}: ws-con has been terminated", user, chatId)
-                rooms.leave(chatId, user)
-              }
-              NotUsed
+              Flow
+                .fromSinkAndSourceCoupled(sinkRef.sink, sourceRef.source)
+                .buffer(buf.max, OverflowStrategy.backpressure)
+                .backpressureTimeout(3.seconds) //automatic cleanup for very slow subscribers.
+                .watchTermination() { (_, c) ⇒
+                  c.flatMap { _ ⇒
+                    sys.log.info("{}@{}: ws-con has been terminated", user, chatId)
+                    rooms.leave(chatId, user)
+                  }
+                  NotUsed
+                }
             }
+          case None ⇒
+            throw new Exception("JoinReplyFailure !!!")
         }
-      case JoinReplyFailure(chatId, user) ⇒
-        throw new Exception("JoinReplyFailure !!!")
     }
 
   /** As long as at least one connection is opened to the chat room, the associated persistent entity won't be passivated.

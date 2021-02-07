@@ -35,8 +35,8 @@ object ChatRoomEntity {
 
   val persistTimeout = akka.util.Timeout(1.second) //write to the journal timeout
 
-  val entityKey: EntityTypeKey[Command] =
-    EntityTypeKey[Command]("chat-rooms")
+  val entityKey: EntityTypeKey[Command[Reply]] =
+    EntityTypeKey[Command[Reply]]("chat-rooms")
 
   val emptyState = com.safechat.actors.ChatRoomState()
 
@@ -74,7 +74,7 @@ object ChatRoomEntity {
     *
     * Causal consistency is maintained as we always write to the journal with parallelism == 1
     */
-  def apply(entityCtx: EntityContext[Command]): Behavior[Command] =
+  def apply(entityCtx: EntityContext[Command[Reply]]): Behavior[Command[Reply]] =
     //com.safechat.LoggingBehaviorInterceptor(ctx.log) {
     Behaviors.setup { ctx ⇒
       implicit val sys      = ctx.system
@@ -89,7 +89,7 @@ object ChatRoomEntity {
       )*/
 
       EventSourcedBehavior
-        .withEnforcedReplies[Command, ChatRoomEvent, ChatRoomState](
+        .withEnforcedReplies[Command[Reply], ChatRoomEvent, ChatRoomState](
           //PersistenceId.ofUniqueId(entityId),
           PersistenceId(entityCtx.entityTypeKey.name, entityCtx.entityId),
           ChatRoomState(),
@@ -197,12 +197,16 @@ object ChatRoomEntity {
   }
 
   /*val commandHandler: (ChatRoomState, Command[Reply]) ⇒ ReplyEffect[ChatRoomEvent, ChatRoomState] = { (state, cmd) ⇒
-    ???
+    cmd match {
+      case JoinUser(chatId, user, pubKey, replyTo)              ⇒
+      case PostText(chatId, sender, receiver, content, replyTo) ⇒
+      case Leave(chatId, user, replyTo)                         ⇒
+    }
   }*/
 
   def onCommand(
     ctx: ActorContext[_]
-  )(state: ChatRoomState, cmd: Command)(implicit
+  )(state: ChatRoomState, cmd: Command[Reply])(implicit
     sys: ActorSystem[Nothing]
   ): ReplyEffect[ChatRoomEvent, ChatRoomState] =
     cmd match {
@@ -225,9 +229,9 @@ object ChatRoomEntity {
                 //Add new consumers on the fly
                 //The rate of the producer will be automatically adapted to the slowest consumer
                 val sinkRefF = hub.sinkHub.runWith(StreamRefs.sinkRef[Message].addAttributes(settings))
-                JoinReplySuccess(cmd.chatId, cmd.user, sinkRefF, srcRefF)
+                JoinReply(cmd.chatId, cmd.user, Some(sinkRefF, srcRefF))
               case None ⇒
-                JoinReplyFailure(cmd.chatId, cmd.user)
+                JoinReply(cmd.chatId, cmd.user, None)
             }
           }
 
@@ -253,7 +257,7 @@ object ChatRoomEntity {
 
   def onEvent(persistenceId: String)(state: ChatRoomState, event: ChatRoomEvent)(implicit
     sys: ActorSystem[Nothing],
-    ctx: ActorContext[Command]
+    ctx: ActorContext[Command[Reply]]
   ): ChatRoomState =
     event match {
       case UserJoined(login, pubKey) ⇒
@@ -280,7 +284,7 @@ object ChatRoomEntity {
     }
 
   def snapshotPredicate(
-    ctx: ActorContext[Command]
+    ctx: ActorContext[Command[Reply]]
   )(state: ChatRoomState, event: ChatRoomEvent, sequenceNr: Long): Boolean = {
     val ifSnap = sequenceNr % snapshotEveryN == 0
 
