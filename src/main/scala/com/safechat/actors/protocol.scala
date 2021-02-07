@@ -36,7 +36,6 @@ final case class TextPostedReply(chatId: String, seqNum: Long, content: String) 
 
 final case class LeaveReply(chatId: String, user: String) extends Reply
 
-
 sealed trait Command {
   def chatId: String
   def replyTo: ActorRef[Reply]
@@ -131,8 +130,7 @@ object Command {
     override type R = DisconnectedReply
   }
 }
-*/
-
+ */
 
 /*
 
@@ -170,7 +168,7 @@ object Command {
   ) extends Command[LeaveReply]
 
 }
-*/
+ */
 
 sealed trait ChatRoomEvent {
   def originator: String

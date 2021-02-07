@@ -95,7 +95,7 @@ class ShardedChatRooms(implicit system: ActorSystem[Nothing]) {
       ChatRoomEntity(entityContext/*, selectedTag*/)
   }
   val chatShardRegion = ClusterSharding(system).init(Entity(ChatRoomEntity.entityKey)(behaviorFactory))
-  */
+   */
 
   val entity = Entity(ChatRoomEntity.entityKey)(ChatRoomEntity(_))
     //ShardingMessageExtractor[UserCmd](512)

@@ -172,8 +172,7 @@ object JournalEventsSerializer {
         )
 
     } else if (manifest.startsWith(STATE_PREF)) {
-      val state =
-        readFromArray[com.safechat.persistent.state.ChatRoomState](bts, writerSchema, readerSchema)
+      val state    = readFromArray[com.safechat.persistent.state.ChatRoomState](bts, writerSchema, readerSchema)
       var userKeys = Map.empty[String, String]
       state.getRegisteredUsers.forEach((login, pubKey) ⇒ userKeys = userKeys + (login.toString → pubKey.toString))
 

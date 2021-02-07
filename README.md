@@ -222,6 +222,7 @@ https://blog.softwaremill.com/the-best-serialization-strategy-for-event-sourcing
 Schema Management at Depop talk: https://youtu.be/ztkyVHPaPgY
 
 https://pulsar.apache.org/docs/en/concepts-schema-registry/
+     
 
 
 ### Protocol-buffers
@@ -461,27 +462,51 @@ https://github.com/akka/akka-samples/tree/2.6/akka-sample-sharding-scala
 
 https://github.com/apache/cassandra/blob/trunk/src/java/org/apache/cassandra/dht/IPartitioner.java
 
+### How to simulate a split brain
 
-###
+`http GET :8558/cluster/members`
 
-http GET :8558/cluster/members
+a) Down but not terminate nodes on both sides of your partition.
 
-Find the PID for the unreachable node:
+
+0. Find target <pid> 
 > lsof -i :2551 | grep LISTEN | awk '{print $2}'
 
-Hard kill
-> kill -9 <pid>
-
-Suspend
+1. Suspend the process  
 > kill -stop <pid>
 
-Resume
+2. Send <pid> to Down via akka-http-managment interface
+> curl -w '\n' -X PUT -H 'Content-Type: multipart/form-data' -F operation=down http://localhost:8080/cluster/members/safe-chat@127.0.0.1:2551  
+> curl -w '\n' -X PUT -H 'Content-Type: multipart/form-data' -F operation=leave http://localhost:8080/cluster/members/safe-chat@127.0.0.1:2551 
+
+
+3. Resume the process 
 > kill -cont <pid>
+ 
+
+b) docker pause
+c) Bring down all seed nodes leaving only non-seed nodes and then start seed nodes again. They will form a new cluster.
+d) Incomplete coordinated shutdown.
+e) Unresponsive applications due to long GC pause.
+
+or
+
+https://github.com/hseeberger/akkluster
+
+To create network partitions we need to connect to a running container and block traffic:
+
+```bash
+
+docker run -d --cap-add NET_ADMIN ...
+
+docker exec -i -t ... bash
+
+iptables -A INPUT -p tcp -j DROP
+iptables -D INPUT -p tcp -j DROP
+
+```
 
 
-curl -w '\n' -X PUT -H 'Content-Type: multipart/form-data' -F operation=down http://localhost:8080/cluster/members/safe-chat@127.0.0.1:2550
-
-curl -w '\n' -X PUT -H 'Content-Type: multipart/form-data' -F operation=leave http://localhost:8080/cluster/members/safe-chat@127.0.0.1:2550
 
 
 ### Akka-cluster-sharding links 
