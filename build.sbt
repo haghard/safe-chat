@@ -4,11 +4,10 @@ import sbtdocker.ImageName
 val projectName   = "safe-chat"
 val Version       = "0.3.0-SNAPSHOT"
 
-val akkaVersion = "2.6.12"
-val AkkaManagement = "1.0.9"
-
+val akkaVersion     = "2.6.12"
 val akkaHttpVersion = "10.2.3"
-val AkkaPersistenceCassandraVersion = "1.0.3"
+val AkkaManagement  = "1.0.9"
+val AkkaPersistenceCassandraVersion = "1.0.4"
 
 promptTheme := ScalapenosTheme
 
@@ -278,7 +277,11 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-http-spray-json" % akkaHttpVersion,
 
   "ch.qos.logback" % "logback-classic" % "1.2.3",
-  "org.apache.avro" % "avro" % "1.10.0",
+
+
+  "org.apache.avro" %   "avro"         %   "1.10.1",
+  //"com.twitter"     %%  "bijection-avro"  %   "0.9.6",  // ++ 2.12.13!
+  //"org.apache.avro" %   "avro-compiler"   %   "1.10.1",
 
   "ru.odnoklassniki" % "one-nio" % "1.2.0",
 
@@ -292,17 +295,16 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-testkit" % akkaVersion % Test,
 
   //https://github.com/chatwork/akka-guard
-  "com.chatwork" %% "akka-guard-http-typed" % "1.5.3-SNAPSHOT",
-
+  //"com.chatwork" %% "akka-guard-http-typed" % "1.5.3-SNAPSHOT",
 
   "com.typesafe.akka" %% "akka-persistence-cassandra-launcher" % AkkaPersistenceCassandraVersion,
 
   //https://github.com/typelevel/algebra/blob/46722cd4aa4b01533bdd01f621c0f697a3b11040/docs/docs/main/tut/typeclasses/overview.md
-  "org.typelevel" %% "algebra" % "2.1.0",
+  //"org.typelevel" %% "algebra" % "2.1.0",
 
   // li haoyi ammonite repl embed
-  ("com.lihaoyi" % "ammonite" % "2.3.8" % "test").cross(CrossVersion.full)
-
+  //("com.lihaoyi" % "ammonite" % "2.3.8" % "test").cross(CrossVersion.full)
+  ("com.lihaoyi" % "ammonite" % "2.3.8-32-64308dc3" % "test").cross(CrossVersion.full)
 )
 
 
@@ -317,9 +319,12 @@ dependencyOverrides += "com.typesafe.akka" %% "akka-coordination"   % akkaVersio
 scalafmtOnCompile := true
 
 //AvroConfig / stringType := "String"
-AvroConfig / fieldVisibility := "private"
 //AvroConfig / createSetters := true
+
+AvroConfig / fieldVisibility := "private"
 AvroConfig / enableDecimalLogicalType := true
+//AvroConfig / sourceDirectory := baseDirectory.value / "src" / "main" / "resources" / "avro"
+
 
 // ammonite repl
 // test:run

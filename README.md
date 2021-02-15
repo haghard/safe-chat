@@ -606,6 +606,20 @@ git tag -a v0.2.0 -m "v0.2.0" &&  git push --tags
 
 Sharding improvements(2.6.10): https://doc.akka.io/docs/akka/2.6/additional/rolling-updates.html
 
+### How to run in docker
+
+```
+
+docker-compose -f docker/docker-cassandra.yml up -d
+docker-compose -f docker/docker-cassandra.yml rm
+
+
+docker-compose -f docker/docker-cassandra-cluster.yml up -d 
+docker-compose -f docker/docker-cassandra-cluster.yml rm
+
+
+```
+
 
 
 ### TO DO 
@@ -621,3 +635,4 @@ otherwise we initialize cluster sharding proxy so no shards are hosted by the no
 4. Try replicated-event-sourcing 
 https://doc.akka.io/docs/akka/current/typed/replicated-eventsourcing.html#replicated-event-sourcing
 https://github.com/akka/akka-samples.git akka-sample-persistence-dc-scala
+https://github.com/akka/akka/tree/146944f99934557eac72e6dc7fa25fc6b2f0f11c/akka-persistence-typed-tests/src/test/scala/docs/akka/persistence/typed

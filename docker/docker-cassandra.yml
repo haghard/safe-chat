@@ -1,0 +1,17 @@
+version: '3.5'
+services:
+
+  cassandra:
+    image: cassandra:3.11.9
+    healthcheck:
+      test: [ "CMD-SHELL", "nc -z localhost 9042" ]
+    volumes:
+      - ${PWD}/docker/jvm.options:/etc/cassandra/jvm.options
+    mem_limit: 1100m
+    mem_reservation: 1024m
+    ports:
+      - "7000:7000"
+      - "7001:7001"
+      - "7199:7199"
+      - "9042:9042"
+      - "9160:9160"

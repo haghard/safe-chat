@@ -1,0 +1,40 @@
+version: '3.5'
+
+services:
+  cassandra0:
+    image: cassandra:3.11.9
+    ports:
+      - "9042:9042"
+    volumes:
+      - ${PWD}/docker/cassandra.yaml:/etc/cassandra/cassandra.yaml
+      - ${PWD}/docker/jvm.options:/etc/cassandra/jvm.options
+      - ${PWD}/cassandra-cluster/0/demo:/var/lib/cassandra
+    mem_limit: 1100m
+    mem_reservation: 1024m
+    networks:
+      cluster:
+        ipv4_address: 172.16.2.2
+
+  cassandra1:
+    image: cassandra:3.11.9
+    volumes:
+      - ${PWD}/docker/cassandra.yaml:/etc/cassandra/cassandra.yaml
+      - ${PWD}/docker/jvm.options:/etc/cassandra/jvm.options
+      - ${PWD}/cassandra-cluster/1/demo:/var/lib/cassandra
+    mem_limit: 1100m
+    mem_reservation: 1024m
+    environment:
+      CASSANDRA_SEEDS: 172.16.2.2
+    links:
+      - cassandra0
+    networks:
+      - cluster
+
+networks:
+  cluster:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+      - subnet: 172.16.2.0/24
+        gateway: 172.16.2.1
