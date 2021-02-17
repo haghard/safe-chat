@@ -489,7 +489,19 @@ c) Bring down all seed nodes leaving only non-seed nodes and then start seed nod
 d) Incomplete coordinated shutdown.
 e) Unresponsive applications due to long GC pause.
 
-or
+or drop some traffic
+
+Use "iptable" to drop 1%, 2%, 5%, 10% of traffic using iptables command:
+
+```bash
+
+iptables -A INPUT -m statistic --mode random --probability 0.2 -j DROP 
+
+iptables -A OUTPUT -m statistic --mode random --probability 0.2 -j DROP 
+
+```
+
+Another example
 
 https://github.com/hseeberger/akkluster
 
