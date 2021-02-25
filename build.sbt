@@ -4,8 +4,8 @@ import sbtdocker.ImageName
 val projectName   = "safe-chat"
 val Version       = "0.3.0-SNAPSHOT"
 
-val akkaVersion     = "2.6.12"
-val akkaHttpVersion = "10.2.3"
+val akkaVersion     = "2.6.13"
+val akkaHttpVersion = "10.2.4"
 val AkkaManagement  = "1.0.9"
 val AkkaPersistenceCassandraVersion = "1.0.4"
 
@@ -13,7 +13,7 @@ promptTheme := ScalapenosTheme
 
 lazy val scalacSettings = Seq(
   scalacOptions ++= Seq(
-    //"-deprecation",                              // Emit warning and location for usages of deprecated APIs.
+    //"-deprecation",                            // Emit warning and location for usages of deprecated APIs.
     "-explaintypes",                             // Explain type errors in more detail.
     "-feature",                                  // Emit warning and location for usages of features that should be imported explicitly.
     "-language:existentials",                    // Existential types (besides wildcard types) can be written and inferred
@@ -278,8 +278,8 @@ libraryDependencies ++= Seq(
 
   "ch.qos.logback" % "logback-classic" % "1.2.3",
 
-
   "org.apache.avro" %   "avro"         %   "1.10.1",
+
   //"com.twitter"     %%  "bijection-avro"  %   "0.9.6",  // ++ 2.12.13!
   //"org.apache.avro" %   "avro-compiler"   %   "1.10.1",
 
@@ -293,6 +293,8 @@ libraryDependencies ++= Seq(
   "org.scalatest" %% "scalatest" % "3.2.2" % Test,
   "com.typesafe.akka" %% "akka-http-testkit" % akkaHttpVersion % Test,
   "com.typesafe.akka" %% "akka-testkit" % akkaVersion % Test,
+
+  "com.typesafe.akka" %% "akka-coordination"   % akkaVersion,
 
   //https://github.com/chatwork/akka-guard
   //"com.chatwork" %% "akka-guard-http-typed" % "1.5.3-SNAPSHOT",

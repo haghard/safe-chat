@@ -177,7 +177,7 @@ object JournalEventsSerializer {
       state.getRegisteredUsers.forEach((login, pubKey) ⇒ userKeys = userKeys + (login.toString → pubKey.toString))
 
       val s = com.safechat.actors.ChatRoomState(regUsers = userKeys)
-      state.getRecentHistory.forEach(e ⇒ s.recentHistory.add(e.toString))
+      state.getRecentHistory.forEach(e ⇒ s.recentHistory.:+(e.toString))
       s
     } else
       notSerializable(
@@ -285,7 +285,7 @@ object JournalEventsSerializer {
       state.getRegisteredUsers.forEach((login, pubKey) ⇒ userKeys = userKeys + (login.toString → pubKey.toString))
 
       val s = com.safechat.actors.ChatRoomState(regUsers = userKeys)
-      state.getRecentHistory.forEach(e ⇒ s.recentHistory.add(e.toString))
+      state.getRecentHistory.forEach(e ⇒ s.recentHistory.:+(e.toString))
       s
     } else
       notSerializable(

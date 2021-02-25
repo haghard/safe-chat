@@ -277,7 +277,7 @@ object ChatRoomEntity {
           )
       case UserTextAdded(originator, receiver, content, when, tz) ⇒
         val zoneDT = ZonedDateTime.ofInstant(Instant.ofEpochMilli(when), ZoneId.of(tz))
-        state.recentHistory.add(s"[${frmtr.format(zoneDT)}] - $originator -> $receiver:$content")
+        state.recentHistory.:+(s"[${frmtr.format(zoneDT)}] - $originator -> $receiver:$content")
         state
       case UserDisconnected(login) ⇒
         state.copy(online = state.online - login)
