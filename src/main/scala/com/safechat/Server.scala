@@ -141,7 +141,7 @@ object Server extends Ops {
     //cfg.getObject(Dispatcher)
 
     val eventMapping =
-      SchemaRegistry.eventTypesMapping(cfg.getConfig("akka.actor.serialization-bindings"))
+      SchemaRegistry.journalEvents(cfg.getConfig("akka.actor.serialization-bindings"))
 
     val system =
       akka.actor.typed.ActorSystem[Nothing](guardian(akkaExternalHostName, httpPort), AkkaSystemName, cfg)

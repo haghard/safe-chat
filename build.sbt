@@ -84,7 +84,7 @@ lazy val commonSettings = Seq(
 
   //sbt headerCreate
   licenses += ("Apache-2.0", new URL("https://www.apache.org/licenses/LICENSE-2.0.txt")),
-  scalaVersion := "2.13.3",
+  scalaVersion := "2.13.4",
   headerMappings := headerMappings.value + (HeaderFileType.scala -> HeaderCommentStyle.cppStyleLineComment),
   headerLicense  := Some(HeaderLicense.Custom("Copyright (c) 2019-2021 Vadim Bondarev. All rights reserved."))
 )
@@ -190,8 +190,8 @@ lazy val root = project
       val dockerResourcesDir        = baseDir / "docker-resources"
       val dockerResourcesTargetPath = s"$imageAppBaseDir/"
 
-      val avroResourcesDir            = baseDir / "src" / "main" / "avro" / "ChatRoomEventsV1.avsc"
-      val avroResourcesDirTargetPath  = s"$imageAppBaseDir/avro/ChatRoomEventsV1.avsc"
+      val avroResourcesDir            = baseDir / "src" / "main" / "avro" / "ChatRoomV1.avsc"
+      val avroResourcesDirTargetPath  = s"$imageAppBaseDir/avro/ChatRoomV1.avsc"
 
       val prodConfigSrc = baseDir / "src" / "main" / "resources" / "production.conf"
       val devConfigSrc  = baseDir / "src" / "main" / "resources" / "development.conf"
@@ -305,8 +305,8 @@ libraryDependencies ++= Seq(
   //"org.typelevel" %% "algebra" % "2.1.0",
 
   // li haoyi ammonite repl embed
-  //("com.lihaoyi" % "ammonite" % "2.3.8" % "test").cross(CrossVersion.full)
   ("com.lihaoyi" % "ammonite" % "2.3.8-32-64308dc3" % "test").cross(CrossVersion.full)
+
 )
 
 
@@ -321,7 +321,6 @@ dependencyOverrides += "com.typesafe.akka" %% "akka-coordination"   % akkaVersio
 scalafmtOnCompile := true
 
 //AvroConfig / stringType := "String"
-//AvroConfig / createSetters := true
 
 AvroConfig / fieldVisibility := "private"
 AvroConfig / enableDecimalLogicalType := true

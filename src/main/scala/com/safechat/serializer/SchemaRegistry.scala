@@ -13,11 +13,11 @@ import scala.jdk.CollectionConverters._
 //https://medium.com/data-rocks/schema-evolution-is-not-that-complex-b7cf7eb567ac
 object SchemaRegistry {
 
-  //private val activeSchema: File = new File("./src/main/avro/ChatRoomEventsV1.avsc")
-  private val activeSchema: File = new File("avro/ChatRoomEventsV1.avsc")
+  //private val activeSchema: File = new File("./src/main/avro/ChatRoomV1.avsc")
+  private val activeSchema: File = new File("avro/ChatRoomV1.avsc")
 
   private val schemaHistory: List[File] = Nil
-  //List(new File("./src/main/avro/prev/ChatRoomEventsV1.avsc")) //, "/avro/ChatRoomEventsV1.avsc")
+  //List(new File("./src/main/avro/prev/ChatRoomV1.avsc")) //, "/avro/ChatRoomV1.avsc")
 
   private val activeSchemaHash: String = getMD5FromUrl(activeSchema)
 
@@ -38,20 +38,21 @@ object SchemaRegistry {
   def apply(): (String, Map[String, Schema]) =
     (activeSchemaHash, schemaMap)
 
-  private val serializerName = "\"journalSerializer\""
+  private val serializerName = "journalSerializer"
 
-  def eventTypesMapping(cfg: Config, fieldName: String = "payload"): Map[String, String] = {
+  def journalEvents(cfg: Config, fieldName: String = "payload"): Map[String, String] = {
     val typesFromSchema = getSchemaFromUrl(activeSchema).getTypes()
     val topLevelRecords = typesFromSchema.asScala
 
     var avroSchemaMapping: Map[String, String] = Map.empty
     topLevelRecords
-      .filter(_.getName.contains("Envelope"))
+      .filter(_.getName.contains("EventEnvelope"))
       .map { eventSchema ⇒
         val it = eventSchema.getField(fieldName).schema().getTypes.iterator()
         while (it.hasNext) {
           val sch = it.next()
-          avroSchemaMapping = avroSchemaMapping + (sch.getDoc → s"${sch.getNamespace}.${sch.getName}")
+          avroSchemaMapping =
+            avroSchemaMapping + (sch.getDoc.replaceAll("Refers to", "").trim → s"${sch.getNamespace}.${sch.getName}")
         }
       }
 
@@ -59,7 +60,7 @@ object SchemaRegistry {
     val iter                      = cfg.entrySet().iterator()
     while (iter.hasNext) {
       val kv = iter.next()
-      if (kv.getValue.render() == serializerName) {
+      if (kv.getValue.render().contains(serializerName)) {
         val k = kv.getKey.replace("\"", "")
         if (k.contains("User"))
           domainEvents = domainEvents + k

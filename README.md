@@ -632,6 +632,10 @@ docker-compose -f docker/docker-cassandra-cluster.yml rm
 
 ```
 
+### Lease for shards
+
+https://doc.akka.io/docs/akka/current/typed/cluster-sharding.html#lease
+
 
 
 ### TO DO 

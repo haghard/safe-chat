@@ -140,8 +140,7 @@ class ShardedChatRooms(implicit system: ActorSystem[Nothing]) {
   def leave(chatId: String, user: String): Future[LeaveReply] =
     chatShardRegion.ask[LeaveReply](Command.Leave(chatId, user, _))
 
-  def join(chatId: String, login: String, pubKey: String): Future[JoinReply] = {
+  def join(chatId: String, login: String, pubKey: String): Future[JoinReply] =
     //chatShardRegion.askWithStatus()
     chatShardRegion.ask[JoinReply](Command.JoinUser(chatId, login, pubKey, _))
-  }
 }

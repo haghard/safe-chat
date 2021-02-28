@@ -103,6 +103,8 @@ object ChatRoomEntity {
         }*/
         .receiveSignal {
           case (state, RecoveryCompleted) ⇒
+            //TODO: Try to throw an ActorInitializationException to stop sharded entity
+            //akka.actor.ActorInitializationException("Boom !!! ")
             ctx.log.info(s"★ ★ ★ Recovered: [${state.regUsers.keySet.mkString(",")}] ★ ★ ★")
           case (state, PreRestart) ⇒
             ctx.log.info(s"★ ★ ★ Pre-restart ${state.regUsers.keySet.mkString(",")} ★ ★ ★")
@@ -236,14 +238,14 @@ object ChatRoomEntity {
           }
 
       case cmd: PostText ⇒
-        val num = EventSourcedBehavior.lastSequenceNumber(ctx)
         Effect
           .persist(
             UserTextAdded(cmd.sender, cmd.receiver, cmd.content, System.currentTimeMillis, TimeZone.getDefault.getID)
           )
           .thenReply(cmd.replyTo) { updatedState: ChatRoomState ⇒
             ctx.log.info("online:[{}]", updatedState.online.mkString(","))
-            TextPostedReply(cmd.chatId, num, s"[from:${cmd.sender} -> to:${cmd.receiver}] - ${cmd.content}")
+            val n = EventSourcedBehavior.lastSequenceNumber(ctx)
+            TextPostedReply(cmd.chatId, n, s"[from:${cmd.sender} -> to:${cmd.receiver}] - ${cmd.content}")
           }
 
       case cmd: Leave ⇒
@@ -277,7 +279,7 @@ object ChatRoomEntity {
           )
       case UserTextAdded(originator, receiver, content, when, tz) ⇒
         val zoneDT = ZonedDateTime.ofInstant(Instant.ofEpochMilli(when), ZoneId.of(tz))
-        state.recentHistory.:+(s"[${frmtr.format(zoneDT)}] - $originator -> $receiver:$content")
+        state.recentHistory :+ s"[${frmtr.format(zoneDT)}] - $originator -> $receiver:$content"
         state
       case UserDisconnected(login) ⇒
         state.copy(online = state.online - login)
