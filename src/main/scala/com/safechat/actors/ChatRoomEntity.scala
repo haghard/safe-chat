@@ -168,7 +168,6 @@ object ChatRoomEntity {
     sys: ActorSystem[Nothing]
   ): ChatRoomHub = {
     val initBs = sys.settings.config.getInt("akka.stream.materializer.initial-input-buffer-size")
-    //val bs1 = sys.settings.config.getInt("akka.stream.materializer.max-input-buffer-size")
 
     sys.log.warn("Create pub-sub for {} chatroom", persistenceId)
 

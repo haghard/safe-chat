@@ -47,7 +47,7 @@ object Server extends Ops {
           val to = Duration.fromNanos(
             sys.settings.config
               .getDuration("akka.cluster.split-brain-resolver.stable-after")
-              .plus(java.time.Duration.ofSeconds(2))
+              .plus(java.time.Duration.ofSeconds(4)) //5 + 4
               .toNanos
           )
 
@@ -182,10 +182,11 @@ object Server extends Ops {
     // Starting the bootstrap process needs to be done explicitly
     akka.management.cluster.bootstrap.ClusterBootstrap(system.toClassic).start()
 
+    //TODO: for debug only
     val _ = StdIn.readLine()
     system.log.warn("Shutting down ...")
-    system.terminate() //triggers CoordinatedShutdown
-    val _ = Await.result(
+    system.terminate()
+    Await.result(
       system.whenTerminated,
       cfg.getDuration("akka.coordinated-shutdown.default-phase-timeout", TimeUnit.SECONDS).seconds
     )

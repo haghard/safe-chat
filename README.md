@@ -74,11 +74,13 @@ docker run --net="host" -d -p 2551:2551 -p 8080:8080 -e HOSTNAME=10.130.0.22 -e 
 
 Aladdin:OpenSesame - QWxhZGRpbjpPcGVuU2VzYW1l
 
-http 127.0.0.1:8080/cluster/members "Authorization:Basic QWxhZGRpbjpPcGVuU2VzYW1l"
+http 127.0.0.1:8558/cluster/members "Authorization:Basic QWxhZGRpbjpPcGVuU2VzYW1l"
 http 127.0.0.1:8558/cluster/members "Authorization:Basic QWxhZGRpbjpPcGVuU2VzYW1l"
 
 http 127.0.0.1:8558/bootstrap/seed-nodes "Authorization:Basic QWxhZGRpbjpPcGVuU2VzYW1l"
 
+
+http 127.0.0.1:8558/cluster/shards/chat-rooms
 
 Leave
 curl -w '\n' -X PUT -H 'Content-Type: multipart/form-data' -F operation=leave http://127.0.0.1:8080/cluster/members/safe-chat@127.0.0.2:2550
@@ -438,19 +440,24 @@ CQRS ShoppingCart example: read-side is implemented using Akka Projections: http
 Akka Persistence and MariaDB:  https://medium.com/@matteodipirro/stateful-actors-with-akka-event-sourcing-and-maria-db-d4202c6c599a
 
 
+
+### SB journal
+
 ```bash
 
-select persistence_id, partition_nr, sequence_nr, timestamp, ser_id, ser_manifest from chat_journal where persistence_id='chat-rooms|aaa' and partition_nr = 0;
+select persistence_id, partition_nr, sequence_nr, timestamp, ser_id, ser_manifest, timebucket, writer_uuid from chat_journal where persistence_id='chat-rooms|kkk' and partition_nr = 0;
 
- chat-room|703c1ae555da3cd4 |            0 |           1 | 6a8b6c60-7be9-11ea-96e6-9f6061501887 |   9999 |       com.safechat.domain.MsgEnvelope/Joined:b936961c182c4389a3f88ba780575915
- chat-room|703c1ae555da3cd4 |            0 |           2 | 7ac552d0-7be9-11ea-96e6-9f6061501887 |   9999 | com.safechat.domain.MsgEnvelope/Disconnected:b936961c182c4389a3f88ba780575915
- chat-room|703c1ae555da3cd4 |            0 |           3 | 7b848420-7be9-11ea-96e6-9f6061501887 |   9999 |       com.safechat.domain.MsgEnvelope/Joined:b936961c182c4389a3f88ba780575915
- chat-room|703c1ae555da3cd4 |            0 |           4 | 7cfa8250-7be9-11ea-96e6-9f6061501887 |   9999 |       com.safechat.domain.MsgEnvelope/Joined:b936961c182c4389a3f88ba780575915
- chat-room|703c1ae555da3cd4 |            0 |           5 | 7fdfc7f0-7be9-11ea-96e6-9f6061501887 |   9999 |       com.safechat.domain.MsgEnvelope/Joined:b936961c182c4389a3f88ba780575915
- chat-room|703c1ae555da3cd4 |            0 |           6 | 8345af40-7be9-11ea-96e6-9f6061501887 |   9999 |       com.safechat.domain.MsgEnvelope/Joined:b936961c182c4389a3f88ba780575915
- chat-room|703c1ae555da3cd4 |            0 |           7 | 86575c10-7be9-11ea-96e6-9f6061501887 |   9999 |       com.safechat.domain.MsgEnvelope/Joined:b936961c182c4389a3f88ba780575915
- chat-room|703c1ae555da3cd4 |            0 |           8 | 89d11980-7be9-11ea-96e6-9f6061501887 |   9999 |       com.safechat.domain.MsgEnvelope/Joined:b936961c182c4389a3f88ba780575915
- chat-room|703c1ae555da3cd4 |            0 |           9 | 8d6a93f0-7be9-11ea-96e6-9f6061501887 |   9999 |       com.safechat.domain.MsgEnvelope/Joined:b936961c182c4389a3f88ba780575915
+  chat-rooms|kkk |            0 |          17 | d688d4d0-7b6f-11eb-bf8d-23d311ebd97d |  99999 |    EVENT_com.safechat.avro.persistent.domain.UserTextAdded:4e0f5a5e34acf1846c2009e27564d577 | 1614697200000 | 2d82f2e1-dca4-418a-96f9-f779b7d84a2b
+  chat-rooms|kkk |            0 |          18 | d6a5f9c0-7b6f-11eb-bf8d-23d311ebd97d |  99999 |    EVENT_com.safechat.avro.persistent.domain.UserTextAdded:4e0f5a5e34acf1846c2009e27564d577 | 1614697200000 | 2d82f2e1-dca4-418a-96f9-f779b7d84a2b
+  chat-rooms|kkk |            0 |          19 | d6bdee90-7b6f-11eb-bf8d-23d311ebd97d |  99999 |    EVENT_com.safechat.avro.persistent.domain.UserTextAdded:4e0f5a5e34acf1846c2009e27564d577 | 1614697200000 | 2d82f2e1-dca4-418a-96f9-f779b7d84a2b
+  chat-rooms|kkk |            0 |          20 | d6d76a00-7b6f-11eb-bf8d-23d311ebd97d |  99999 |    EVENT_com.safechat.avro.persistent.domain.UserTextAdded:4e0f5a5e34acf1846c2009e27564d577 | 1614697200000 | 2d82f2e1-dca4-418a-96f9-f779b7d84a2b
+  chat-rooms|kkk |            0 |          21 | d7d21db0-7b6f-11eb-bf8d-23d311ebd97d |  99999 |    EVENT_com.safechat.avro.persistent.domain.UserTextAdded:4e0f5a5e34acf1846c2009e27564d577 | 1614697200000 | 2d82f2e1-dca4-418a-96f9-f779b7d84a2b
+  chat-rooms|kkk |            0 |          22 | d800a7c0-7b6f-11eb-bf8d-23d311ebd97d |  99999 |    EVENT_com.safechat.avro.persistent.domain.UserTextAdded:4e0f5a5e34acf1846c2009e27564d577 | 1614697200000 | 2d82f2e1-dca4-418a-96f9-f779b7d84a2b
+  chat-rooms|kkk |            0 |          23 | 000c1ec0-7b70-11eb-bfaa-13f96f73408e |  99999 |       EVENT_com.safechat.avro.persistent.domain.UserJoined:4e0f5a5e34acf1846c2009e27564d577 | 1614697200000 | f88cee4e-0a8e-4514-8ad5-7b6ea830c467
+  chat-rooms|kkk |            0 |          23 | 1eb45360-7b70-11eb-bf8d-23d311ebd97d |  99999 |    EVENT_com.safechat.avro.persistent.domain.UserTextAdded:4e0f5a5e34acf1846c2009e27564d577 | 1614697200000 | 2d82f2e1-dca4-418a-96f9-f779b7d84a2b
+  chat-rooms|kkk |            0 |          24 | 000cbb00-7b70-11eb-bfaa-13f96f73408e |  99999 |       EVENT_com.safechat.avro.persistent.domain.UserJoined:4e0f5a5e34acf1846c2009e27564d577 | 1614697200000 | f88cee4e-0a8e-4514-8ad5-7b6ea830c467
+  chat-rooms|kkk |            0 |          25 | 000d5740-7b70-11eb-bfaa-13f96f73408e |  99999 |    EVENT_com.safechat.avro.persistent.domain.UserTextAdded:4e0f5a5e34acf1846c2009e27564d577 | 1614697200000 | f88cee4e-0a8e-4514-8ad5-7b6ea830c467
+ 
 
 ```
 
@@ -519,8 +526,6 @@ iptables -D INPUT -p tcp -j DROP
 ```
 
 
-
-
 ### Akka-cluster-sharding links 
 
 https://manuel.bernhardt.io/2018/02/26/tour-akka-cluster-cluster-sharding/
@@ -532,85 +537,9 @@ https://doc.akka.io/docs/akka/current/typed/cluster-sharding.html
 https://github.com/michael-read/akka-typed-distributed-state-blog/blob/master/Blog_Model.png
 
 
-### Cassandra journal schema
+## Sharding improvements in 2.6.10
 
-```
-
-CREATE KEYSPACE chat WITH replication = {'class': 'SimpleStrategy', 'replication_factor': '3'}  AND durable_writes = true;
-
-CREATE TABLE chat.all_persistence_ids (
-    persistence_id text PRIMARY KEY
-) WITH bloom_filter_fp_chance = 0.01
-    AND caching = {'keys': 'ALL', 'rows_per_partition': 'NONE'}
-    AND comment = ''
-    AND compaction = {'class': 'org.apache.cassandra.db.compaction.SizeTieredCompactionStrategy', 'max_threshold': '32', 'min_threshold': '4'}
-    AND compression = {'chunk_length_in_kb': '64', 'class': 'org.apache.cassandra.io.compress.LZ4Compressor'}
-    AND crc_check_chance = 1.0
-    AND dclocal_read_repair_chance = 0.1
-    AND default_time_to_live = 0
-    AND gc_grace_seconds = 864000
-    AND max_index_interval = 2048
-    AND memtable_flush_period_in_ms = 0
-    AND min_index_interval = 128
-    AND read_repair_chance = 0.0
-    AND speculative_retry = '99PERCENTILE';
-
-CREATE TABLE chat.chat_journal (
-    persistence_id text,
-    partition_nr bigint,
-    sequence_nr bigint,
-    timestamp timeuuid,
-    event blob,
-    event_manifest text,
-    meta blob,
-    meta_ser_id int,
-    meta_ser_manifest text,
-    ser_id int,
-    ser_manifest text,
-    tags set<text>,
-    timebucket text,
-    writer_uuid text,
-    PRIMARY KEY ((persistence_id, partition_nr), sequence_nr, timestamp)
-) WITH CLUSTERING ORDER BY (sequence_nr ASC, timestamp ASC)
-    AND bloom_filter_fp_chance = 0.01
-    AND caching = {'keys': 'ALL', 'rows_per_partition': 'NONE'}
-    AND comment = ''
-    AND compaction = {'bucket_high': '1.5', 'bucket_low': '0.5', 'class': 'org.apache.cassandra.db.compaction.SizeTieredCompactionStrategy', 'enabled': 'true', 'max_threshold': '32', 'min_sstable_size': '50', 'min_threshold': '4', 'tombstone_compaction_interval': '86400', 'tombstone_threshold': '0.2', 'unchecked_tombstone_compaction': 'false'}
-    AND compression = {'chunk_length_in_kb': '64', 'class': 'org.apache.cassandra.io.compress.LZ4Compressor'}
-    AND crc_check_chance = 1.0
-    AND dclocal_read_repair_chance = 0.1
-    AND default_time_to_live = 0
-    AND gc_grace_seconds = 864000
-    AND max_index_interval = 2048
-    AND memtable_flush_period_in_ms = 0
-    AND min_index_interval = 128
-    AND read_repair_chance = 0.0
-    AND speculative_retry = '99PERCENTILE';
-
-CREATE TABLE chat.metadata (
-    persistence_id text PRIMARY KEY,
-    deleted_to bigint,
-    properties map<text, text>
-) WITH bloom_filter_fp_chance = 0.01
-    AND caching = {'keys': 'ALL', 'rows_per_partition': 'NONE'}
-    AND comment = ''
-    AND compaction = {'class': 'org.apache.cassandra.db.compaction.SizeTieredCompactionStrategy', 'max_threshold': '32', 'min_threshold': '4'}
-    AND compression = {'chunk_length_in_kb': '64', 'class': 'org.apache.cassandra.io.compress.LZ4Compressor'}
-    AND crc_check_chance = 1.0
-    AND dclocal_read_repair_chance = 0.1
-    AND default_time_to_live = 0
-    AND gc_grace_seconds = 864000
-    AND max_index_interval = 2048
-    AND memtable_flush_period_in_ms = 0
-    AND min_index_interval = 128
-    AND read_repair_chance = 0.0
-    AND speculative_retry = '99PERCENTILE';
-
-```
-
-### Improvements
-
-Sharding improvements(2.6.10): https://doc.akka.io/docs/akka/2.6/additional/rolling-updates.html
+https://doc.akka.io/docs/akka/2.6/additional/rolling-updates.html
 
 ### How to run in docker
 
@@ -629,6 +558,8 @@ docker-compose -f docker/docker-cassandra-cluster.yml rm
 ### Lease for shards
 
 https://doc.akka.io/docs/akka/current/typed/cluster-sharding.html#lease
+        
+
 
 
 ### Git
@@ -649,7 +580,7 @@ sbt localSecond
 ### TO DO 
 
 1. Add two roles: endpoint and domain. If the role of the cluster node is “domain” we simply start cluster sharding, 
-otherwise we initialize cluster sharding proxy so no shards are hosted by the node and start HTTP endpoints.
+otherwise we initialize the cluster sharding proxy so no shards are hosted by the node and start HTTP endpoints.
 (See how it's done for https://www.lightbend.com/blog/how-to-distribute-application-state-with-akka-cluster-part-4-the-source-code)
 
 2. Use `streamee` to enable streaming from http routes to shard region proxies. 

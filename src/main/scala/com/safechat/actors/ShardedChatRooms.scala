@@ -16,6 +16,7 @@ import java.util.concurrent.atomic.AtomicReference
 object ShardedChatRooms {
 
   object ChatRoomsMsgExtractor {
+    //We want to have one shard per one chat room so that we could achieve isolations for all rooms
     def apply[T <: Command[Reply]](numberOfShards: Int): ShardingMessageExtractor[T, T] =
       new ShardingMessageExtractor[T, T] {
 
@@ -40,18 +41,15 @@ object ShardedChatRooms {
   }
 }
 
-class ShardedChatRooms(liveShards: AtomicReference[scala.collection.immutable.Set[String]], to: FiniteDuration)(implicit
-  system: ActorSystem[Nothing]
-) {
+final class ShardedChatRooms(
+  liveShards: AtomicReference[scala.collection.immutable.Set[String]],
+  to: FiniteDuration)(implicit system: ActorSystem[Nothing]) {
 
   val numberOfShards     = 1 << 8      //TODO: make it configurable
   val passivationTimeout = 300.seconds //TODO: make it configurable
   val sharding           = ClusterSharding(system)
 
-  implicit val shardAskTimeout = akka.util.Timeout(to)
-
-  val settings =
-    ClusterShardingSettings(system)
+  val settings = ClusterShardingSettings(system)
   /*
         rememberEntities == false ensures that a shard entity won't be recreates/restarted automatically on
         a different `ShardRegion` due to rebalance, crash or leave (graceful exit). That is exactly what we want,
@@ -142,6 +140,8 @@ class ShardedChatRooms(liveShards: AtomicReference[scala.collection.immutable.Se
       .entityRefFor(ChatRoomEntity.entityKey, chatId)
       .ask[ChatRoomReply](DisconnectUser(chatId, user, _))
    */
+
+  implicit val askTimeout = akka.util.Timeout(to)
 
   def leave(chatId: String, user: String): Future[LeaveReply] =
     chatShardRegion.ask[LeaveReply](Command.Leave(chatId, user, _))

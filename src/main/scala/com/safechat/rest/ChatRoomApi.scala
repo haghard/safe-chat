@@ -13,6 +13,7 @@ import com.safechat.actors._
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
+import scala.util.control.NonFatal
 
 final case class ChatRoomApi(rooms: ShardedChatRooms, to: FiniteDuration)(implicit sys: ActorSystem[Nothing])
     extends Directives {
@@ -53,7 +54,10 @@ final case class ChatRoomApi(rooms: ShardedChatRooms, to: FiniteDuration)(implic
     rooms
       .join(chatId, user, pubKey)
       .mapTo[JoinReply]
-      .recoverWith(_ ⇒ getChatRoomFlow(rooms, chatId, user, pubKey))
+      .recoverWith { case NonFatal(ex) ⇒
+        sys.log.warn(s"GetChatRoomFlow $chatId error", ex)
+        getChatRoomFlow(rooms, chatId, user, pubKey)
+      }
 
   private def chatRoomWsFlow(
     rooms: ShardedChatRooms,
