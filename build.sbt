@@ -84,7 +84,7 @@ lazy val commonSettings = Seq(
 
   //sbt headerCreate
   licenses += ("Apache-2.0", new URL("https://www.apache.org/licenses/LICENSE-2.0.txt")),
-  scalaVersion := "2.13.4",
+  scalaVersion := "2.13.5",
   headerMappings := headerMappings.value + (HeaderFileType.scala -> HeaderCommentStyle.cppStyleLineComment),
   headerLicense  := Some(HeaderLicense.Custom("Copyright (c) 2019-2021 Vadim Bondarev. All rights reserved."))
 )
@@ -110,8 +110,7 @@ lazy val root = project
     // Compile / run / fork := true and you run one of the aliases,
     //overwise use
     // sbt -J-Xmx1024M -J-XX:MaxMetaspaceSize=850M -J-XX:+UseG1GC -J-XX:+PrintCommandLineFlags -J-XshowSettings
-    javaOptions ++= Seq("-Xmx1024M", "-XX:MaxMetaspaceSize=850m", "-XX:+UseG1GC", "-XX:+PrintCommandLineFlags", "-XshowSettings"),
-
+    //javaOptions ++= Seq("-Xmx1024M", "-XX:MaxMetaspaceSize=850m", "-XX:+UseG1GC", "-XX:+PrintCommandLineFlags", "-XshowSettings"),
 
     //TODO: Check this out
     //https://github.com/zhao258147/personalization-demo/blob/d94eb38766a1ce374b7762a6ec26de2074af1a87/build.sbt#L75
@@ -136,12 +135,9 @@ lazy val root = project
 
     // Resolve duplicates for Sbt Assembly
     assemblyMergeStrategy in assembly := {
-      case PathList("META-INF", xs @ _*) =>
-        MergeStrategy.discard
-      case PathList(xs@_*) if xs.last == "module-info.class" =>
-        MergeStrategy.discard
-      case PathList(xs@_*) if xs.last == "io.netty.versions.properties" =>
-        MergeStrategy.rename
+      case PathList("META-INF", xs @ _*) => MergeStrategy.discard
+      case PathList(xs@_*) if xs.last == "module-info.class" => MergeStrategy.discard
+      case PathList(xs@_*) if xs.last == "io.netty.versions.properties" => MergeStrategy.rename
       case other =>
         //MergeStrategy.first
         (assemblyMergeStrategy in assembly).value(other)
@@ -247,7 +243,7 @@ lazy val root = project
 libraryDependencies ++= Seq(
   "com.typesafe.akka"       %% "akka-slf4j"         % akkaVersion,
   "com.github.pureconfig"   %% "pureconfig"         % "0.12.3",
-  "com.typesafe.akka"       %% "akka-actor-typed"   % akkaVersion,
+  //"com.typesafe.akka"       %% "akka-actor-typed"   % akkaVersion,
   "com.typesafe.akka"       %% "akka-stream-typed"  % akkaVersion,
   "com.typesafe.akka"       %% "akka-cluster-typed" % akkaVersion,
 
@@ -255,13 +251,16 @@ libraryDependencies ++= Seq(
   //"org.sisioh"        %% "akka-cluster-custom-downing" % "0.1.0",
   //"com.swissborg"    %% "lithium" % "0.11.1", brings cats
 
+  "com.typesafe.akka" %% "akka-coordination"   % akkaVersion,
+
   "com.typesafe.akka" %% "akka-cluster-sharding-typed"  % akkaVersion,
+
   "com.typesafe.akka" %% "akka-persistence-typed"       % akkaVersion,
   "com.typesafe.akka" %% "akka-persistence-query"       % akkaVersion,
-
-  ("com.typesafe.akka" %% "akka-persistence-cassandra" % AkkaPersistenceCassandraVersion) //-RC1
+  ("com.typesafe.akka" %% "akka-persistence-cassandra"  % AkkaPersistenceCassandraVersion) //-RC1
     .excludeAll(ExclusionRule(organization = "io.netty", name="netty-all")), //to exclude netty-all-4.1.39.Final.jar
 
+  "com.typesafe.akka" %% "akka-persistence-cassandra-launcher" % AkkaPersistenceCassandraVersion,
 
   //https://github.com/lightbend/akka-cluster-operator
   //https://developer.lightbend.com/guides/openshift-deployment/lagom/forming-a-cluster.html#akka-management-http
@@ -283,29 +282,27 @@ libraryDependencies ++= Seq(
   //"com.twitter"     %%  "bijection-avro"  %   "0.9.6",  // ++ 2.12.13!
   //"org.apache.avro" %   "avro-compiler"   %   "1.10.1",
 
-  "ru.odnoklassniki" % "one-nio" % "1.2.0",
+  //"ru.odnoklassniki" % "one-nio" % "1.2.0",
+
 
   //https://kwark.github.io/refined-in-practice/#1
   //"eu.timepit" %% "refined"                 % "0.9.14",
   //"eu.timepit" %% "refined-shapeless"       % "0.9.14",
 
-  "commons-codec" % "commons-codec" % "1.11",
-  "org.scalatest" %% "scalatest" % "3.2.2" % Test,
-  "com.typesafe.akka" %% "akka-http-testkit" % akkaHttpVersion % Test,
-  "com.typesafe.akka" %% "akka-testkit" % akkaVersion % Test,
+  "commons-codec"   %   "commons-codec"   %   "1.11",
+  "org.scalatest"   %%  "scalatest"       %   "3.2.2" % Test,
 
-  "com.typesafe.akka" %% "akka-coordination"   % akkaVersion,
+  "com.typesafe.akka" %% "akka-http-testkit" % akkaHttpVersion % Test,
+  "com.typesafe.akka" %% "akka-testkit" % akkaVersion % Test
 
   //https://github.com/chatwork/akka-guard
   //"com.chatwork" %% "akka-guard-http-typed" % "1.5.3-SNAPSHOT",
-
-  "com.typesafe.akka" %% "akka-persistence-cassandra-launcher" % AkkaPersistenceCassandraVersion,
 
   //https://github.com/typelevel/algebra/blob/46722cd4aa4b01533bdd01f621c0f697a3b11040/docs/docs/main/tut/typeclasses/overview.md
   //"org.typelevel" %% "algebra" % "2.1.0",
 
   // li haoyi ammonite repl embed
-  ("com.lihaoyi" % "ammonite" % "2.3.8-32-64308dc3" % "test").cross(CrossVersion.full)
+  //("com.lihaoyi" % "ammonite" % "2.3.8-32-64308dc3" % "test").cross(CrossVersion.full)
 
 )
 
@@ -334,4 +331,3 @@ sourceGenerators in Test += Def.task {
   IO.write(file, """object amm extends App { ammonite.Main().run() }""")
   Seq(file)
 }.taskValue
-

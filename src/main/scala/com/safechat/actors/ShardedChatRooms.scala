@@ -4,13 +4,14 @@ package com.safechat.actors
 
 import akka.actor.typed.ActorSystem
 import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, Entity}
-import akka.cluster.sharding.typed.ClusterShardingSettings.StateStoreModeDData
 import akka.cluster.sharding.typed.{ClusterShardingSettings, ShardingMessageExtractor}
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import ShardedChatRooms._
 import akka.actor.typed.scaladsl.AskPattern._
+
+import java.util.concurrent.atomic.AtomicReference
 
 object ShardedChatRooms {
 
@@ -28,34 +29,37 @@ object ShardedChatRooms {
           cmd.chatId
         //hash3_128(cmd.chatId).toHexString
 
+        //taking the abs value before doing the Modulo can produce a bug if the hashCode happens to be Int.MinValue
         override def shardId(entityId: String): String =
-          //taking the abs value before doing the Modulo can produce a bug if the hashCode happens to be Int.MinValue
-          math.abs(entityId.hashCode % numberOfShards).toString
-        //math.abs(hash3_128(entityId) % numberOfShards).toString
+          //math.abs(entityId.hashCode % numberOfShards).toString
+          //math.abs(hash3_128(entityId) % numberOfShards).toString
+          entityId
 
         override def unwrapMessage(cmd: T): T = cmd
       }
   }
 }
 
-class ShardedChatRooms(implicit system: ActorSystem[Nothing]) {
+class ShardedChatRooms(liveShards: AtomicReference[scala.collection.immutable.Set[String]], to: FiniteDuration)(implicit
+  system: ActorSystem[Nothing]
+) {
 
   val numberOfShards     = 1 << 8      //TODO: make it configurable
   val passivationTimeout = 300.seconds //TODO: make it configurable
   val sharding           = ClusterSharding(system)
 
-  implicit val shardAskTimeout = akka.util.Timeout(ChatRoomEntity.hubInitTimeout)
+  implicit val shardAskTimeout = akka.util.Timeout(to)
 
   val settings =
     ClusterShardingSettings(system)
-      /*
+  /*
         rememberEntities == false ensures that a shard entity won't be recreates/restarted automatically on
         a different `ShardRegion` due to rebalance, crash or leave (graceful exit). That is exactly what we want,
         because we want lazy start for each ChatRoomEntity.
-       */
-      .withRememberEntities(false)
-      .withStateStoreMode(StateStoreModeDData)
-      .withPassivateIdleEntityAfter(passivationTimeout)
+   */
+  //.withRememberEntities(false)
+  //.withStateStoreMode(StateStoreModeDData)
+  //.withPassivateIdleEntityAfter(passivationTimeout)
 
   /** Aa a example of non persistent but sharded `Entity`.
     * Note that since this station is not storing its state anywhere else than in JVM memory, if Akka Cluster Sharding
@@ -97,9 +101,11 @@ class ShardedChatRooms(implicit system: ActorSystem[Nothing]) {
   val chatShardRegion = ClusterSharding(system).init(Entity(ChatRoomEntity.entityKey)(behaviorFactory))
    */
 
-  val entity = Entity(ChatRoomEntity.entityKey)(ChatRoomEntity(_))
+  val entity = Entity(ChatRoomEntity.entityKey)(ChatRoomEntity(_, liveShards, to))
     //ShardingMessageExtractor[UserCmd](512)
-    .withMessageExtractor(ChatRoomsMsgExtractor[Command[Reply]](numberOfShards))
+    .withMessageExtractor(
+      ChatRoomsMsgExtractor[Command[Reply]](numberOfShards)
+    )
     .withSettings(settings)
     //https://doc.akka.io/docs/akka/current/typed/cluster-sharding.html
 

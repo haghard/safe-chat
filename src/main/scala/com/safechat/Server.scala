@@ -6,7 +6,6 @@ import java.io.File
 import java.lang.management.ManagementFactory
 import java.time.LocalDateTime
 import java.util.TimeZone
-
 import akka.actor.typed.{ActorSystem, Behavior, DispatcherSelector}
 import akka.actor.typed.scaladsl.Behaviors
 import akka.cluster.typed.{Cluster, SelfUp, Unsubscribe}
@@ -19,13 +18,15 @@ import com.safechat.actors.ShardedChatRooms
 import com.safechat.rest.ChatRoomApi
 import com.safechat.serializer.SchemaRegistry
 
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
 import scala.collection.Map
-import scala.concurrent.Future
+import scala.concurrent.{Await, Future}
+import scala.io.StdIn
 import scala.util.Try
+import scala.concurrent.duration._
 
 object Server extends Ops {
-
-  //val Dispatcher     = "akka.actor.default-dispatcher"
 
   val AkkaSystemName = "safe-chat"
 
@@ -39,7 +40,26 @@ object Server extends Ops {
         Behaviors.receive { (ctx, _) ⇒
           //ctx.log.info(info)
           cluster.subscriptions ! Unsubscribe(ctx.self)
-          Bootstrap(ChatRoomApi(new ShardedChatRooms()).routes, hostName, httpPort)(sys.toClassic)
+
+          val liveLocalShards =
+            new AtomicReference[scala.collection.immutable.Set[String]](scala.collection.immutable.Set[String]())
+
+          val to = Duration.fromNanos(
+            sys.settings.config
+              .getDuration("akka.cluster.split-brain-resolver.stable-after")
+              .plus(java.time.Duration.ofSeconds(2))
+              .toNanos
+          )
+
+          Bootstrap(
+            ChatRoomApi(
+              new ShardedChatRooms(liveLocalShards, to)(sys),
+              to
+            ).routes,
+            hostName,
+            httpPort,
+            liveLocalShards
+          )(sys.toClassic)
           Behaviors.empty
         }
       }
@@ -156,10 +176,19 @@ object Server extends Ops {
     system.log.info(greeting)
 
     // Akka Management hosts the HTTP routes used by bootstrap
-    akka.management.scaladsl.AkkaManagement(system).start(_.withAuth(basicAuth(system)))
+    //akka.management.scaladsl.AkkaManagement(system).start(_.withAuth(basicAuth(system)))
+    akka.management.scaladsl.AkkaManagement(system).start()
 
     // Starting the bootstrap process needs to be done explicitly
     akka.management.cluster.bootstrap.ClusterBootstrap(system.toClassic).start()
+
+    val _ = StdIn.readLine()
+    system.log.warn("Shutting down ...")
+    system.terminate() //triggers CoordinatedShutdown
+    val _ = Await.result(
+      system.whenTerminated,
+      cfg.getDuration("akka.coordinated-shutdown.default-phase-timeout", TimeUnit.SECONDS).seconds
+    )
   }
 
   // http 127.0.0.1:8558/cluster/members "Authorization:Basic QWxhZGRpbjpPcGVuU2VzYW1l"

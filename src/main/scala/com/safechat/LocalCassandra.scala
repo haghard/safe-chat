@@ -8,8 +8,6 @@ import java.util.concurrent.CountDownLatch
 import akka.persistence.cassandra.testkit.CassandraLauncher
 
 //https://github.com/akka/akka-samples/blob/52054a5f8b8244e2cf37aa58085f362bba0f808e/akka-sample-persistence-dc-scala/src/main/scala/sample/persistence/multidc/ThumbsUpApp.scala
-
-//runMain com.safechat.LocalCassandra
 object LocalCassandra {
 
   def main(args: Array[String]): Unit = {
@@ -21,5 +19,6 @@ object LocalCassandra {
   def startCassandraDatabase(): Unit = {
     val databaseDirectory = new File("target/cassandra-db")
     CassandraLauncher.start(databaseDirectory, CassandraLauncher.DefaultTestConfigResource, clean = false, port = 9042)
+    //CassandraLauncher.start(databaseDirectory, CassandraLauncher.DefaultTestConfigResource, clean = true, port = 9042)
   }
 }

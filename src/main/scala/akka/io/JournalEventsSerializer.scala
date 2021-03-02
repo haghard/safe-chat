@@ -8,10 +8,7 @@ import java.nio.ByteBuffer
 import java.util
 import java.util.{TimeZone, UUID}
 import akka.actor.ExtendedActorSystem
-import akka.io.JournalEventsSerializer.{withEnvelope, BinaryEncoderIsReleasable}
-import akka.serialization.{ByteBufferSerializer, SerializationExtension, SerializerWithStringManifest}
-import akka.stream.impl.streamref.StreamRefsProtocol
-import akka.stream.serialization.StreamRefSerializer
+import akka.serialization.SerializerWithStringManifest
 import com.safechat.actors.{ChatRoomEvent, UserDisconnected, UserJoined, UserTextAdded}
 import com.safechat.serializer.SchemaRegistry
 import org.apache.avro.Schema
@@ -84,17 +81,6 @@ object JournalEventsSerializer {
     reader.read(null.asInstanceOf[T], decoder)
   }
 
-  def writeToBuffer[T](ev: T, buf: ByteBuffer, schema: Schema): Unit = {
-    val bOut = new org.apache.avro.util.ByteBufferOutputStream()
-    bOut.write(buf)
-    val writer = new SpecificDatumWriter[T](schema)
-    Using.resource(bOut /*new ByteBufferOutputStream(buf)*/ /*new ByteArrayOutputStream()*/ ) { out ⇒
-      Using.resource(EncoderFactory.get.binaryEncoder(out, null)) { enc ⇒
-        writer.write(ev, enc)
-      }
-    }
-  }
-
   def notSerializable(msg: String) = throw new NotSerializableException(msg)
 
   def illegalArgument(msg: String) = throw new IllegalArgumentException(msg)
@@ -117,15 +103,14 @@ object JournalEventsSerializer {
 
   def toArray(
     o: AnyRef,
-    streamRefSerializer: StreamRefSerializer,
     activeSchemaHash: String,
     schemaMap: Map[String, Schema]
   ): Array[Byte] = {
     val schema = schemaMap(activeSchemaHash)
     o match {
       case state: com.safechat.actors.ChatRoomState ⇒
-        Using.resource(new ByteArrayOutputStream()) { out ⇒
-          Using.resource(EncoderFactory.get.binaryEncoder(out, null)) { enc ⇒
+        Using.resource(new ByteArrayOutputStream(256)) { baos ⇒
+          Using.resource(EncoderFactory.get.directBinaryEncoder(baos, null)) { enc ⇒
             val users = new java.util.HashMap[CharSequence, CharSequence]()
             state.regUsers.foreach { case (login, pubKey) ⇒
               users.put(login, pubKey)
@@ -135,18 +120,16 @@ object JournalEventsSerializer {
             new SpecificDatumWriter[com.safechat.avro.persistent.state.ChatRoomState](schema)
               .write(new com.safechat.avro.persistent.state.ChatRoomState(users, history), enc)
           }
-          out.toByteArray
+          baos.toByteArray
         }
 
       case e: ChatRoomEvent ⇒
-        Using.resource(new ByteArrayOutputStream()) { baos ⇒
-          Using.resource(EncoderFactory.get.binaryEncoder(baos, null)) { enc ⇒
+        Using.resource(new ByteArrayOutputStream(256)) { baos ⇒
+          Using.resource(EncoderFactory.get.directBinaryEncoder(baos, null)) { enc ⇒
             new SpecificDatumWriter(schema).write(withEnvelope(e), enc)
           }
           baos.toByteArray
         }
-
-      case _ ⇒ streamRefSerializer.toBinary(o)
     }
   }
 
@@ -158,32 +141,30 @@ object JournalEventsSerializer {
   ): AnyRef = {
     val writerSchemaKey = manifest.split(SEP)(1)
     //println(s"fromBinary Schemas:[writer:$writerSchemaKey reader:$activeSchemaHash]")
-
     val writerSchema = schemaMap(writerSchemaKey)
     val readerSchema = schemaMap(activeSchemaHash)
 
     if (manifest.startsWith(EVENT_PREF)) {
       val envelope = readFromArray[com.safechat.avro.persistent.domain.EventEnvelope](bts, writerSchema, readerSchema)
-      if (envelope.getPayload.isInstanceOf[com.safechat.avro.persistent.domain.UserJoined]) {
-        val event = envelope.getPayload.asInstanceOf[com.safechat.avro.persistent.domain.UserJoined]
-        UserJoined(event.getLogin.toString, event.getPubKey.toString)
-      } else if (envelope.getPayload.isInstanceOf[com.safechat.avro.persistent.domain.UserTextAdded]) {
-        val event = envelope.getPayload.asInstanceOf[com.safechat.avro.persistent.domain.UserTextAdded]
-        UserTextAdded(
-          event.getUser.toString,
-          event.getReceiver.toString,
-          event.getText.toString,
-          envelope.getWhen,
-          envelope.getTz.toString
-        )
-      } else if (envelope.getPayload.isInstanceOf[com.safechat.avro.persistent.domain.UserDisconnected]) {
-        val event = envelope.getPayload.asInstanceOf[com.safechat.avro.persistent.domain.UserDisconnected]
-        UserDisconnected(event.getLogin.toString)
-      } else
-        notSerializable(
-          s"Deserialization for event $manifest not supported. Check fromBinary method in ${this.getClass.getName} class."
-        )
-
+      val payload  = envelope.getPayload.asInstanceOf[org.apache.avro.specific.SpecificRecordBase]
+      payload match {
+        case p: com.safechat.avro.persistent.domain.UserJoined ⇒
+          UserJoined(p.getLogin.toString, p.getPubKey.toString)
+        case p: com.safechat.avro.persistent.domain.UserTextAdded ⇒
+          UserTextAdded(
+            p.getUser.toString,
+            p.getReceiver.toString,
+            p.getText.toString,
+            envelope.getWhen,
+            envelope.getTz.toString
+          )
+        case p: com.safechat.avro.persistent.domain.UserDisconnected ⇒
+          UserDisconnected(p.getLogin.toString)
+        case _ ⇒
+          notSerializable(
+            s"Deserialization for event $manifest not supported. Check fromBinary method in ${this.getClass.getName} class."
+          )
+      }
     } else if (manifest.startsWith(STATE_PREF)) {
       val state    = readFromArray[com.safechat.avro.persistent.state.ChatRoomState](bts, writerSchema, readerSchema)
       var userKeys = Map.empty[String, String]
@@ -192,11 +173,10 @@ object JournalEventsSerializer {
       val s = com.safechat.actors.ChatRoomState(regUsers = userKeys)
       state.getRecentHistory.forEach(e ⇒ s.recentHistory.:+(e.toString))
       s
-    } else {
-      //notSerializable(s"Deserialization for $manifest not supported. Check fromBinary method in ${this.getClass.getName} class.")
-
-      ???
-    }
+    } else
+      illegalArgument(
+        s"Deserialization for $manifest not supported. Check fromBinary method in ${this.getClass.getName} class."
+      )
   }
 
   private def withEnvelope(e: ChatRoomEvent) =
@@ -223,89 +203,6 @@ object JournalEventsSerializer {
           com.safechat.avro.persistent.domain.UserDisconnected.newBuilder.setLogin(e.originator).build
         )
     }
-
-  /** Possible inputs:
-    *   com.safechat.actors.ChatRoomEvent
-    *   com.safechat.actors.ChatRoomState
-    *
-    * Serializes the given object into the given `ByteBuffer`
-    */
-  def toBuffer(
-    o: AnyRef,
-    directByteBuffer: ByteBuffer,
-    activeSchemaHash: String,
-    schemaMap: Map[String, Schema]
-  ): Unit = {
-    val schema = schemaMap(activeSchemaHash)
-    o match {
-      case state: com.safechat.actors.ChatRoomState ⇒
-        val out = new org.apache.avro.util.ByteBufferOutputStream()
-        out.write(directByteBuffer)
-        Using.resource(out /*new ByteBufferOutputStream(directByteBuffer)*/ /*new ByteArrayOutputStream()*/ ) { out ⇒
-          Using.resource(EncoderFactory.get.binaryEncoder(out, null)) { enc ⇒
-            val users = new java.util.HashMap[CharSequence, CharSequence]()
-            state.regUsers.foreach { case (login, pubKey) ⇒
-              users.put(login, pubKey)
-            }
-            val history = new util.ArrayList[CharSequence]()
-            state.recentHistory.entries.foreach(history.add(_))
-            new SpecificDatumWriter[com.safechat.avro.persistent.state.ChatRoomState](schema)
-              .write(new com.safechat.avro.persistent.state.ChatRoomState(users, history), enc)
-          }
-        }
-
-      case e: ChatRoomEvent ⇒
-        writeToBuffer[com.safechat.avro.persistent.domain.EventEnvelope](withEnvelope(e), directByteBuffer, schema)
-    }
-  }
-
-  def fromBuffer(
-    buf: ByteBuffer,
-    manifest: String,
-    activeSchemaHash: String,
-    schemaMap: Map[String, Schema]
-  ): AnyRef = {
-    val writerSchemaKey = manifest.split(SEP)(1)
-    val writerSchema    = schemaMap(writerSchemaKey)
-    val readerSchema    = schemaMap(activeSchemaHash)
-
-    if (manifest.startsWith(EVENT_PREF)) {
-      val envelope =
-        readFromBuffer[com.safechat.avro.persistent.domain.EventEnvelope](buf, writerSchema, readerSchema)
-      if (envelope.getPayload.isInstanceOf[com.safechat.avro.persistent.domain.UserJoined]) {
-        val event = envelope.getPayload.asInstanceOf[com.safechat.avro.persistent.domain.UserJoined]
-        UserJoined(event.getLogin.toString, event.getPubKey.toString)
-      } else if (envelope.getPayload.isInstanceOf[com.safechat.avro.persistent.domain.UserTextAdded]) {
-        val event = envelope.getPayload.asInstanceOf[com.safechat.avro.persistent.domain.UserTextAdded]
-        UserTextAdded(
-          event.getUser.toString,
-          event.getReceiver.toString,
-          event.getText.toString,
-          envelope.getWhen,
-          envelope.getTz.toString
-        )
-      } else if (envelope.getPayload.isInstanceOf[com.safechat.avro.persistent.domain.UserDisconnected]) {
-        val event = envelope.getPayload.asInstanceOf[com.safechat.avro.persistent.domain.UserDisconnected]
-        UserDisconnected(event.getLogin.toString)
-      } else
-        notSerializable(
-          s"Deserialization for event $manifest not supported. Check fromBinary method in ${this.getClass.getName} class."
-        )
-
-    } else if (manifest.startsWith(STATE_PREF)) {
-      val state =
-        readFromBuffer[com.safechat.avro.persistent.state.ChatRoomState](buf, writerSchema, readerSchema)
-      var userKeys = Map.empty[String, String]
-      state.getRegisteredUsers.forEach((login, pubKey) ⇒ userKeys = userKeys + (login.toString → pubKey.toString))
-
-      val s = com.safechat.actors.ChatRoomState(regUsers = userKeys)
-      state.getRecentHistory.forEach(e ⇒ s.recentHistory.:+(e.toString))
-      s
-    } else {
-      //notSerializable(s"Deserialization for $manifest not supported. Check fromBinary method in ${this.getClass.getName} class.")
-      1.asInstanceOf[AnyRef]
-    }
-  }
 }
 
 /** https://doc.akka.io/docs/akka/current/remoting-artery.html#bytebuffer-based-serialization
@@ -317,20 +214,19 @@ object JournalEventsSerializer {
   *
   * https://blog.softwaremill.com/akka-references-serialization-with-protobufs-up-to-akka-2-5-87890c4b6cb0
   */
-final class JournalEventsSerializer(system: ExtendedActorSystem)
-    extends /*StreamRefSerializer(system)*/ SerializerWithStringManifest
-    with ByteBufferSerializer {
+final class JournalEventsSerializer(system: ExtendedActorSystem) extends SerializerWithStringManifest {
 
-  lazy val streamRefSerializer =
+  /*StreamRefSerializer(system)*/
+  /*lazy val streamRefSerializer =
     SerializationExtension(system)
       .serializerByIdentity(30)
-      .asInstanceOf[akka.stream.serialization.StreamRefSerializer] //SerializerWithStringManifest
+      .asInstanceOf[akka.stream.serialization.StreamRefSerializer]*/
 
   override val identifier = 99999
 
   private val (activeSchemaHash, schemaMap) = SchemaRegistry()
 
-  //Mapping from domain event to avro classes that are being used for persistence
+  //Mapping from domain events to avro classes that are being used for persistence
   private val mapping =
     SchemaRegistry.journalEvents(system.settings.config.getConfig("akka.actor.serialization-bindings"))
 
@@ -340,98 +236,16 @@ final class JournalEventsSerializer(system: ExtendedActorSystem)
         JournalEventsSerializer.manifest(obj, activeSchemaHash, mapping)
       case _: com.safechat.actors.ChatRoomState ⇒
         JournalEventsSerializer.manifest(obj, activeSchemaHash, mapping)
-      case _ ⇒ streamRefSerializer.manifest(obj)
     }
 
   override def toBinary(obj: AnyRef): Array[Byte] =
-    JournalEventsSerializer.toArray(obj, streamRefSerializer, activeSchemaHash, schemaMap)
-
-  override def toBinary(obj: AnyRef, directByteBuffer: ByteBuffer): Unit = {
-    val schema = schemaMap(activeSchemaHash)
-    obj match {
-      case e: ChatRoomEvent ⇒
-        system.log.warning(
-          "toBinary:{} IsDirect:{}:{}",
-          e.getClass.getSimpleName,
-          directByteBuffer.isDirect,
-          streamRefSerializer.identifier
-        )
-
-        //val outputStream = new org.apache.avro.util.ByteBufferOutputStream()
-        //outputStream.write(directByteBuffer)
-
-        Using.resource( /*outputStream*/ new ByteBufferOutputStream(directByteBuffer)) { out ⇒
-          Using.resource(EncoderFactory.get.directBinaryEncoder(out, null)) { enc ⇒ //binaryEncoder
-            new SpecificDatumWriter(schema).write(withEnvelope(e), enc)
-          }(BinaryEncoderIsReleasable)
-        }
-
-      case state: com.safechat.actors.ChatRoomState ⇒
-        system.log.warning("toBinary:{} IsDirect:{}", state.getClass.getSimpleName, directByteBuffer.isDirect)
-
-        //val outputStream = new org.apache.avro.util.ByteBufferOutputStream()
-        //outputStream.write(directByteBuffer)
-
-        Using.resource( /*outputStream*/ new ByteBufferOutputStream(directByteBuffer)) { out ⇒
-          Using.resource(EncoderFactory.get.directBinaryEncoder(out, null)) { enc ⇒
-            val users = new java.util.HashMap[CharSequence, CharSequence]()
-            state.regUsers.foreach { case (login, pubKey) ⇒ users.put(login, pubKey) }
-            val history = new util.ArrayList[CharSequence]()
-            state.recentHistory.entries.foreach(history.add(_))
-            new SpecificDatumWriter[com.safechat.avro.persistent.state.ChatRoomState](schema)
-              .write(new com.safechat.avro.persistent.state.ChatRoomState(users, history), enc)
-          }
-        }
-
-      case _ ⇒
-        //serialization.findSerializerFor(obj).toBinary(obj)
-        //super.toBinary(obj)
-        //val outputStream = new org.apache.avro.util.ByteBufferOutputStream()
-        //outputStream.write(directByteBuffer)
-        Using.resource(new ByteBufferOutputStream(directByteBuffer)) { out ⇒
-          val bytes = streamRefSerializer.toBinary(obj)
-          system.log.error("toBinary-other:{} : {} : {}", obj, bytes.size, streamRefSerializer.identifier)
-          //directByteBuffer.put(bytes)
-          out.write(bytes)
-        }
-    }
-  }
+    JournalEventsSerializer.toArray(obj, activeSchemaHash, schemaMap)
 
   override def fromBinary(bytes: Array[Byte], manifest: String): AnyRef =
-    fromBinary(ByteBuffer.wrap(bytes), manifest)
-  //JournalEventsSerializer.fromArray(bytes, manifest, activeSchemaHash, schemaMap)
-
-  override def fromBinary(directByteBuffer: ByteBuffer, manifest: String): AnyRef = {
-    val r = JournalEventsSerializer.fromBuffer(directByteBuffer, manifest, activeSchemaHash, schemaMap)
-
-    if (r.isInstanceOf[Int] && r.asInstanceOf[Int] == 1) {
-      system.log.warning(
-        "fromBinary-other:{} size:{} IsDirect:{}:{}",
-        manifest,
-        directByteBuffer.remaining,
-        directByteBuffer.isDirect,
-        streamRefSerializer.identifier
-      )
-
-      //allocate extra array
-      val bytes = new Array[Byte](directByteBuffer.remaining)
-      directByteBuffer.get(bytes)
-      streamRefSerializer.fromBinary(bytes, manifest)
-      //serialization.deserializeByteBuffer(directByteBuffer, ???, manifest)
-      //super.fromBinary(bytes, manifest)
-    } else {
-      system.log.warning(
-        "fromBinary:{} size:{} IsDirect:{}:{}",
-        manifest,
-        directByteBuffer.remaining,
-        directByteBuffer.isDirect,
-        streamRefSerializer.identifier
-      )
-
-      r
-    }
-  }
+    JournalEventsSerializer.fromArray(bytes, manifest, activeSchemaHash, schemaMap)
 }
+
+/*
 
 final class JournalEventsSerializer1(val system: ExtendedActorSystem)
     extends SerializerWithStringManifest
@@ -453,9 +267,9 @@ final class JournalEventsSerializer1(val system: ExtendedActorSystem)
   override def manifest(obj: AnyRef): String = JournalEventsSerializer.manifest(obj, activeSchemaHash, mapping)
 
   /** Allows the ByteBufferSerializer to directly write into a shared java.nio.ByteBuffer
-    * instead of being forced to allocate and return an Array[Byte] for each serialized message.
-    * Very useful for apps without persistence.
-    */
+ * instead of being forced to allocate and return an Array[Byte] for each serialized message.
+ * Very useful for apps without persistence.
+ */
   override def toBinary(obj: AnyRef): Array[Byte] = {
     val directByteBuffer = bufferPool.acquire()
     try {
@@ -525,7 +339,7 @@ final class JournalEventsSerializer2(val system: ExtendedActorSystem)
       LongHashSet, LongLongHashMap, LongObjectHashMap: off-heap lock-free hash tables with 64-bit keys.
       OffheapMap: an abstraction for building general purpose off-heap hash tables.
       SharedMemory*Map: a generic solution for caching data in shared memory or memory-mapped files.
-   */
+ */
   //val allocator = new Malloc(maxFrameSize + (1024 * 2))
 
   //Lock-free allocator that manages chunks of the fixed size.
@@ -533,8 +347,8 @@ final class JournalEventsSerializer2(val system: ExtendedActorSystem)
     new FixedSizeAllocator(maxFrameSize + extraSpace, (maxFrameSize + extraSpace) * concurrencyLevel)
 
   /** Allows the ByteBufferSerializer to directly write into a shared java.nio.ByteBuffer
-    * instead of being forced to allocate and return an Array[Byte] for each serialized message.
-    */
+ * instead of being forced to allocate and return an Array[Byte] for each serialized message.
+ */
   override def toBinary(obj: AnyRef): Array[Byte] = {
     //DirectMemory: [used:264192 total:8454144]
     //println(s"DirectMemory: [entry:${allocator.entrySize} total:${allocator.chunkSize} ]")
@@ -583,9 +397,10 @@ final class JournalEventsSerializer2(val system: ExtendedActorSystem)
           JournalEventsSerializer.illegalArgument("Allocator free error :" + err.getMessage)
       }
     }
-   */
+ */
 
 }
+ */
 
 //https://github.com/rsocket/rsocket-transport-akka
 //https://www.lightbend.com/blog/implementing-rsocket-ingress-in-cloudflow-part-3-pluggable-transport

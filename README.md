@@ -608,12 +608,6 @@ CREATE TABLE chat.metadata (
 
 ```
 
-
-### Git
-
-git tag -a v0.2.0 -m "v0.2.0" &&  git push --tags
-
-
 ### Improvements
 
 Sharding improvements(2.6.10): https://doc.akka.io/docs/akka/2.6/additional/rolling-updates.html
@@ -637,6 +631,20 @@ docker-compose -f docker/docker-cassandra-cluster.yml rm
 https://doc.akka.io/docs/akka/current/typed/cluster-sharding.html#lease
 
 
+### Git
+
+git tag -a v0.2.0 -m "v0.2.0" &&  git push --tags
+
+
+## How to run
+
+```
+
+sbt localFirst
+
+sbt localSecond
+
+```
 
 ### TO DO 
 

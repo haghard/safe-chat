@@ -5,7 +5,6 @@ package com.safechat.actors
 import java.time.format.DateTimeFormatter
 import java.time.{Instant, ZoneId, ZonedDateTime}
 import java.util.TimeZone
-
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
 import akka.actor.typed._
 import akka.cluster.sharding.typed.scaladsl.{EntityContext, EntityTypeKey}
@@ -17,6 +16,9 @@ import akka.stream.{Attributes, KillSwitches, StreamRefAttributes}
 import akka.util.Timeout
 import Command._
 
+import java.util.concurrent.atomic.AtomicReference
+import scala.annotation.tailrec
+import scala.collection.immutable
 import scala.concurrent.duration._
 
 /** https://doc.akka.io/docs/akka/current/typed/persistence-style.html#event-handlers-in-the-state
@@ -24,21 +26,28 @@ import scala.concurrent.duration._
   */
 object ChatRoomEntity {
 
-  val snapshotEveryN = 300       //TODO should be configurable
-  val hubInitTimeout = 5.seconds //TODO should be configurable
-
-  val MSG_SEP = ":"
+  val snapshotEveryN = 300 //TODO should be configurable
+  val MSG_SEP        = ":"
 
   val wakeUpUserName   = "John Doe"
   val wakeUpEntityName = "dungeon"
   val frmtr            = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss Z")
 
-  val persistTimeout = akka.util.Timeout(1.second) //write to the journal timeout
+  val persistTimeout = akka.util.Timeout(2.second) //write to the journal timeout
 
   val entityKey: EntityTypeKey[Command[Reply]] =
     EntityTypeKey[Command[Reply]]("chat-rooms")
 
   val emptyState = com.safechat.actors.ChatRoomState()
+
+  @tailrec
+  private final def storeNewChatRoom(
+    liveShards: AtomicReference[immutable.Set[String]],
+    persistenceId: String
+  ): Unit = {
+    val cur = liveShards.get()
+    if (liveShards.compareAndSet(cur, cur + persistenceId)) () else storeNewChatRoom(liveShards, persistenceId)
+  }
 
   private def persistFlow(persistenceId: String, entity: ActorRef[PostText])(implicit
     persistTimeout: Timeout
@@ -51,8 +60,7 @@ object ChatRoomEntity {
               val segments = text.split(MSG_SEP)
               if (text.split(MSG_SEP).size == 3)
                 PostText(persistenceId, segments(0).trim, segments(1).trim, segments(2).trim, reply)
-              else
-                PostText(persistenceId, "null", "null", s"Message error. Wrong format $text", reply)
+              else PostText(persistenceId, "null", "null", s"Message error. Wrong format $text", reply)
 
             case other ⇒
               throw new Exception(s"Unexpected message type ${other.getClass.getName}")
@@ -66,15 +74,18 @@ object ChatRoomEntity {
     RestartFlow.withBackoff(akka.stream.RestartSettings(1.second, 3.seconds, 0.3))(() ⇒ persistFlow)
   }
 
-  /** Each `ChatRoomEntity` actor is a single source of true, acting as a consistency boundary for the data that is manages.
+  /** Each `ChatRoomEntity` actor is a single source of true, acting as a consistency boundary for the data that it manages.
     *
-    * Messages in a single chat define a single total order.
-    *
+    * Messages in a single chat room define a single total order.
     * Messages in a single chat causally dependent on each other by design.
     *
-    * Causal consistency is maintained as we always write to the journal with parallelism == 1
+    * Total order is maintained as we always write to the journal with parallelism == 1
     */
-  def apply(entityCtx: EntityContext[Command[Reply]]): Behavior[Command[Reply]] =
+  def apply(
+    entityCtx: EntityContext[Command[Reply]],
+    liveShards: AtomicReference[immutable.Set[String]],
+    to: FiniteDuration
+  ): Behavior[Command[Reply]] =
     //com.safechat.LoggingBehaviorInterceptor(ctx.log) {
     Behaviors.setup { ctx ⇒
       implicit val sys      = ctx.system
@@ -88,12 +99,14 @@ object ChatRoomEntity {
         (state, event) ⇒ state.applyEvn(event)
       )*/
 
+      val pId = PersistenceId(entityCtx.entityTypeKey.name, entityCtx.entityId)
+
       EventSourcedBehavior
         .withEnforcedReplies[Command[Reply], ChatRoomEvent, ChatRoomState](
           //PersistenceId.ofUniqueId(entityId),
-          PersistenceId(entityCtx.entityTypeKey.name, entityCtx.entityId),
+          pId,
           ChatRoomState(),
-          onCommand(ctx),
+          onCommand(ctx, to),
           //commandHandler,
           onEvent(ctx.self.path.name)
         )
@@ -103,8 +116,9 @@ object ChatRoomEntity {
         }*/
         .receiveSignal {
           case (state, RecoveryCompleted) ⇒
-            //TODO: Try to throw an ActorInitializationException to stop sharded entity
-            //akka.actor.ActorInitializationException("Boom !!! ")
+            val leaseName = s"${sys.name}-shard-${ChatRoomEntity.entityKey.name}-${entityCtx.entityId}"
+            storeNewChatRoom(liveShards, leaseName)
+
             ctx.log.info(s"★ ★ ★ Recovered: [${state.regUsers.keySet.mkString(",")}] ★ ★ ★")
           case (state, PreRestart) ⇒
             ctx.log.info(s"★ ★ ★ Pre-restart ${state.regUsers.keySet.mkString(",")} ★ ★ ★")
@@ -207,7 +221,8 @@ object ChatRoomEntity {
   }*/
 
   def onCommand(
-    ctx: ActorContext[_]
+    ctx: ActorContext[_],
+    to: FiniteDuration
   )(state: ChatRoomState, cmd: Command[Reply])(implicit
     sys: ActorSystem[Nothing]
   ): ReplyEffect[ChatRoomEvent, ChatRoomState] =
@@ -218,7 +233,7 @@ object ChatRoomEntity {
           .thenReply[JoinReply](cmd.replyTo) { updateState: ChatRoomState ⇒ //That's new state after applying the event
 
             val settings =
-              StreamRefAttributes.subscriptionTimeout(hubInitTimeout) //.and(akka.stream.Attributes.inputBuffer(bs, bs))
+              StreamRefAttributes.subscriptionTimeout(to) //.and(akka.stream.Attributes.inputBuffer(bs, bs))
 
             updateState.hub match {
               case Some(hub) ⇒
@@ -257,7 +272,9 @@ object ChatRoomEntity {
           }
     }
 
-  def onEvent(persistenceId: String)(state: ChatRoomState, event: ChatRoomEvent)(implicit
+  def onEvent(
+    persistenceId: String
+  )(state: ChatRoomState, event: ChatRoomEvent)(implicit
     sys: ActorSystem[Nothing],
     ctx: ActorContext[Command[Reply]]
   ): ChatRoomState =

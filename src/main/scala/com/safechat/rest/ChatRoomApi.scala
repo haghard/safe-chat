@@ -14,7 +14,8 @@ import com.safechat.actors._
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-case class ChatRoomApi(rooms: ShardedChatRooms)(implicit sys: ActorSystem[Nothing]) extends Directives {
+final case class ChatRoomApi(rooms: ShardedChatRooms, to: FiniteDuration)(implicit sys: ActorSystem[Nothing])
+    extends Directives {
   implicit val cx         = sys.executionContext
   implicit val sch        = sys.scheduler
   implicit val classicSch = sys.toClassic.scheduler
@@ -98,7 +99,7 @@ case class ChatRoomApi(rooms: ShardedChatRooms)(implicit sys: ActorSystem[Nothin
         //When ChatRoomEntities get rebalanced, a flow(src, sink) we got once may no longed be valid so we need to restart that transparently for users
         //TODO: When reconnect, filter out recent chat history
         RestartFlow.withBackoff(
-          akka.stream.RestartSettings(ChatRoomEntity.hubInitTimeout, ChatRoomEntity.hubInitTimeout, 0.4)
+          akka.stream.RestartSettings(to + 1.second, to + 2.seconds, 0.4)
         )(() ⇒ Flow.futureFlow(chatRoomWsFlow(rooms, chatId, user, pubKey)))
       handleWebSocketMessages(flow)
     }
