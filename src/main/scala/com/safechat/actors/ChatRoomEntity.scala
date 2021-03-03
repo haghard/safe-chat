@@ -40,7 +40,7 @@ object ChatRoomEntity {
 
   val emptyState = com.safechat.actors.ChatRoomState()
 
-  //
+  //if akka.sharding.use-lease
   @tailrec final def captureChatRoom(
     liveShards: AtomicReference[immutable.Set[String]],
     persistenceId: String

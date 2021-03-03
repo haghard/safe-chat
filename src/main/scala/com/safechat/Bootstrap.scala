@@ -107,6 +107,7 @@ case class Bootstrap(
         }
       }
 
+      //if akka.sharding.use-lease
       /*shutdown.addTask(PhaseClusterExitingDone, "lease.release") { () ⇒
         val leaseOwner = Bootstrap.makeLeaseOwner(classicSystem, ua.address)
         val rooms      = liveRooms.get()
