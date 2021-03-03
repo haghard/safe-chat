@@ -40,13 +40,13 @@ object ChatRoomEntity {
 
   val emptyState = com.safechat.actors.ChatRoomState()
 
-  @tailrec
-  private final def storeNewChatRoom(
+  //
+  @tailrec final def captureChatRoom(
     liveShards: AtomicReference[immutable.Set[String]],
     persistenceId: String
   ): Unit = {
     val cur = liveShards.get()
-    if (liveShards.compareAndSet(cur, cur + persistenceId)) () else storeNewChatRoom(liveShards, persistenceId)
+    if (liveShards.compareAndSet(cur, cur + persistenceId)) () else captureChatRoom(liveShards, persistenceId)
   }
 
   private def persistFlow(persistenceId: String, entity: ActorRef[PostText])(implicit
@@ -59,8 +59,21 @@ object ChatRoomEntity {
             case TextMessage.Strict(text) ⇒
               val segments = text.split(MSG_SEP)
               if (text.split(MSG_SEP).size == 3)
-                PostText(persistenceId, segments(0).trim, segments(1).trim, segments(2).trim, reply)
-              else PostText(persistenceId, "null", "null", s"Message error. Wrong format $text", reply)
+                PostText(
+                  persistenceId,
+                  segments(0).trim,
+                  segments(1).trim,
+                  segments(2).trim,
+                  reply
+                )
+              else
+                PostText(
+                  persistenceId,
+                  "null",
+                  "null",
+                  s"Message error. Wrong format $text",
+                  reply
+                )
 
             case other ⇒
               throw new Exception(s"Unexpected message type ${other.getClass.getName}")
@@ -83,27 +96,26 @@ object ChatRoomEntity {
     */
   def apply(
     entityCtx: EntityContext[Command[Reply]],
-    liveShards: AtomicReference[immutable.Set[String]],
+    localChatRooms: AtomicReference[immutable.Set[String]],
     to: FiniteDuration
   ): Behavior[Command[Reply]] =
     //com.safechat.LoggingBehaviorInterceptor(ctx.log) {
     Behaviors.setup { ctx ⇒
       implicit val sys      = ctx.system
       implicit val actorCtx = ctx
+      val pId               = PersistenceId(entityCtx.entityTypeKey.name, entityCtx.entityId)
 
-      //fp style
-      /*EventSourcedBehavior.withEnforcedReplies[UserCmd, ChatRoomEvent, ChatRoomState](
-        PersistenceId(entityCtx.entityTypeKey.name, entityCtx.entityId),
+      /*
+      fp style
+      EventSourcedBehavior.withEnforcedReplies[UserCmd, ChatRoomEvent, ChatRoomState](
+        pId,
         empty,
         (state, cmd) ⇒ state.applyCmd(cmd),
         (state, event) ⇒ state.applyEvn(event)
       )*/
 
-      val pId = PersistenceId(entityCtx.entityTypeKey.name, entityCtx.entityId)
-
       EventSourcedBehavior
         .withEnforcedReplies[Command[Reply], ChatRoomEvent, ChatRoomState](
-          //PersistenceId.ofUniqueId(entityId),
           pId,
           ChatRoomState(),
           onCommand(ctx, to),
@@ -117,8 +129,7 @@ object ChatRoomEntity {
         .receiveSignal {
           case (state, RecoveryCompleted) ⇒
             val leaseName = s"${sys.name}-shard-${ChatRoomEntity.entityKey.name}-${entityCtx.entityId}"
-            storeNewChatRoom(liveShards, leaseName)
-
+            //captureChatRoom(localChatRooms, leaseName)
             ctx.log.info(s"★ ★ ★ Recovered: [${state.regUsers.keySet.mkString(",")}] ★ ★ ★")
           case (state, PreRestart) ⇒
             ctx.log.info(s"★ ★ ★ Pre-restart ${state.regUsers.keySet.mkString(",")} ★ ★ ★")
@@ -167,17 +178,17 @@ object ChatRoomEntity {
   )(implicit
     sys: ActorSystem[Nothing]
   ): ChatRoomHub = {
-    val initBs = sys.settings.config.getInt("akka.stream.materializer.initial-input-buffer-size")
-
-    sys.log.warn("Create pub-sub for {} chatroom", persistenceId)
+    //val initBs = sys.settings.config.getInt("akka.stream.materializer.initial-input-buffer-size")
+    val bs = 1
+    sys.log.warn("Create chatroom {}", persistenceId)
 
     //import akka.actor.typed.scaladsl.AskPattern._
     val ((sinkHub, ks), sourceHub) =
       MergeHub
-        .source[Message](initBs)
+        .source[Message](perProducerBufferSize = bs)
         //.alsoTo(Sink.foreachAsync(1) { entity.ask[ChatRoomReply](PostText(persistenceId, "", "", "", _))(???, ???) })
-        //.wireTap(Sink.ignore)
-        //.wireTap(m => println(m.toString))
+        //.alsoTo()
+        //.wireTap(m ⇒ sys.log.info("before p: {}", m)) //for rebug
         .via(
           //WsScaffolding.flowWithHeartbeat(30.second).via(persist(persistenceId, entity))
           persistFlow(persistenceId, entity)(persistTimeout)
@@ -205,7 +216,7 @@ object ChatRoomEntity {
             }
         )*/
         .viaMat(KillSwitches.single)(Keep.both)
-        .toMat(BroadcastHub.sink[Message](initBs))(Keep.both)
+        .toMat(BroadcastHub.sink[Message](bufferSize = bs))(Keep.both)
         .run()
 
     ChatRoomHub(sinkHub, sourceHub, ks)
@@ -252,14 +263,22 @@ object ChatRoomEntity {
           }
 
       case cmd: PostText ⇒
+        //if (System.currentTimeMillis - cmd.when < to.toMillis)
+        val seqNum = EventSourcedBehavior.lastSequenceNumber(ctx)
         Effect
           .persist(
-            UserTextAdded(cmd.sender, cmd.receiver, cmd.content, System.currentTimeMillis, TimeZone.getDefault.getID)
+            UserTextAdded(
+              seqNum,
+              cmd.sender,
+              cmd.receiver,
+              cmd.content,
+              System.currentTimeMillis,
+              TimeZone.getDefault.getID
+            )
           )
           .thenReply(cmd.replyTo) { updatedState: ChatRoomState ⇒
             ctx.log.info("online:[{}]", updatedState.online.mkString(","))
-            val n = EventSourcedBehavior.lastSequenceNumber(ctx)
-            TextPostedReply(cmd.chatId, n, s"[from:${cmd.sender} -> to:${cmd.receiver}] - ${cmd.content}")
+            TextPostedReply(cmd.chatId, seqNum, s"[from:${cmd.sender} -> to:${cmd.receiver}] - ${cmd.content}")
           }
 
       case cmd: Leave ⇒
@@ -293,9 +312,9 @@ object ChatRoomEntity {
             regUsers = state.regUsers + (login → pubKey),
             online = state.online + login
           )
-      case UserTextAdded(originator, receiver, content, when, tz) ⇒
+      case UserTextAdded(seqNum, originator, receiver, content, when, tz) ⇒
         val zoneDT = ZonedDateTime.ofInstant(Instant.ofEpochMilli(when), ZoneId.of(tz))
-        state.recentHistory :+ s"[${frmtr.format(zoneDT)}] - $originator -> $receiver:$content"
+        state.recentHistory :+ s"[$seqNum at ${frmtr.format(zoneDT)}] - $originator -> $receiver:$content"
         state
       case UserDisconnected(login) ⇒
         state.copy(online = state.online - login)

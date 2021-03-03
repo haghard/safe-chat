@@ -179,8 +179,14 @@ sealed trait ChatRoomEvent {
 
 final case class UserJoined(originator: String, pubKey: String) extends ChatRoomEvent
 
-final case class UserTextAdded(originator: String, recipient: String, content: String, when: Long, tz: String)
-    extends ChatRoomEvent
+final case class UserTextAdded(
+  seqNum: Long,
+  originator: String,
+  recipient: String,
+  content: String,
+  when: Long,
+  tz: String
+) extends ChatRoomEvent
 
 final case class UserDisconnected(originator: String) extends ChatRoomEvent
 

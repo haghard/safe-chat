@@ -13,7 +13,6 @@ import com.safechat.actors._
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
-import scala.util.control.NonFatal
 
 final case class ChatRoomApi(rooms: ShardedChatRooms, to: FiniteDuration)(implicit sys: ActorSystem[Nothing])
     extends Directives {
@@ -54,10 +53,7 @@ final case class ChatRoomApi(rooms: ShardedChatRooms, to: FiniteDuration)(implic
     rooms
       .join(chatId, user, pubKey)
       .mapTo[JoinReply]
-      .recoverWith { case NonFatal(ex) ⇒
-        sys.log.warn(s"GetChatRoomFlow $chatId error", ex)
-        getChatRoomFlow(rooms, chatId, user, pubKey)
-      }
+  //.recoverWith { case scala.util.control.NonFatal(ex) ⇒ getChatRoomFlow(rooms, chatId, user, pubKey) }
 
   private def chatRoomWsFlow(
     rooms: ShardedChatRooms,
@@ -65,32 +61,30 @@ final case class ChatRoomApi(rooms: ShardedChatRooms, to: FiniteDuration)(implic
     user: String,
     pubKey: String
   ): Future[Flow[Message, Message, Future[NotUsed]]] =
-    getChatRoomFlow(rooms, chatId, user, pubKey).map {
-      //case JoinReplySuccess(chatId, user, sinkRef, sourceRef) ⇒
-      case JoinReply(chatId, user, sinkSourceRef) ⇒
-        sinkSourceRef match {
-          case Some((sinkRef, sourceRef)) ⇒
-            Flow.fromMaterializer { (mat, attr) ⇒
-              //val ec: ExecutionContextExecutor = mat.executionContext
-              //val disp                        = attr.get[ActorAttributes.Dispatcher].get
-              val buf = attr.get[akka.stream.Attributes.InputBuffer].get
-              //println("attributes: " + attr.attributeList.mkString(","))
+    getChatRoomFlow(rooms, chatId, user, pubKey).map { case JoinReply(chatId, user, sinkSourceRef) ⇒
+      sinkSourceRef match {
+        case Some((sinkRef, sourceRef)) ⇒
+          Flow.fromMaterializer { (mat, attr) ⇒
+            //val ec: ExecutionContextExecutor = mat.executionContext
+            //val disp                        = attr.get[ActorAttributes.Dispatcher].get
+            val buf = attr.get[akka.stream.Attributes.InputBuffer].get
+            //println("attributes: " + attr.attributeList.mkString(","))
 
-              Flow
-                .fromSinkAndSourceCoupled(sinkRef.sink, sourceRef.source)
-                .buffer(buf.max, OverflowStrategy.backpressure)
-                .backpressureTimeout(3.seconds) //automatic cleanup for very slow subscribers.
-                .watchTermination() { (_, c) ⇒
-                  c.flatMap { _ ⇒
-                    sys.log.info("{}@{}: ws-con has been terminated", user, chatId)
-                    rooms.leave(chatId, user)
-                  }
-                  NotUsed
+            Flow
+              .fromSinkAndSourceCoupled(sinkRef.sink, sourceRef.source)
+              .buffer(buf.max, OverflowStrategy.backpressure)
+              .backpressureTimeout(3.seconds) //automatic cleanup for very slow subscribers.
+              .watchTermination() { (_, c) ⇒
+                c.flatMap { _ ⇒
+                  sys.log.info("{}@{} flow has been terminated", user, chatId)
+                  rooms.leave(chatId, user)
                 }
-            }
-          case None ⇒
-            throw new Exception("JoinReplyFailure !!!")
-        }
+                NotUsed
+              }
+          }
+        case None ⇒
+          throw new Exception("JoinReplyFailure !!!")
+      }
     }
 
   /** As long as at least one connection is opened to the chat room, the associated persistent entity won't be passivated.
@@ -100,11 +94,12 @@ final case class ChatRoomApi(rooms: ShardedChatRooms, to: FiniteDuration)(implic
   val routes: Route =
     (path("chat" / Segment / "user" / Segment) & parameter("pub".as[String])) { (chatId, user, pubKey) ⇒
       val flow =
-        //When ChatRoomEntities get rebalanced, a flow(src, sink) we got once may no longed be valid so we need to restart that transparently for users
+        //When ChatRoomEntities get rebalanced, a flow(src, sink) we got once may no longed be valid so we need to restart it transparently for the clients
         //TODO: When reconnect, filter out recent chat history
-        RestartFlow.withBackoff(
-          akka.stream.RestartSettings(to + 1.second, to + 2.seconds, 0.4)
-        )(() ⇒ Flow.futureFlow(chatRoomWsFlow(rooms, chatId, user, pubKey)))
+        //to, to + 1.seconds
+        RestartFlow.withBackoff(akka.stream.RestartSettings(2.seconds, 4.seconds, 0.4))(() ⇒
+          Flow.futureFlow(chatRoomWsFlow(rooms, chatId, user, pubKey))
+        )
       handleWebSocketMessages(flow)
     }
 }

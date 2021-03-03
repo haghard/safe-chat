@@ -41,10 +41,10 @@ object Server extends Ops {
           //ctx.log.info(info)
           cluster.subscriptions ! Unsubscribe(ctx.self)
 
-          val liveLocalShards =
+          val localShards =
             new AtomicReference[scala.collection.immutable.Set[String]](scala.collection.immutable.Set[String]())
 
-          val to = Duration.fromNanos(
+          val shardAllocationMaxTO = Duration.fromNanos(
             sys.settings.config
               .getDuration("akka.cluster.split-brain-resolver.stable-after")
               .plus(java.time.Duration.ofSeconds(4)) //5 + 4
@@ -53,12 +53,12 @@ object Server extends Ops {
 
           Bootstrap(
             ChatRoomApi(
-              new ShardedChatRooms(liveLocalShards, to)(sys),
-              to
+              new ShardedChatRooms(localShards, shardAllocationMaxTO)(sys),
+              shardAllocationMaxTO
             ).routes,
             hostName,
             httpPort,
-            liveLocalShards
+            localShards
           )(sys.toClassic)
           Behaviors.empty
         }
@@ -229,7 +229,7 @@ object Server extends Ops {
         s"  Journal partition size: ${cfg.getInt("akka.persistence.cassandra.journal.target-partition-size")} ★ ★ ★"
       )
       .append('\n')
-      .append("★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★  Schema mapping ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★")
+      .append("★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★  Persistent events schema mapping ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★")
       .append('\n')
       .append(eventMapping.mkString("\n"))
       .append('\n')

@@ -45,56 +45,7 @@ class CassandraSessionExtension(system: ActorSystem) extends Extension {
   }
 
   private def createLeaseTable(cassandraSession: CassandraSession) = {
-    val ttl = system.settings.config
-      .getDuration("akka.cluster.split-brain-resolver.stable-after")
-      .getSeconds * 3
-
-    /*
-
-      CREATE TABLE leases1 (name text, when timeuuid, rooms set<text> static, PRIMARY KEY(name, when)) WITH CLUSTERING ORDER BY (when DESC);
-
-      INSERT INTO leases1(name, when, rooms) VALUES ('p.0', now(), {});
-
-
-      UPDATE leases1 SET rooms = rooms + {'aaa'} WHERE name = 'p.0' IF rooms = null;
-      UPDATE leases1 SET rooms = rooms + {'b'}   WHERE name = 'p.0' IF rooms != null;
-
-
-      UPDATE leases1 SET rooms = rooms + {'b'} WHERE name = 'p.0' IF rooms IN { 'a' };
-      UPDATE leases1 SET rooms = rooms + {'b'} WHERE name = 'p.0' AND rooms NOT IN { 'a' } IF NOT EXIST;
-
-      SELECT * FROM leases1 WHERE name = 'p.0' AND rooms CONTAINS 'a';
-
-
-      SELECT * FROM leases1 WHERE name = 'p.0' AND rooms CONTAINS 'aaa' ALLOW FILTERING;
-
-      CREATE INDEX leases_rooms_indx ON leases1(rooms);
-      SELECT * FROM leases1 WHERE name = 'p.0' AND rooms CONTAINS 'aaa';
-
-
-      SELECT * FROM leases1 WHERE name = 'p.0' AND rooms CONTAINS 'aaa';
-
-
-      UPDATE leases1 SET rooms = rooms + {'c'} WHERE name = 'p.0' AND rooms CONTAINS 'c' IF NOT EXIST;
-                                               WHERE name = 'p.0' AND rooms CONTAINS 'c' IF NOT EXIST
-
-
-
-
-    #SELECT TTL(race_name) FROM cycling.calendar  WHERE race_id=200;
-
-     */
-
-    //CREATE TABLE leases0 (name text PRIMARY KEY, owner text, when timeuuid);
-    //SELECT writetime(owner) from leases0 where name = 'a';
-
-    //INSERT into leases0 (name, owner, when) VALUES ('a', '1', now());
-    //UPDATE leases0 set owner = '2'               WHERE name = 'a' IF when > now();
-    //UPDATE leases0 set owner = '3', when = now() WHERE name = 'a' IF when < now();
-
-    val createStatement =
-      //s"CREATE TABLE IF NOT EXISTS $keyspace.leases (name text PRIMARY KEY, owner text) with default_time_to_live = $ttl"
-      s"CREATE TABLE IF NOT EXISTS $keyspace.leases (name text PRIMARY KEY, owner text)"
-    cassandraSession executeDDL createStatement
+    val stmt = s"CREATE TABLE IF NOT EXISTS $keyspace.leases (name text PRIMARY KEY, owner text)"
+    cassandraSession executeDDL stmt
   }
 }

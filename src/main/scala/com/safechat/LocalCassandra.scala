@@ -17,7 +17,7 @@ object LocalCassandra {
   }
 
   def startCassandraDatabase(): Unit = {
-    val databaseDirectory = new File("target/cassandra-db")
+    val databaseDirectory = new File("./cassandra-db")
     CassandraLauncher.start(databaseDirectory, CassandraLauncher.DefaultTestConfigResource, clean = false, port = 9042)
     //CassandraLauncher.start(databaseDirectory, CassandraLauncher.DefaultTestConfigResource, clean = true, port = 9042)
   }

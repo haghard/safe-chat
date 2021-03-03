@@ -36,7 +36,7 @@ case class Bootstrap(
   routes: Route,
   host: String,
   port: Int,
-  liveRooms: AtomicReference[scala.collection.immutable.Set[String]]
+  localShards: AtomicReference[scala.collection.immutable.Set[String]]
 )(implicit
   classicSystem: akka.actor.ActorSystem
 ) {
@@ -47,8 +47,6 @@ case class Bootstrap(
     .getDuration("akka.coordinated-shutdown.default-phase-timeout")
     .getSeconds
     .second
-
-  //safe-chat@127.0.0.1:2550
 
   val f = Http()
     .newServerAt(host, port)
@@ -109,7 +107,7 @@ case class Bootstrap(
         }
       }
 
-      shutdown.addTask(PhaseClusterExitingDone, "lease.release") { () ⇒
+      /*shutdown.addTask(PhaseClusterExitingDone, "lease.release") { () ⇒
         val leaseOwner = Bootstrap.makeLeaseOwner(classicSystem, ua.address)
         val rooms      = liveRooms.get()
         if (rooms.nonEmpty) {
@@ -125,7 +123,7 @@ case class Bootstrap(
             }
             .map(_ ⇒ Done)
         } else Future.successful(Done)
-      }
+      }*/
 
       shutdown.addTask(PhaseActorSystemTerminate, "system.term") { () ⇒
         Future.successful {

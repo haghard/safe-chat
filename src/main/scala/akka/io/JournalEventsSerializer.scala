@@ -152,6 +152,7 @@ object JournalEventsSerializer {
           UserJoined(p.getLogin.toString, p.getPubKey.toString)
         case p: com.safechat.avro.persistent.domain.UserTextAdded ⇒
           UserTextAdded(
+            p.getSeqNum,
             p.getUser.toString,
             p.getReceiver.toString,
             p.getText.toString,
@@ -188,12 +189,12 @@ object JournalEventsSerializer {
           TimeZone.getDefault.getID,
           com.safechat.avro.persistent.domain.UserJoined.newBuilder.setLogin(e.originator).setPubKey(e.pubKey).build()
         )
-      case UserTextAdded(originator, receiver, content, when, tz) ⇒
+      case UserTextAdded(seqNum, originator, receiver, content, when, tz) ⇒
         new com.safechat.avro.persistent.domain.EventEnvelope(
           UUID.randomUUID.toString,
           when,
           tz,
-          new com.safechat.avro.persistent.domain.UserTextAdded(originator, receiver, content)
+          new com.safechat.avro.persistent.domain.UserTextAdded(seqNum, originator, receiver, content)
         )
       case e: UserDisconnected ⇒
         new com.safechat.avro.persistent.domain.EventEnvelope(

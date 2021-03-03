@@ -41,9 +41,9 @@ object ShardedChatRooms {
   }
 }
 
-final class ShardedChatRooms(
-  liveShards: AtomicReference[scala.collection.immutable.Set[String]],
-  to: FiniteDuration)(implicit system: ActorSystem[Nothing]) {
+final class ShardedChatRooms(localShards: AtomicReference[scala.collection.immutable.Set[String]], to: FiniteDuration)(
+  implicit system: ActorSystem[Nothing]
+) {
 
   val numberOfShards     = 1 << 8      //TODO: make it configurable
   val passivationTimeout = 300.seconds //TODO: make it configurable
@@ -99,27 +99,27 @@ final class ShardedChatRooms(
   val chatShardRegion = ClusterSharding(system).init(Entity(ChatRoomEntity.entityKey)(behaviorFactory))
    */
 
-  val entity = Entity(ChatRoomEntity.entityKey)(ChatRoomEntity(_, liveShards, to))
+  val entity = Entity(ChatRoomEntity.entityKey)(ChatRoomEntity(_, localShards, to))
     //ShardingMessageExtractor[UserCmd](512)
-    .withMessageExtractor(
-      ChatRoomsMsgExtractor[Command[Reply]](numberOfShards)
-    )
+    .withMessageExtractor(ChatRoomsMsgExtractor[Command[Reply]](numberOfShards))
     .withSettings(settings)
     //https://doc.akka.io/docs/akka/current/typed/cluster-sharding.html
 
     //For any shardId that has not been allocated it will be allocated to the requesting node (like a sticky session)
-    .withAllocationStrategy(
+    /*.withAllocationStrategy(
       new akka.cluster.sharding.external.ExternalShardAllocationStrategy(system, ChatRoomEntity.entityKey.name)
-    )
+    )*/
 
-  //default AllocationStrategy
-  //.withAllocationStrategy(new akka.cluster.sharding.ShardCoordinator.LeastShardAllocationStrategy(1, 3))
-  //https://doc.akka.io/docs/akka/2.6/typed/cluster-sharding.html?_ga=#shard-allocation
-  /*.withAllocationStrategy(
+    //default AllocationStrategy
+    //.withAllocationStrategy(new akka.cluster.sharding.ShardCoordinator.LeastShardAllocationStrategy(1, 3))
+    //https://doc.akka.io/docs/akka/2.6/typed/cluster-sharding.html?_ga=#shard-allocation
+    .withAllocationStrategy(
       akka.cluster.sharding.ShardCoordinator.ShardAllocationStrategy
         .leastShardAllocationStrategy(numberOfShards / 2, 0.5)
-    )*/
-  //.withEntityProps(akka.actor.typed.Props.empty.withDispatcherFromConfig(disName))
+    )
+    .withEntityProps(
+      akka.actor.typed.Props.empty.withDispatcherFromConfig("cassandra-dispatcher")
+    )
 
   val chatShardRegion = sharding.init(entity)
 

@@ -15,12 +15,19 @@ import scala.compat.java8.FutureConverters.CompletionStageOps
 import scala.concurrent.Future
 import scala.util.control.NonFatal
 
-/** https://github.com/haghard/linguistic/blob/1b6bc8af7674982537cf574d3929cea203a2b6fa/server/src/main/scala/linguistic/dao/Accounts.scala
+import CassandraLease._
+
+/** This implementation can be used for either `akka.sharding.use-lease` or `split-brain-resolver.active-strategy = lease-majority`.
+  *
+  * https://github.com/haghard/linguistic/blob/1b6bc8af7674982537cf574d3929cea203a2b6fa/server/src/main/scala/linguistic/dao/Accounts.scala
   * https://github.com/dekses/cassandra-lock/blob/master/src/main/java/com/dekses/cassandra/lock/LockFactory.java
   * https://www.datastax.com/blog/consensus-cassandra
+  *
+  * select * from leases where name = 'safe-chat-akka-sbr';
   */
 object CassandraLease {
   val configPath = "akka.coordination.lease.cassandra"
+  val SbrPref    = "sbr"
 }
 
 final class CassandraLease(system: ExtendedActorSystem, leaseTaken: AtomicBoolean, settings: LeaseSettings)
@@ -83,7 +90,12 @@ final class CassandraLease(system: ExtendedActorSystem, leaseTaken: AtomicBoolea
       .flatMap { cqlSession ⇒
         cqlSession.executeAsync(delete).toScala.map { r ⇒
           val bool = r.wasApplied()
-          system.log.info("CassandraLease {} by {} released: {}", settings.leaseName, settings.ownerName, bool)
+
+          if (settings.leaseName.contains(SbrPref))
+            system.log.warning("CassandraLeaseSbr {} by {} released: {}", settings.leaseName, settings.ownerName, bool)
+          else
+            system.log.info("CassandraLease {} by {} released: {}", settings.leaseName, settings.ownerName, bool)
+
           bool
         }
       }
@@ -96,14 +108,23 @@ final class CassandraLease(system: ExtendedActorSystem, leaseTaken: AtomicBoolea
       .flatMap { cqlSession ⇒
         cqlSession.executeAsync(insert).toScala.flatMap { r ⇒
           val bool = r.wasApplied()
-          system.log.info(s"CassandraLease ${settings.leaseName} by ${settings.ownerName} acquired: $bool")
+          if (settings.leaseName.contains("sbr"))
+            system.log.warning(s"CassandraLeaseSBR ${settings.leaseName} by ${settings.ownerName} acquired: $bool")
+          else
+            system.log.info(s"CassandraLease ${settings.leaseName} by ${settings.ownerName} acquired: $bool")
           if (bool) Future.successful(bool)
           else
             akka.pattern.after(forceAcquireTimeout, system.scheduler)(
               cqlSession.executeAsync(forcedInsert).toScala.map { r ⇒
                 val bool = r.wasApplied()
-                system.log
-                  .info(s"CassandraLease.Forced ${settings.leaseName} by ${settings.ownerName} acquired: $bool")
+
+                if (settings.leaseName.contains(SbrPref))
+                  system.log
+                    .warning(s"CassandraLeaseSbr.Forced ${settings.leaseName} by ${settings.ownerName} acquired: $bool")
+                else
+                  system.log
+                    .info(s"CassandraLease.Forced ${settings.leaseName} by ${settings.ownerName} acquired: $bool")
+
                 bool
               }
             )
