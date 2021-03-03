@@ -3,3 +3,4 @@ avro
 target
 *.class
 *.log
+/cassandra-db/
