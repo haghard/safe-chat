@@ -12,9 +12,10 @@ import akka.http.scaladsl.model.ws.{Message, TextMessage}
 import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior, ReplyEffect, RetentionCriteria}
 import akka.persistence.typed._
 import akka.stream.scaladsl.{BroadcastHub, Flow, Keep, MergeHub, RestartFlow, Source, StreamRefs}
-import akka.stream.{Attributes, KillSwitches, StreamRefAttributes}
+import akka.stream.{Attributes, KillSwitches, StreamRefAttributes, UniqueKillSwitch}
 import akka.util.Timeout
 import Command._
+import akka.stream.typed.scaladsl.ActorFlow
 
 import java.util.concurrent.atomic.AtomicReference
 import scala.annotation.tailrec
@@ -24,7 +25,7 @@ import scala.concurrent.duration._
 /** https://doc.akka.io/docs/akka/current/typed/persistence-style.html#event-handlers-in-the-state
   * https://doc.akka.io/docs/akka/current/typed/persistence-fsm.html
   */
-object ChatRoomEntity {
+object ChatRoom {
 
   val snapshotEveryN = 300 //TODO should be configurable
   val MSG_SEP        = ":"
@@ -41,34 +42,36 @@ object ChatRoomEntity {
   val emptyState = com.safechat.actors.ChatRoomState()
 
   //if akka.sharding.use-lease
-  @tailrec final def captureChatRoom(
+  @tailrec final def registerChatRoom(
     liveShards: AtomicReference[immutable.Set[String]],
     persistenceId: String
   ): Unit = {
     val cur = liveShards.get()
-    if (liveShards.compareAndSet(cur, cur + persistenceId)) () else captureChatRoom(liveShards, persistenceId)
+    if (liveShards.compareAndSet(cur, cur + persistenceId)) () else registerChatRoom(liveShards, persistenceId)
   }
 
-  private def persistFlow(persistenceId: String, entity: ActorRef[PostText])(implicit
+  @tailrec final def registerKS(
+    kss: AtomicReference[immutable.Set[UniqueKillSwitch]],
+    ks: UniqueKillSwitch
+  ): Unit = {
+    val set = kss.get()
+    if (kss.compareAndSet(set, set + ks)) () else registerKS(kss, ks)
+  }
+
+  private def persistFlow(chatId: String, entity: ActorRef[PostText])(implicit
     persistTimeout: Timeout
   ): Flow[Message, Reply, akka.NotUsed] = {
     def persistFlow =
-      akka.stream.typed.scaladsl.ActorFlow
+      ActorFlow
         .ask[Message, PostText, Reply](1)(entity) { (msg: Message, reply: ActorRef[Reply]) ⇒
           msg match {
             case TextMessage.Strict(text) ⇒
-              val segments = text.split(MSG_SEP)
+              val segs = text.split(MSG_SEP)
               if (text.split(MSG_SEP).size == 3)
-                PostText(
-                  persistenceId,
-                  segments(0).trim,
-                  segments(1).trim,
-                  segments(2).trim,
-                  reply
-                )
+                PostText(chatId, segs(0).trim, segs(1).trim, segs(2).trim, reply)
               else
                 PostText(
-                  persistenceId,
+                  chatId,
                   "null",
                   "null",
                   s"Message error. Wrong format $text",
@@ -84,7 +87,9 @@ object ChatRoomEntity {
     //ActorAttributes.supervisionStrategy({ case _ => Supervision.Resume }).and(Attributes.inputBuffer(1, 1))
 
     //TODO: maybe would be better to fail instead of retrying
-    RestartFlow.withBackoff(akka.stream.RestartSettings(1.second, 3.seconds, 0.3))(() ⇒ persistFlow)
+    RestartFlow.withBackoff(
+      akka.stream.RestartSettings(1.second, 3.seconds, 0.3)
+    )(() ⇒ persistFlow)
   }
 
   /** Each `ChatRoomEntity` actor is a single source of true, acting as a consistency boundary for the data that it manages.
@@ -92,11 +97,12 @@ object ChatRoomEntity {
     * Messages in a single chat room define a single total order.
     * Messages in a single chat causally dependent on each other by design.
     *
-    * Total order is maintained as we always write to the journal with parallelism == 1
+    * Total order for persistence is maintained as we always write to the journal with parallelism == 1
     */
   def apply(
     entityCtx: EntityContext[Command[Reply]],
     localChatRooms: AtomicReference[immutable.Set[String]],
+    kks: AtomicReference[immutable.Set[UniqueKillSwitch]],
     to: FiniteDuration
   ): Behavior[Command[Reply]] =
     //com.safechat.LoggingBehaviorInterceptor(ctx.log) {
@@ -118,9 +124,13 @@ object ChatRoomEntity {
         .withEnforcedReplies[Command[Reply], ChatRoomEvent, ChatRoomState](
           pId,
           ChatRoomState(),
-          onCommand(ctx, to),
+          onCommand(
+            ctx,
+            to,
+            ctx.system.settings.config.getDuration("akka.cluster.split-brain-resolver.stable-after").toMillis
+          ),
           //commandHandler,
-          onEvent(ctx.self.path.name)
+          onEvent(ctx.self.path.name, kks)
         )
         /*.withTagger {
           //tagged events are useful for querying  by tag
@@ -128,22 +138,22 @@ object ChatRoomEntity {
         }*/
         .receiveSignal {
           case (state, RecoveryCompleted) ⇒
-            val leaseName = s"${sys.name}-shard-${ChatRoomEntity.entityKey.name}-${entityCtx.entityId}"
+            //val leaseName = s"${sys.name}-shard-${ChatRoomEntity.entityKey.name}-${entityCtx.entityId}"
             //captureChatRoom(localChatRooms, leaseName)
-            ctx.log.info(s"★ ★ ★ Recovered: [${state.regUsers.keySet.mkString(",")}] ★ ★ ★")
+            ctx.log.info(s"★ Recovered: [${state.regUsers.keySet.mkString(",")}] ★")
           case (state, PreRestart) ⇒
-            ctx.log.info(s"★ ★ ★ Pre-restart ${state.regUsers.keySet.mkString(",")} ★ ★ ★")
+            ctx.log.info(s"★ Pre-restart ${state.regUsers.keySet.mkString(",")} ★")
           case (state, PostStop) ⇒
-            state.hub.foreach(_.ks.shutdown)
-            ctx.log.info("★ ★ ★ PostStop(Passivation). Clean up chat resources ★ ★ ★")
+            state.hub.foreach(_.ks.shutdown())
+            ctx.log.info("★ PostStop(Passivation). Clean up chat resources ★ ★ ★")
           case (state, SnapshotCompleted(_)) ⇒
-            ctx.log.info(s"SnapshotCompleted [${state.regUsers.keySet.mkString(",")}]")
+            ctx.log.info(s"★ SnapshotCompleted [${state.regUsers.keySet.mkString(",")}]")
           case (state, SnapshotFailed(_, ex)) ⇒
-            ctx.log.error(s"SnapshotFailed ${state.regUsers.keySet.mkString(",")}", ex)
+            ctx.log.error(s"★ SnapshotFailed ${state.regUsers.keySet.mkString(",")}", ex)
           case (_, RecoveryFailed(cause)) ⇒
-            ctx.log.error(s"RecoveryFailed $cause", cause)
+            ctx.log.error(s"★ RecoveryFailed $cause", cause)
           case (_, signal) ⇒
-            ctx.log.info(s"★ ★ ★ Signal $signal ★ ★ ★")
+            ctx.log.info(s"★ Signal $signal ★")
         }
         /*.snapshotWhen {
           case (_, UserJoined(_, _), _) ⇒ true
@@ -174,7 +184,8 @@ object ChatRoomEntity {
     */
   def chatRoomHub(
     persistenceId: String,
-    entity: ActorRef[PostText]
+    entity: ActorRef[PostText],
+    kksRef: AtomicReference[immutable.Set[UniqueKillSwitch]]
   )(implicit
     sys: ActorSystem[Nothing]
   ): ChatRoomHub = {
@@ -219,6 +230,7 @@ object ChatRoomEntity {
         .toMat(BroadcastHub.sink[Message](bufferSize = bs))(Keep.both)
         .run()
 
+    registerKS(kksRef, ks)
     ChatRoomHub(sinkHub, sourceHub, ks)
   }
 
@@ -232,7 +244,8 @@ object ChatRoomEntity {
 
   def onCommand(
     ctx: ActorContext[_],
-    to: FiniteDuration
+    to: FiniteDuration,
+    stableAfter: Long
   )(state: ChatRoomState, cmd: Command[Reply])(implicit
     sys: ActorSystem[Nothing]
   ): ReplyEffect[ChatRoomEvent, ChatRoomState] =
@@ -249,7 +262,7 @@ object ChatRoomEntity {
               case Some(hub) ⇒
                 val chatHistory = updateState.recentHistory.entries.mkString("\n")
                 //Add new producer on the fly
-                //If the consumer cannot keep up then all of the producers are backpressured
+                //If the consumer cannot keep up, all producers will be backpressured
                 val srcRefF = (Source.single[Message](TextMessage(chatHistory)) ++ hub.srcHub)
                   .runWith(StreamRefs.sourceRef[Message].addAttributes(settings))
 
@@ -263,7 +276,6 @@ object ChatRoomEntity {
           }
 
       case cmd: PostText ⇒
-        //if (System.currentTimeMillis - cmd.when < to.toMillis)
         val seqNum = EventSourcedBehavior.lastSequenceNumber(ctx)
         Effect
           .persist(
@@ -291,7 +303,8 @@ object ChatRoomEntity {
     }
 
   def onEvent(
-    persistenceId: String
+    persistenceId: String,
+    kksRef: AtomicReference[immutable.Set[UniqueKillSwitch]]
   )(state: ChatRoomState, event: ChatRoomEvent)(implicit
     sys: ActorSystem[Nothing],
     ctx: ActorContext[Command[Reply]]
@@ -299,13 +312,13 @@ object ChatRoomEntity {
     event match {
       case UserJoined(login, pubKey) ⇒
         if (state.online.isEmpty && state.hub.isEmpty)
-          if (login == ChatRoomEntity.wakeUpUserName)
+          if (login == ChatRoom.wakeUpUserName)
             state
           else
             state.copy(
               regUsers = state.regUsers + (login → pubKey),
               online = Set(login),
-              hub = Some(chatRoomHub(persistenceId, ctx.self.narrow[PostText]))
+              hub = Some(chatRoomHub(persistenceId, ctx.self.narrow[PostText], kksRef))
             )
         else
           state.copy(

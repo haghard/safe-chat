@@ -36,6 +36,10 @@
 
   <logger name="com.datastax.oss.driver.internal.core.pool.ChannelPool" level="error"/>
 
+
+  <logger name="akka.actor.RepointableActorRef" level="off"/>
+
+
   <appender name="console" class="ch.qos.logback.core.ConsoleAppender">
     <encoder>
       <pattern>%d{HH:mm:ss.SS} [%X{sourceThread}] %-5level %logger{36} %X{akkaSource} – %msg%n</pattern>

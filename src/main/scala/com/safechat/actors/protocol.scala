@@ -200,7 +200,7 @@ final case class ChatRoomHub(sinkHub: Sink[Message, NotUsed], srcHub: Source[Mes
 final case class ChatRoomState(
   regUsers: Map[String, String] = Map.empty,
   online: Set[String] = Set.empty,
-  recentHistory: RingBuffer[String] = new RingBuffer[String](1 << 4),
+  recentHistory: RingBuffer[String] = RingBuffer[String](1 << 3),
   hub: Option[ChatRoomHub] = None
 ) {
 

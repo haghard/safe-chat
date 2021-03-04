@@ -12,6 +12,7 @@ import akka.cluster.typed.{Cluster, SelfUp, Unsubscribe}
 import com.typesafe.config.{Config, ConfigFactory}
 import akka.actor.typed.scaladsl.adapter._
 import akka.http.scaladsl.server.directives.Credentials
+import akka.stream.UniqueKillSwitch
 
 import scala.jdk.CollectionConverters._
 import com.safechat.actors.ShardedChatRooms
@@ -20,7 +21,7 @@ import com.safechat.serializer.SchemaRegistry
 
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
-import scala.collection.Map
+import scala.collection.{immutable, Map}
 import scala.concurrent.{Await, Future}
 import scala.io.StdIn
 import scala.util.Try
@@ -51,14 +52,20 @@ object Server extends Ops {
               .toNanos
           )
 
+          val kksRef =
+            new AtomicReference[scala.collection.immutable.Set[UniqueKillSwitch]](
+              scala.collection.immutable.Set[UniqueKillSwitch]()
+            )
+
           Bootstrap(
             ChatRoomApi(
-              new ShardedChatRooms(localShards, shardAllocationMaxTO)(sys),
+              new ShardedChatRooms(localShards, kksRef, shardAllocationMaxTO)(sys),
               shardAllocationMaxTO
             ).routes,
             hostName,
             httpPort,
-            localShards
+            localShards,
+            kksRef
           )(sys.toClassic)
           Behaviors.empty
         }

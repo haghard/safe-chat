@@ -28,9 +28,9 @@ final case class ChatRoomApi(rooms: ShardedChatRooms, to: FiniteDuration)(implic
       akka.pattern.retry(
         () ⇒
           rooms
-            .join(ChatRoomEntity.wakeUpEntityName, ChatRoomEntity.wakeUpUserName, "fake-pub-key")
+            .join(ChatRoom.wakeUpEntityName, ChatRoom.wakeUpUserName, "fake-pub-key")
             .mapTo[Reply]
-            .flatMap(_ ⇒ rooms.leave(ChatRoomEntity.wakeUpEntityName, ChatRoomEntity.wakeUpUserName)),
+            .flatMap(_ ⇒ rooms.leave(ChatRoom.wakeUpEntityName, ChatRoom.wakeUpUserName)),
         3,
         1.second
       )
@@ -67,9 +67,9 @@ final case class ChatRoomApi(rooms: ShardedChatRooms, to: FiniteDuration)(implic
           Flow.fromMaterializer { (mat, attr) ⇒
             //val ec: ExecutionContextExecutor = mat.executionContext
             //val disp                        = attr.get[ActorAttributes.Dispatcher].get
-            val buf = attr.get[akka.stream.Attributes.InputBuffer].get
             //println("attributes: " + attr.attributeList.mkString(","))
 
+            val buf = attr.get[akka.stream.Attributes.InputBuffer].get
             Flow
               .fromSinkAndSourceCoupled(sinkRef.sink, sourceRef.source)
               .buffer(buf.max, OverflowStrategy.backpressure)

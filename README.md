@@ -27,33 +27,6 @@ sbt second
 
 ```
 
-### Start message
-
-```
-
-[info] =================================================================================================
-[info] ★ ★ ★   Node 127.0.0.1:2550   ★ ★ ★
-[info] ★ ★ ★   Seed nodes: [akka://safe-chat@127.0.0.1:2550, akka://safe-chat@127.0.0.2:2550]  ★ ★ ★
-[info] ★ ★ ★   Cassandra: 84.201.150.26:9042,84.201.146.112:9042   Journal partition size: 500000 ★ ★ ★
-[info] ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★  Schema mapping ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★
-[info] com.safechat.actors.UserTextAdded -> com.safechat.persistent.domain.UserTextAdded
-[info] com.safechat.actors.UserDisconnected -> com.safechat.persistent.domain.UserDisconnected
-[info] com.safechat.actors.UserJoined -> com.safechat.persistent.domain.UserJoined
-[info] ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★
-[info] ★ ★ ★   Environment: [TZ:Europe/Amsterdam. Start time:2020-10-11T...]  ★ ★ ★
-[info] ★ ★ ★   HTTP server is online: http://127.0.0.1:8080 ★ ★ ★ 
-[info]                                 ___  ____   ___  __   __  ___   ___     ______
-[info]                                / __| | __| | _ \ \ \ / / | __| | _ \    \ \ \ \
-[info]                                \__ \ | _|  |   /  \ V /  | _|  |   /     ) ) ) )
-[info]                                |___/ |___| |_|_\   \_/   |___| |_|_\    /_/_/_/
-[info]         
-[info] ★ ★ ★  Artery: maximum-frame-size: 262144 bytes  ★ ★ ★
-[info] Version:0.3.0-SNAPSHOT at 2020-10-11 17:25:15.310+0200
-[info] Cores:8 Total Memory:268Mb Max Memory:1073Mb Free Memory:197Mb RAM:17179Mb
-[info] =================================================================================================
-
-```
-
 
 ### How to build and publish with docker
 
@@ -421,12 +394,6 @@ sbt -J-Xms256M -J-Xmx512M -J-XX:+PrintCommandLineFlags -J-XX:NativeMemoryTrackin
 ```
 
 
-
-OR
-
-Create .sbtopts
-
-
 ### Examples
   
 Killrweather:             https://github.com/akka/akka-samples/tree/2.6/akka-sample-sharding-scala
@@ -440,26 +407,51 @@ CQRS ShoppingCart example: read-side is implemented using Akka Projections: http
 Akka Persistence and MariaDB:  https://medium.com/@matteodipirro/stateful-actors-with-akka-event-sourcing-and-maria-db-d4202c6c599a
 
 
-
-### SB journal
+### A slice of a journal after a split brain
 
 ```bash
 
-select persistence_id, partition_nr, sequence_nr, timestamp, ser_id, ser_manifest, timebucket, writer_uuid from chat_journal where persistence_id='chat-rooms|kkk' and partition_nr = 0;
+select persistence_id, sequence_nr, timestamp, ser_id, ser_manifest, writer_uuid from chat_journal where persistence_id='chat-rooms|k' and partition_nr = 0;
 
-  chat-rooms|kkk |            0 |          17 | d688d4d0-7b6f-11eb-bf8d-23d311ebd97d |  99999 |    EVENT_com.safechat.avro.persistent.domain.UserTextAdded:4e0f5a5e34acf1846c2009e27564d577 | 1614697200000 | 2d82f2e1-dca4-418a-96f9-f779b7d84a2b
-  chat-rooms|kkk |            0 |          18 | d6a5f9c0-7b6f-11eb-bf8d-23d311ebd97d |  99999 |    EVENT_com.safechat.avro.persistent.domain.UserTextAdded:4e0f5a5e34acf1846c2009e27564d577 | 1614697200000 | 2d82f2e1-dca4-418a-96f9-f779b7d84a2b
-  chat-rooms|kkk |            0 |          19 | d6bdee90-7b6f-11eb-bf8d-23d311ebd97d |  99999 |    EVENT_com.safechat.avro.persistent.domain.UserTextAdded:4e0f5a5e34acf1846c2009e27564d577 | 1614697200000 | 2d82f2e1-dca4-418a-96f9-f779b7d84a2b
-  chat-rooms|kkk |            0 |          20 | d6d76a00-7b6f-11eb-bf8d-23d311ebd97d |  99999 |    EVENT_com.safechat.avro.persistent.domain.UserTextAdded:4e0f5a5e34acf1846c2009e27564d577 | 1614697200000 | 2d82f2e1-dca4-418a-96f9-f779b7d84a2b
-  chat-rooms|kkk |            0 |          21 | d7d21db0-7b6f-11eb-bf8d-23d311ebd97d |  99999 |    EVENT_com.safechat.avro.persistent.domain.UserTextAdded:4e0f5a5e34acf1846c2009e27564d577 | 1614697200000 | 2d82f2e1-dca4-418a-96f9-f779b7d84a2b
-  chat-rooms|kkk |            0 |          22 | d800a7c0-7b6f-11eb-bf8d-23d311ebd97d |  99999 |    EVENT_com.safechat.avro.persistent.domain.UserTextAdded:4e0f5a5e34acf1846c2009e27564d577 | 1614697200000 | 2d82f2e1-dca4-418a-96f9-f779b7d84a2b
-  chat-rooms|kkk |            0 |          23 | 000c1ec0-7b70-11eb-bfaa-13f96f73408e |  99999 |       EVENT_com.safechat.avro.persistent.domain.UserJoined:4e0f5a5e34acf1846c2009e27564d577 | 1614697200000 | f88cee4e-0a8e-4514-8ad5-7b6ea830c467
-  chat-rooms|kkk |            0 |          23 | 1eb45360-7b70-11eb-bf8d-23d311ebd97d |  99999 |    EVENT_com.safechat.avro.persistent.domain.UserTextAdded:4e0f5a5e34acf1846c2009e27564d577 | 1614697200000 | 2d82f2e1-dca4-418a-96f9-f779b7d84a2b
-  chat-rooms|kkk |            0 |          24 | 000cbb00-7b70-11eb-bfaa-13f96f73408e |  99999 |       EVENT_com.safechat.avro.persistent.domain.UserJoined:4e0f5a5e34acf1846c2009e27564d577 | 1614697200000 | f88cee4e-0a8e-4514-8ad5-7b6ea830c467
-  chat-rooms|kkk |            0 |          25 | 000d5740-7b70-11eb-bfaa-13f96f73408e |  99999 |    EVENT_com.safechat.avro.persistent.domain.UserTextAdded:4e0f5a5e34acf1846c2009e27564d577 | 1614697200000 | f88cee4e-0a8e-4514-8ad5-7b6ea830c467
- 
+chat-rooms|k |81 | 1e4d74a0-7c07-11eb-968c-ed6f87b8049e |  99999 | EVENT_com.safechat.avro.persistent.domain.UserTextAdded | ab4e5ea0-b9c1-46e5-ad35-08ed8942640f
+chat-rooms|k |82 | 1e68ebe0-7c07-11eb-968c-ed6f87b8049e |  99999 | EVENT_com.safechat.avro.persistent.domain.UserTextAdded | ab4e5ea0-b9c1-46e5-ad35-08ed8942640f
+chat-rooms|k |83 | 1e9923a0-7c07-11eb-968c-ed6f87b8049e |  99999 | EVENT_com.safechat.avro.persistent.domain.UserTextAdded | ab4e5ea0-b9c1-46e5-ad35-08ed8942640f
+chat-rooms|k |84 | 2becda10-7c07-11eb-b141-7f65a26e8259 |  99999 |    EVENT_com.safechat.avro.persistent.domain.UserJoined | 6446391b-38e0-470b-9031-32d9bf3b74eb
+chat-rooms|k |84 | 381f6910-7c07-11eb-968c-ed6f87b8049e |  99999 | EVENT_com.safechat.avro.persistent.domain.UserTextAdded | ab4e5ea0-b9c1-46e5-ad35-08ed8942640f
+chat-rooms|k |85 | 319efb50-7c07-11eb-b141-7f65a26e8259 |  99999 | EVENT_com.safechat.avro.persistent.domain.UserTextAdded | 6446391b-38e0-470b-9031-32d9bf3b74eb
+chat-rooms|k |85 | 38229d60-7c07-11eb-968c-ed6f87b8049e |  99999 | EVENT_com.safechat.avro.persistent.domain.UserTextAdded | ab4e5ea0-b9c1-46e5-ad35-08ed8942640f
+chat-rooms|k |86 | 32190d50-7c07-11eb-b141-7f65a26e8259 |  99999 | EVENT_com.safechat.avro.persistent.domain.UserTextAdded | 6446391b-38e0-470b-9031-32d9bf3b74eb
+chat-rooms|k |86 | 38244b10-7c07-11eb-968c-ed6f87b8049e |  99999 | EVENT_com.safechat.avro.persistent.domain.UserTextAdded | ab4e5ea0-b9c1-46e5-ad35-08ed8942640f
+chat-rooms|k |87 | 39bc5030-7c07-11eb-b141-7f65a26e8259 |  99999 | EVENT_com.safechat.avro.persistent.domain.UserTextAdded | 6446391b-38e0-470b-9031-32d9bf3b74eb
+chat-rooms|k |88 | 3a37e8d0-7c07-11eb-b141-7f65a26e8259 |  99999 | EVENT_com.safechat.avro.persistent.domain.UserTextAdded | 6446391b-38e0-470b-9031-32d9bf3b74eb
+chat-rooms|k |89 | 3a9d8870-7c07-11eb-b141-7f65a26e8259 |  99999 | EVENT_com.safechat.avro.persistent.domain.UserTextAdded | 6446391b-38e0-470b-9031-32d9bf3b74eb  
 
 ```
+
+
+### The real time ordering of those write
+
+```bash
+
+ts 0    - ab4e5ea0-b9c1-46e5-ad35-08ed8942640f:83
+
+ts 22.3 - 6446391b-38e0-470b-9031-32d9bf3b74eb:84
+ts 31.9 - 6446391b-38e0-470b-9031-32d9bf3b74eb:85
+ts 32.7 - 6446391b-38e0-470b-9031-32d9bf3b74eb:86
+
+ts 42.823 - ab4e5ea0-b9c1-46e5-ad35-08ed8942640f:84
+ts 42.844 - ab4e5ea0-b9c1-46e5-ad35-08ed8942640f:85
+ts 42.855 - ab4e5ea0-b9c1-46e5-ad35-08ed8942640f:86
+
+ts 47.9   - 6446391b-38e0-470b-9031-32d9bf3b74eb:87
+
+
+```
+
+Writer `ab4e5ea0-b9c1-46e5-ad35-08ed8942640f` freezes for some time and as a result new writer `6446391b-38e0-470b-9031-32d9bf3b74eb` recovers and continues writing messages (84,85 and 86). Later, the old writer `ab4e5ea0-b9c1-46e5-ad35-08ed8942640f` comes back and before downing itself it produces its own sequence of events (84,85 and 86) that was buffered in some internal queue.  
+
+
+
 
 
 ### Links to read
@@ -491,8 +483,8 @@ a) Down but not terminate nodes on both sides of your partition.
 > kill -cont <pid>
  
 
-b) docker pause
-c) Bring down all seed nodes leaving only non-seed nodes and then start seed nodes again. They will form a new cluster.
+b) Docker pause
+c) Bring down all seed nodes leaving only non-seed nodes and then start the seed nodes again. They will form a new cluster and the rest of the cluster will be left
 d) Incomplete coordinated shutdown.
 e) Unresponsive applications due to long GC pause.
 
@@ -591,3 +583,9 @@ otherwise we initialize the cluster sharding proxy so no shards are hosted by th
 https://doc.akka.io/docs/akka/current/typed/replicated-eventsourcing.html#replicated-event-sourcing
 https://github.com/akka/akka-samples.git akka-sample-persistence-dc-scala
 https://github.com/akka/akka/tree/146944f99934557eac72e6dc7fa25fc6b2f0f11c/akka-persistence-typed-tests/src/test/scala/docs/akka/persistence/typed
+                
+
+
+
+akka.cluster.sharding.PersistentShardCoordinator
+

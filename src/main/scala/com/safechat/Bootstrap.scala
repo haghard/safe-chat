@@ -9,16 +9,16 @@ import akka.http.scaladsl.server.Route
 import scala.util.{Failure, Success}
 import scala.concurrent.duration._
 import akka.actor.{Address, CoordinatedShutdown}
-import akka.actor.CoordinatedShutdown.{PhaseActorSystemTerminate, PhaseBeforeServiceUnbind, PhaseClusterExitingDone, PhaseServiceRequestsDone, PhaseServiceStop, PhaseServiceUnbind, Reason}
-import akka.coordination.lease.cassandra.CassandraLease
-import akka.coordination.lease.scaladsl.{Lease, LeaseProvider}
+import akka.actor.CoordinatedShutdown.{PhaseActorSystemTerminate, PhaseBeforeServiceUnbind, PhaseServiceRequestsDone, PhaseServiceStop, PhaseServiceUnbind, Reason}
+import akka.coordination.lease.scaladsl.Lease
 import akka.management.scaladsl.AkkaManagement
+import akka.stream.UniqueKillSwitch
 
 import scala.concurrent.Future
 import akka.stream.scaladsl.Sink
 
 import java.util.concurrent.atomic.AtomicReference
-import scala.util.control.NonFatal
+import scala.collection.immutable
 
 object Bootstrap {
   final private case object BindFailure extends Reason
@@ -32,11 +32,12 @@ object Bootstrap {
 
 }
 
-case class Bootstrap(
+final case class Bootstrap(
   routes: Route,
   host: String,
   port: Int,
-  localShards: AtomicReference[scala.collection.immutable.Set[String]]
+  localShards: AtomicReference[immutable.Set[String]],
+  kksRef: AtomicReference[immutable.Set[UniqueKillSwitch]]
 )(implicit
   classicSystem: akka.actor.ActorSystem
 ) {
@@ -72,6 +73,7 @@ case class Bootstrap(
         }
       }
 
+      //PhaseServiceUnbind - stop accepting new req
       shutdown.addTask(PhaseServiceUnbind, "http-api.unbind") { () ⇒
         //No new connections are accepted. Existing connections are still allowed to perform request/response cycles
         binding.unbind().map { done ⇒
@@ -80,7 +82,9 @@ case class Bootstrap(
         }
       }
 
-      //graceful termination request being handled on this connection
+      //PhaseServiceRequestsDone - process in-flight requests
+
+      //graceful termination of requests being handled on this connection
       shutdown.addTask(PhaseServiceRequestsDone, "http-api.terminate") { () ⇒
         /** It doesn't accept new connection but it drains the existing connections
           * Until the `terminationDeadline` all the req that have been accepted will be completed
@@ -92,13 +96,23 @@ case class Bootstrap(
         }
       }
 
-      //forcefully kills connections that are still open
+      //forcefully kills connections and kill switches that are still open
       shutdown.addTask(PhaseServiceStop, "close.connections") { () ⇒
         Http().shutdownAllConnectionPools().map { _ ⇒
+          val kks = kksRef.get()
+          //kks.foreach(_.shutdown())
+          kks.foreach(_.abort(new Exception("abort")))
           classicSystem.log.info("★ ★ ★ CoordinatedShutdown [close.connections] ★ ★ ★")
           Done
         }
       }
+
+      /*cShutdown.addTask(PhaseServiceStop, "stop.smth") { () =>
+        smth.stop().map { _ =>
+          classicSystem.log.info("CoordinatedShutdown [stop.smth]")
+          Done
+        }
+      }*/
 
       shutdown.addTask(PhaseServiceUnbind, "akka-management.stop") { () ⇒
         AkkaManagement(classicSystem).stop().map { done ⇒
@@ -116,7 +130,7 @@ case class Bootstrap(
 
           Future
             .traverse(rooms) { roomName ⇒
-              val lease = LeaseProvider(classicSystem).getLease(roomName, CassandraLease.configPath, leaseOwner)
+              val lease = akka.coordination.lease.scaladsl.LeaseProvider(classicSystem).getLease(roomName, CassandraLease.configPath, leaseOwner)
               release(lease, roomName, leaseOwner)
                 .recoverWith { case NonFatal(_) ⇒
                   akka.pattern.after(200.millis, classicSystem.scheduler)(release(lease, roomName, leaseOwner))

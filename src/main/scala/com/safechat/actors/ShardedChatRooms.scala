@@ -10,6 +10,7 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 import ShardedChatRooms._
 import akka.actor.typed.scaladsl.AskPattern._
+import akka.stream.UniqueKillSwitch
 
 import java.util.concurrent.atomic.AtomicReference
 
@@ -41,8 +42,12 @@ object ShardedChatRooms {
   }
 }
 
-final class ShardedChatRooms(localShards: AtomicReference[scala.collection.immutable.Set[String]], to: FiniteDuration)(
-  implicit system: ActorSystem[Nothing]
+final class ShardedChatRooms(
+  localShards: AtomicReference[scala.collection.immutable.Set[String]],
+  kss: AtomicReference[scala.collection.immutable.Set[UniqueKillSwitch]],
+  to: FiniteDuration
+)(implicit
+  system: ActorSystem[Nothing]
 ) {
 
   val numberOfShards     = 1 << 8      //TODO: make it configurable
@@ -99,7 +104,7 @@ final class ShardedChatRooms(localShards: AtomicReference[scala.collection.immut
   val chatShardRegion = ClusterSharding(system).init(Entity(ChatRoomEntity.entityKey)(behaviorFactory))
    */
 
-  val entity = Entity(ChatRoomEntity.entityKey)(ChatRoomEntity(_, localShards, to))
+  val entity = Entity(ChatRoom.entityKey)(ChatRoom(_, localShards, kss, to))
     //ShardingMessageExtractor[UserCmd](512)
     .withMessageExtractor(ChatRoomsMsgExtractor[Command[Reply]](numberOfShards))
     .withSettings(settings)

@@ -7,13 +7,15 @@ import scala.reflect.ClassTag
 object RingBuffer {
   def nextPowerOfTwo(value: Int): Int =
     1 << (32 - Integer.numberOfLeadingZeros(value - 1))
+
+  def apply[T: ClassTag](capacity: Int) = new RingBuffer[T](capacity)
 }
 
 final class RingBuffer[T: ClassTag] private (capacity: Int, buffer: Array[T]) {
   private var tail: Long = 0L
   private var head: Long = 0L
 
-  def this(capacity: Int) {
+  private def this(capacity: Int) {
     this(RingBuffer.nextPowerOfTwo(capacity), Array.ofDim[T](RingBuffer.nextPowerOfTwo(capacity)))
   }
 
