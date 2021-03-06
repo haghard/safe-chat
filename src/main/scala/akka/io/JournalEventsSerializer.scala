@@ -9,7 +9,7 @@ import java.util
 import java.util.{TimeZone, UUID}
 import akka.actor.ExtendedActorSystem
 import akka.serialization.SerializerWithStringManifest
-import com.safechat.actors.{ChatRoomEvent, UserDisconnected, UserJoined, UserTextAdded}
+import com.safechat.actors.ChatRoomEvent
 import com.safechat.serializer.SchemaRegistry
 import org.apache.avro.Schema
 import org.apache.avro.io.{BinaryEncoder, DecoderFactory, EncoderFactory}
@@ -149,9 +149,9 @@ object JournalEventsSerializer {
       val payload  = envelope.getPayload.asInstanceOf[org.apache.avro.specific.SpecificRecordBase]
       payload match {
         case p: com.safechat.avro.persistent.domain.UserJoined ⇒
-          UserJoined(p.getLogin.toString, p.getPubKey.toString)
+          ChatRoomEvent.UserJoined(p.getLogin.toString, p.getPubKey.toString)
         case p: com.safechat.avro.persistent.domain.UserTextAdded ⇒
-          UserTextAdded(
+          ChatRoomEvent.UserTextAdded(
             p.getSeqNum,
             p.getUser.toString,
             p.getReceiver.toString,
@@ -160,7 +160,7 @@ object JournalEventsSerializer {
             envelope.getTz.toString
           )
         case p: com.safechat.avro.persistent.domain.UserDisconnected ⇒
-          UserDisconnected(p.getLogin.toString)
+          ChatRoomEvent.UserDisconnected(p.getLogin.toString)
         case _ ⇒
           notSerializable(
             s"Deserialization for event $manifest not supported. Check fromBinary method in ${this.getClass.getName} class."
@@ -182,26 +182,26 @@ object JournalEventsSerializer {
 
   private def withEnvelope(e: ChatRoomEvent) =
     e match {
-      case e: UserJoined ⇒
+      case e: ChatRoomEvent.UserJoined ⇒
         new com.safechat.avro.persistent.domain.EventEnvelope(
           UUID.randomUUID.toString,
           System.currentTimeMillis,
           TimeZone.getDefault.getID,
-          com.safechat.avro.persistent.domain.UserJoined.newBuilder.setLogin(e.originator).setPubKey(e.pubKey).build()
+          com.safechat.avro.persistent.domain.UserJoined.newBuilder.setLogin(e.userId).setPubKey(e.pubKey).build()
         )
-      case UserTextAdded(seqNum, originator, receiver, content, when, tz) ⇒
+      case ChatRoomEvent.UserTextAdded(seqNum, originator, receiver, content, when, tz) ⇒
         new com.safechat.avro.persistent.domain.EventEnvelope(
           UUID.randomUUID.toString,
           when,
           tz,
           new com.safechat.avro.persistent.domain.UserTextAdded(seqNum, originator, receiver, content)
         )
-      case e: UserDisconnected ⇒
+      case e: ChatRoomEvent.UserDisconnected ⇒
         new com.safechat.avro.persistent.domain.EventEnvelope(
           UUID.randomUUID.toString,
           System.currentTimeMillis,
           TimeZone.getDefault.getID,
-          com.safechat.avro.persistent.domain.UserDisconnected.newBuilder.setLogin(e.originator).build
+          com.safechat.avro.persistent.domain.UserDisconnected.newBuilder.setLogin(e.userId).build
         )
     }
 }

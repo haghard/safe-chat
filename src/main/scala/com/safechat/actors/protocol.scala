@@ -8,6 +8,7 @@ import akka.http.scaladsl.model.ws.Message
 import akka.persistence.typed.scaladsl.{Effect, ReplyEffect}
 import akka.stream.scaladsl.{Sink, Source}
 import akka.stream.{SinkRef, SourceRef, UniqueKillSwitch}
+import com.safechat.actors.ChatRoomEvent.{ChatRoomHub, UserJoined}
 import com.safechat.actors.Command.{JoinUser, Leave, PostText}
 import com.safechat.domain.RingBuffer
 
@@ -171,26 +172,31 @@ object Command {
 }
 
 }
- */
+*/
+
 
 sealed trait ChatRoomEvent {
-  def originator: String
+  def userId: String
 }
 
-final case class UserJoined(originator: String, pubKey: String) extends ChatRoomEvent
+object ChatRoomEvent {
 
-final case class UserTextAdded(
-  seqNum: Long,
-  originator: String,
-  recipient: String,
-  content: String,
-  when: Long,
-  tz: String
-) extends ChatRoomEvent
+  final case class UserJoined(userId: String, pubKey: String) extends ChatRoomEvent
 
-final case class UserDisconnected(originator: String) extends ChatRoomEvent
+  final case class UserTextAdded(
+    seqNum: Long,
+    userId: String,
+    recipient: String,
+    content: String,
+    when: Long,
+    tz: String
+  ) extends ChatRoomEvent
 
-final case class ChatRoomHub(sinkHub: Sink[Message, NotUsed], srcHub: Source[Message, NotUsed], ks: UniqueKillSwitch)
+  final case class UserDisconnected(userId: String) extends ChatRoomEvent
+
+  final case class ChatRoomHub(sinkHub: Sink[Message, NotUsed], srcHub: Source[Message, NotUsed], ks: UniqueKillSwitch)
+
+}
 
 /*case object Null extends ChatRoomEvent {
   override def originator: String = ""
@@ -213,9 +219,9 @@ final case class ChatRoomState(
 
   def applyEvent(event: ChatRoomEvent): ChatRoomState =
     event match {
-      case _: UserJoined       ⇒ ???
-      case _: UserTextAdded    ⇒ ???
-      case _: UserDisconnected ⇒ ???
+      case _: ChatRoomEvent.UserJoined       ⇒ ???
+      case _: ChatRoomEvent.UserTextAdded    ⇒ ???
+      case _: ChatRoomEvent.UserDisconnected ⇒ ???
       //case Null                ⇒ ???
     }
 }

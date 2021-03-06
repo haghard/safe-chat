@@ -550,8 +550,6 @@ docker-compose -f docker/docker-cassandra-cluster.yml rm
 ### Lease for shards
 
 https://doc.akka.io/docs/akka/current/typed/cluster-sharding.html#lease
-        
-
 
 
 ### Git
@@ -579,7 +577,9 @@ otherwise we initialize the cluster sharding proxy so no shards are hosted by th
 
 3. Make use of `askWithStatus` Example: https://developer.lightbend.com/docs/akka-platform-guide/microservices-tutorial/entity.html
 
-4. Try replicated-event-sourcing 
+4. Take a look at https://github.com/TanUkkii007/reactive-zookeeper/tree/master/example/src/main/scala/tanukkii/reactivezk/example/zookeeperbook in order to implement ZookeeperLease
+
+5. Try replicated-event-sourcing 
 https://doc.akka.io/docs/akka/current/typed/replicated-eventsourcing.html#replicated-event-sourcing
 https://github.com/akka/akka-samples.git akka-sample-persistence-dc-scala
 https://github.com/akka/akka/tree/146944f99934557eac72e6dc7fa25fc6b2f0f11c/akka-persistence-typed-tests/src/test/scala/docs/akka/persistence/typed
@@ -587,5 +587,8 @@ https://github.com/akka/akka/tree/146944f99934557eac72e6dc7fa25fc6b2f0f11c/akka-
 
 
 
+a.c.sharding.DDataShardCoordinator 
+akka://fsa@192.168.0.30:2551/system/sharding/tenantsCoordinator/singleton/coordinator/RememberEntitiesStore] a.c.s.i.DDataRememberEntitiesCoordinatorStore 
 akka.cluster.sharding.PersistentShardCoordinator
+akka.cluster.sharding.DDataShardCoordinator
 

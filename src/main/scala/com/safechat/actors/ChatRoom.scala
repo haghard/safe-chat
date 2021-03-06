@@ -2,21 +2,21 @@
 
 package com.safechat.actors
 
+import akka.actor.typed._
+import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
+import akka.cluster.sharding.typed.scaladsl.{EntityContext, EntityTypeKey}
+import akka.http.scaladsl.model.ws.{Message, TextMessage}
+import akka.persistence.typed._
+import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior, ReplyEffect, RetentionCriteria}
+import akka.stream.scaladsl.{BroadcastHub, Flow, Keep, MergeHub, RestartFlow, Source, StreamRefs}
+import akka.stream.typed.scaladsl.ActorFlow
+import akka.stream.{Attributes, KillSwitches, StreamRefAttributes, UniqueKillSwitch}
+import akka.util.Timeout
+import com.safechat.actors.Command._
+
 import java.time.format.DateTimeFormatter
 import java.time.{Instant, ZoneId, ZonedDateTime}
 import java.util.TimeZone
-import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
-import akka.actor.typed._
-import akka.cluster.sharding.typed.scaladsl.{EntityContext, EntityTypeKey}
-import akka.http.scaladsl.model.ws.{Message, TextMessage}
-import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior, ReplyEffect, RetentionCriteria}
-import akka.persistence.typed._
-import akka.stream.scaladsl.{BroadcastHub, Flow, Keep, MergeHub, RestartFlow, Source, StreamRefs}
-import akka.stream.{Attributes, KillSwitches, StreamRefAttributes, UniqueKillSwitch}
-import akka.util.Timeout
-import Command._
-import akka.stream.typed.scaladsl.ActorFlow
-
 import java.util.concurrent.atomic.AtomicReference
 import scala.annotation.tailrec
 import scala.collection.immutable
@@ -32,7 +32,6 @@ object ChatRoom {
 
   val wakeUpUserName   = "John Doe"
   val wakeUpEntityName = "dungeon"
-  val frmtr            = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss Z")
 
   val persistTimeout = akka.util.Timeout(2.second) //write to the journal timeout
 
@@ -83,7 +82,6 @@ object ChatRoom {
           }
         }
         .withAttributes(Attributes.inputBuffer(0, 0)) //ActorAttributes.maxFixedBufferSize(1))
-
     //ActorAttributes.supervisionStrategy({ case _ => Supervision.Resume }).and(Attributes.inputBuffer(1, 1))
 
     //TODO: maybe would be better to fail instead of retrying
@@ -105,7 +103,6 @@ object ChatRoom {
     kks: AtomicReference[immutable.Set[UniqueKillSwitch]],
     to: FiniteDuration
   ): Behavior[Command[Reply]] =
-    //com.safechat.LoggingBehaviorInterceptor(ctx.log) {
     Behaviors.setup { ctx ⇒
       implicit val sys      = ctx.system
       implicit val actorCtx = ctx
@@ -120,53 +117,51 @@ object ChatRoom {
         (state, event) ⇒ state.applyEvn(event)
       )*/
 
-      EventSourcedBehavior
-        .withEnforcedReplies[Command[Reply], ChatRoomEvent, ChatRoomState](
-          pId,
-          ChatRoomState(),
-          onCommand(
-            ctx,
-            to,
-            ctx.system.settings.config.getDuration("akka.cluster.split-brain-resolver.stable-after").toMillis
-          ),
-          //commandHandler,
-          onEvent(ctx.self.path.name, kks)
-        )
-        /*.withTagger {
+      com.safechat.LoggingBehaviorInterceptor(ctx.log) {
+        EventSourcedBehavior
+          .withEnforcedReplies[Command[Reply], ChatRoomEvent, ChatRoomState](
+            pId,
+            ChatRoomState(),
+            onCommand(ctx, to),
+            //commandHandler,
+            onEvent(ctx.self.path.name, kks, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss Z"))
+          )
+          /*.withTagger {
           //tagged events are useful for querying  by tag
           case m: MsgEnvelope if m.getPayload.isInstanceOf[Joined] ⇒ Set("user")
         }*/
-        .receiveSignal {
-          case (state, RecoveryCompleted) ⇒
-            //val leaseName = s"${sys.name}-shard-${ChatRoomEntity.entityKey.name}-${entityCtx.entityId}"
-            //captureChatRoom(localChatRooms, leaseName)
-            ctx.log.info(s"★ Recovered: [${state.regUsers.keySet.mkString(",")}] ★")
-          case (state, PreRestart) ⇒
-            ctx.log.info(s"★ Pre-restart ${state.regUsers.keySet.mkString(",")} ★")
-          case (state, PostStop) ⇒
-            state.hub.foreach(_.ks.shutdown())
-            ctx.log.info("★ PostStop(Passivation). Clean up chat resources ★ ★ ★")
-          case (state, SnapshotCompleted(_)) ⇒
-            ctx.log.info(s"★ SnapshotCompleted [${state.regUsers.keySet.mkString(",")}]")
-          case (state, SnapshotFailed(_, ex)) ⇒
-            ctx.log.error(s"★ SnapshotFailed ${state.regUsers.keySet.mkString(",")}", ex)
-          case (_, RecoveryFailed(cause)) ⇒
-            ctx.log.error(s"★ RecoveryFailed $cause", cause)
-          case (_, signal) ⇒
-            ctx.log.info(s"★ Signal $signal ★")
-        }
-        /*.snapshotWhen {
+          .receiveSignal {
+            case (state, RecoveryCompleted) ⇒
+              //val leaseName = s"${sys.name}-shard-${ChatRoomEntity.entityKey.name}-${entityCtx.entityId}"
+              //captureChatRoom(localChatRooms, leaseName)
+              ctx.log.info(s"★ Recovered: [${state.regUsers.keySet.mkString(",")}] ★")
+            case (state, PreRestart) ⇒
+              ctx.log.info(s"★ Pre-restart ${state.regUsers.keySet.mkString(",")} ★")
+            case (state, PostStop) ⇒
+              state.hub.foreach(_.ks.shutdown())
+              ctx.log.info("★ PostStop(Passivation). Clean up chat resources ★ ★ ★")
+            case (state, SnapshotCompleted(_)) ⇒
+              ctx.log.info(s"★ SnapshotCompleted [${state.regUsers.keySet.mkString(",")}]")
+            case (state, SnapshotFailed(_, ex)) ⇒
+              ctx.log.error(s"★ SnapshotFailed ${state.regUsers.keySet.mkString(",")}", ex)
+            case (_, RecoveryFailed(cause)) ⇒
+              ctx.log.error(s"★ RecoveryFailed $cause", cause)
+            case (_, signal) ⇒
+              ctx.log.info(s"★ Signal $signal ★")
+          }
+          /*.snapshotWhen {
           case (_, UserJoined(_, _), _) ⇒ true
           case _                        ⇒ false
         }*/
-        .snapshotWhen(snapshotPredicate(ctx))
-        //save a snapshot on every 100 events and keep max 2
-        .withRetention(RetentionCriteria.snapshotEvery(numberOfEvents = snapshotEveryN, keepNSnapshots = 2))
-        .onPersistFailure(
-          SupervisorStrategy
-            .restartWithBackoff(minBackoff = 2.seconds, maxBackoff = 20.seconds, randomFactor = 0.3)
-            .withMaxRestarts(100)
-        )
+          .snapshotWhen(snapshotPredicate(ctx))
+          //save a snapshot on every 100 events and keep max 2
+          .withRetention(RetentionCriteria.snapshotEvery(numberOfEvents = snapshotEveryN, keepNSnapshots = 2))
+          .onPersistFailure(
+            SupervisorStrategy
+              .restartWithBackoff(minBackoff = 2.seconds, maxBackoff = 20.seconds, randomFactor = 0.3)
+              .withMaxRestarts(100)
+          )
+      }
     }
 
   /** Each chat root contains MergeHub and BroadcastHub connected together to form a runnable graph.
@@ -188,7 +183,7 @@ object ChatRoom {
     kksRef: AtomicReference[immutable.Set[UniqueKillSwitch]]
   )(implicit
     sys: ActorSystem[Nothing]
-  ): ChatRoomHub = {
+  ): ChatRoomEvent.ChatRoomHub = {
     //val initBs = sys.settings.config.getInt("akka.stream.materializer.initial-input-buffer-size")
     val bs = 1
     sys.log.warn("Create chatroom {}", persistenceId)
@@ -231,7 +226,7 @@ object ChatRoom {
         .run()
 
     registerKS(kksRef, ks)
-    ChatRoomHub(sinkHub, sourceHub, ks)
+    ChatRoomEvent.ChatRoomHub(sinkHub, sourceHub, ks)
   }
 
   /*val commandHandler: (ChatRoomState, Command[Reply]) ⇒ ReplyEffect[ChatRoomEvent, ChatRoomState] = { (state, cmd) ⇒
@@ -244,15 +239,14 @@ object ChatRoom {
 
   def onCommand(
     ctx: ActorContext[_],
-    to: FiniteDuration,
-    stableAfter: Long
+    to: FiniteDuration
   )(state: ChatRoomState, cmd: Command[Reply])(implicit
     sys: ActorSystem[Nothing]
   ): ReplyEffect[ChatRoomEvent, ChatRoomState] =
     cmd match {
       case cmd: JoinUser ⇒
         Effect
-          .persist(UserJoined(cmd.user, cmd.pubKey))
+          .persist(ChatRoomEvent.UserJoined(cmd.user, cmd.pubKey))
           .thenReply[JoinReply](cmd.replyTo) { updateState: ChatRoomState ⇒ //That's new state after applying the event
 
             val settings =
@@ -279,7 +273,7 @@ object ChatRoom {
         val seqNum = EventSourcedBehavior.lastSequenceNumber(ctx)
         Effect
           .persist(
-            UserTextAdded(
+            ChatRoomEvent.UserTextAdded(
               seqNum,
               cmd.sender,
               cmd.receiver,
@@ -289,13 +283,13 @@ object ChatRoom {
             )
           )
           .thenReply(cmd.replyTo) { updatedState: ChatRoomState ⇒
-            ctx.log.info("online:[{}]", updatedState.online.mkString(","))
+            //ctx.log.info("online:[{}]", updatedState.online.mkString(","))
             TextPostedReply(cmd.chatId, seqNum, s"[from:${cmd.sender} -> to:${cmd.receiver}] - ${cmd.content}")
           }
 
       case cmd: Leave ⇒
         Effect
-          .persist(UserDisconnected(cmd.user))
+          .persist(ChatRoomEvent.UserDisconnected(cmd.user))
           .thenReply(cmd.replyTo) { updatedState: ChatRoomState ⇒
             ctx.log.info("{} disconnected - online:[{}]", cmd.user, updatedState.online.mkString(""))
             LeaveReply(cmd.chatId, cmd.user)
@@ -304,13 +298,14 @@ object ChatRoom {
 
   def onEvent(
     persistenceId: String,
-    kksRef: AtomicReference[immutable.Set[UniqueKillSwitch]]
+    kksRef: AtomicReference[immutable.Set[UniqueKillSwitch]],
+    frmtr: DateTimeFormatter
   )(state: ChatRoomState, event: ChatRoomEvent)(implicit
     sys: ActorSystem[Nothing],
     ctx: ActorContext[Command[Reply]]
   ): ChatRoomState =
     event match {
-      case UserJoined(login, pubKey) ⇒
+      case ChatRoomEvent.UserJoined(login, pubKey) ⇒
         if (state.online.isEmpty && state.hub.isEmpty)
           if (login == ChatRoom.wakeUpUserName)
             state
@@ -325,11 +320,11 @@ object ChatRoom {
             regUsers = state.regUsers + (login → pubKey),
             online = state.online + login
           )
-      case UserTextAdded(seqNum, originator, receiver, content, when, tz) ⇒
+      case ChatRoomEvent.UserTextAdded(seqNum, originator, receiver, content, when, tz) ⇒
         val zoneDT = ZonedDateTime.ofInstant(Instant.ofEpochMilli(when), ZoneId.of(tz))
         state.recentHistory :+ s"[$seqNum at ${frmtr.format(zoneDT)}] - $originator -> $receiver:$content"
         state
-      case UserDisconnected(login) ⇒
+      case ChatRoomEvent.UserDisconnected(login) ⇒
         state.copy(online = state.online - login)
     }
 

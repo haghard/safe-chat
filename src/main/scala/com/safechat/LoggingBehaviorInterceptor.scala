@@ -19,20 +19,20 @@ final class LoggingBehaviorInterceptor[T: ClassTag] private (logger: Logger) ext
 
   import BehaviorInterceptor._
 
+  override val toString: String = "LoggingBehaviorInterceptor"
+
   override def aroundReceive(ctx: TypedActorContext[T], msg: T, target: ReceiveTarget[T]): Behavior[T] = {
-    logger.info(s"Intercepted msg: $msg")
-    val ret = target(ctx, msg)
-    if (Behavior.isUnhandled(ret))
+    logger.warn(s"Intercepted: $msg")
+    val b = target(ctx, msg)
+    if (Behavior.isUnhandled(b))
       logger.warn(s"Intercepted unhandled message: $msg")
-    ret
+    b
   }
 
   override def aroundSignal(ctx: TypedActorContext[T], signal: Signal, target: SignalTarget[T]): Behavior[T] = {
-    logger.info(s"Intercepted signal: $signal")
+    logger.warn(s"Intercepted signal: $signal")
     target(ctx, signal)
   }
-
-  override def toString: String = "LoggingBehaviorInterceptor"
 
   override def isSame(other: BehaviorInterceptor[Any, Any]): Boolean =
     other match {

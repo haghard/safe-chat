@@ -18,7 +18,7 @@ object ShardedChatRooms {
 
   object ChatRoomsMsgExtractor {
     //We want to have one shard per one chat room so that we could achieve isolations for all rooms
-    def apply[T <: Command[Reply]](numberOfShards: Int): ShardingMessageExtractor[T, T] =
+    def apply[T <: Command[Reply]]( /*numberOfShards: Int*/ ): ShardingMessageExtractor[T, T] =
       new ShardingMessageExtractor[T, T] {
 
         /*
@@ -50,11 +50,9 @@ final class ShardedChatRooms(
   system: ActorSystem[Nothing]
 ) {
 
-  val numberOfShards     = 1 << 8      //TODO: make it configurable
-  val passivationTimeout = 300.seconds //TODO: make it configurable
-  val sharding           = ClusterSharding(system)
-
-  val settings = ClusterShardingSettings(system)
+  val numberOfShards = 1 << 8
+  val sharding       = ClusterSharding(system)
+  val settings       = ClusterShardingSettings(system)
   /*
         rememberEntities == false ensures that a shard entity won't be recreates/restarted automatically on
         a different `ShardRegion` due to rebalance, crash or leave (graceful exit). That is exactly what we want,
@@ -106,7 +104,7 @@ final class ShardedChatRooms(
 
   val entity = Entity(ChatRoom.entityKey)(ChatRoom(_, localShards, kss, to))
     //ShardingMessageExtractor[UserCmd](512)
-    .withMessageExtractor(ChatRoomsMsgExtractor[Command[Reply]](numberOfShards))
+    .withMessageExtractor(ChatRoomsMsgExtractor[Command[Reply]]( /*numberOfShards*/ ))
     .withSettings(settings)
     //https://doc.akka.io/docs/akka/current/typed/cluster-sharding.html
 
@@ -120,13 +118,12 @@ final class ShardedChatRooms(
     //https://doc.akka.io/docs/akka/2.6/typed/cluster-sharding.html?_ga=#shard-allocation
     .withAllocationStrategy(
       akka.cluster.sharding.ShardCoordinator.ShardAllocationStrategy
-        .leastShardAllocationStrategy(numberOfShards / 2, 0.5)
+        .leastShardAllocationStrategy(numberOfShards / 5, 0.2)
     )
-    .withEntityProps(
-      akka.actor.typed.Props.empty.withDispatcherFromConfig("cassandra-dispatcher")
-    )
+    .withEntityProps(akka.actor.typed.Props.empty.withDispatcherFromConfig("cassandra-dispatcher"))
 
-  val chatShardRegion = sharding.init(entity)
+  implicit val askTimeout = akka.util.Timeout(to)
+  val chatShardRegion     = sharding.init(entity)
 
   //Example how to use explicit client:  akka.kafka.cluster.sharding.KafkaClusterSharding
   //val client             = akka.cluster.sharding.external.ExternalShardAllocation(system).clientFor(ChatRoomEntity.entityKey.name)
@@ -145,8 +142,6 @@ final class ShardedChatRooms(
       .entityRefFor(ChatRoomEntity.entityKey, chatId)
       .ask[ChatRoomReply](DisconnectUser(chatId, user, _))
    */
-
-  implicit val askTimeout = akka.util.Timeout(to)
 
   def leave(chatId: String, user: String): Future[LeaveReply] =
     chatShardRegion.ask[LeaveReply](Command.Leave(chatId, user, _))
