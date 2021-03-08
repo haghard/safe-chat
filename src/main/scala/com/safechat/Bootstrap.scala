@@ -84,6 +84,15 @@ final case class Bootstrap(
 
       //PhaseServiceRequestsDone - process in-flight requests
 
+      //graceful termination of chatroom streams
+      shutdown.addTask(PhaseServiceRequestsDone, "kss.shutdown") { () ⇒
+        Future.successful {
+          val kks = kksRef.get()
+          kks.foreach(_.shutdown())
+          Done
+        }
+      }
+
       //graceful termination of requests being handled on this connection
       shutdown.addTask(PhaseServiceRequestsDone, "http-api.terminate") { () ⇒
         /** It doesn't accept new connection but it drains the existing connections

@@ -579,7 +579,10 @@ otherwise we initialize the cluster sharding proxy so no shards are hosted by th
 
 4. Take a look at https://github.com/TanUkkii007/reactive-zookeeper/tree/master/example/src/main/scala/tanukkii/reactivezk/example/zookeeperbook in order to implement ZookeeperLease
 
-5. Try replicated-event-sourcing 
+5. Replace cassandra with scylla
+https://github.com/FrodeRanders/scylladb-demo
+
+6. Try replicated-event-sourcing 
 https://doc.akka.io/docs/akka/current/typed/replicated-eventsourcing.html#replicated-event-sourcing
 https://github.com/akka/akka-samples.git akka-sample-persistence-dc-scala
 https://github.com/akka/akka/tree/146944f99934557eac72e6dc7fa25fc6b2f0f11c/akka-persistence-typed-tests/src/test/scala/docs/akka/persistence/typed

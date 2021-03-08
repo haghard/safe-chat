@@ -139,7 +139,7 @@ object ChatRoom {
               ctx.log.info(s"★ Pre-restart ${state.regUsers.keySet.mkString(",")} ★")
             case (state, PostStop) ⇒
               state.hub.foreach(_.ks.shutdown())
-              ctx.log.info("★ PostStop(Passivation). Clean up chat resources ★ ★ ★")
+              ctx.log.info("★ PostStop. Clean up resources ★")
             case (state, SnapshotCompleted(_)) ⇒
               ctx.log.info(s"★ SnapshotCompleted [${state.regUsers.keySet.mkString(",")}]")
             case (state, SnapshotFailed(_, ex)) ⇒
@@ -294,6 +294,11 @@ object ChatRoom {
             ctx.log.info("{} disconnected - online:[{}]", cmd.user, updatedState.online.mkString(""))
             LeaveReply(cmd.chatId, cmd.user)
           }
+
+      case c: Command.StopChatRoom ⇒
+        state.hub.foreach(_.ks.shutdown())
+        ctx.log.info(c.getClass.getName)
+        Effect.none.thenStop().thenNoReply()
     }
 
   def onEvent(

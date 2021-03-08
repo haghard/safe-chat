@@ -54,7 +54,9 @@ object Command {
     user: String,
     pubKey: String,
     replyTo: ActorRef[JoinReply]
-  ) extends Command[JoinReply]
+  ) extends Command[JoinReply] {
+    override val toString = s"JoinUser($chatId, $user, $pubKey)"
+  }
 
   final case class PostText(
     chatId: String,
@@ -62,13 +64,29 @@ object Command {
     receiver: String,
     content: String,
     replyTo: ActorRef[TextPostedReply]
-  ) extends Command[TextPostedReply]
+  ) extends Command[TextPostedReply] {
+    override val toString = s"PostText($chatId, $sender, $receiver)"
+  }
 
   final case class Leave(
     chatId: String,
     user: String,
     replyTo: ActorRef[LeaveReply]
-  ) extends Command[LeaveReply]
+  ) extends Command[LeaveReply] {
+    override val toString = s"Leave($chatId, $user)"
+  }
+
+  //
+  final case class StopChatRoom(
+    chatId: String = null,
+    user: String = null,
+    replyTo: ActorRef[Nothing] = null //akka.actor.ActorRef.noSender.toTyped[Nothing]
+  ) extends Command[Nothing] {
+    override val toString = "StopChatRoom"
+  }
+
+  val Stop = StopChatRoom()
+
 }
 
 /*
@@ -172,8 +190,7 @@ object Command {
 }
 
 }
-*/
-
+ */
 
 sealed trait ChatRoomEvent {
   def userId: String
@@ -192,10 +209,11 @@ object ChatRoomEvent {
     tz: String
   ) extends ChatRoomEvent
 
+  //com.safechat.actors.UserDisconnected
+  //com.safechat.actors.ChatRoomEvent.UserDisconnected
   final case class UserDisconnected(userId: String) extends ChatRoomEvent
 
   final case class ChatRoomHub(sinkHub: Sink[Message, NotUsed], srcHub: Source[Message, NotUsed], ks: UniqueKillSwitch)
-
 }
 
 /*case object Null extends ChatRoomEvent {

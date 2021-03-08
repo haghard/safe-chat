@@ -24,7 +24,7 @@ class CassandraSessionExtension(system: ActorSystem) extends Extension {
 
   //val logger       = akka.event.Logging(system, getClass)
 
-  val keyspace = system.settings.config.getString("akka.persistence.cassandra.journal.keyspace")
+  lazy val keyspace = system.settings.config.getString("akka.persistence.cassandra.journal.keyspace")
 
   lazy val session: CassandraSession = {
 

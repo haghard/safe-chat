@@ -89,23 +89,23 @@ final class ShardedChatRooms(
       .withAllocationStrategy(new ExternalShardAllocationStrategy(system, ChatRoomEntity.entityKey.name))
   )*/
 
+  //Another way to initialize and get a ref to shardRegion
   /*
-  Another way to initialize and get ref to shardRegion
-
   val tags = Vector.tabulate(5)(i => s"room-$i")
-  val behaviorFactory: EntityContext[Command] => Behavior[Command] = {
+  val behaviorFactory: EntityContext[Command[Reply]] => Behavior[Command[Reply]] = {
     entityContext =>
       val i = math.abs(entityContext.entityId.hashCode % tags.size)
       val selectedTag = tags(i)
-      ChatRoomEntity(entityContext/*, selectedTag*/)
-  }
-  val chatShardRegion = ClusterSharding(system).init(Entity(ChatRoomEntity.entityKey)(behaviorFactory))
-   */
+      ChatRoom(entityContext  /*, selectedTag*/, localShards, kss, to)
+  }*/
+  //val chatShardRegion = ClusterSharding(system).init(Entity(ChatRoomEntity.entityKey)(behaviorFactory))
 
   val entity = Entity(ChatRoom.entityKey)(ChatRoom(_, localShards, kss, to))
     //ShardingMessageExtractor[UserCmd](512)
     .withMessageExtractor(ChatRoomsMsgExtractor[Command[Reply]]( /*numberOfShards*/ ))
     .withSettings(settings)
+    .withStopMessage(Command.Stop)
+
     //https://doc.akka.io/docs/akka/current/typed/cluster-sharding.html
 
     //For any shardId that has not been allocated it will be allocated to the requesting node (like a sticky session)
