@@ -14,6 +14,7 @@ promptTheme := ScalapenosTheme
 lazy val scalacSettings = Seq(
   scalacOptions ++= Seq(
     //"-deprecation",                            // Emit warning and location for usages of deprecated APIs.
+    "-target:jvm-14",
     "-explaintypes",                             // Explain type errors in more detail.
     "-feature",                                  // Emit warning and location for usages of features that should be imported explicitly.
     "-language:existentials",                    // Existential types (besides wildcard types) can be written and inferred
@@ -84,7 +85,7 @@ lazy val commonSettings = Seq(
 
   //sbt headerCreate
   licenses += ("Apache-2.0", new URL("https://www.apache.org/licenses/LICENSE-2.0.txt")),
-  scalaVersion := "2.13.4",
+  scalaVersion := "2.13.5",
   headerMappings := headerMappings.value + (HeaderFileType.scala -> HeaderCommentStyle.cppStyleLineComment),
   headerLicense  := Some(HeaderLicense.Custom("Copyright (c) 2019-2021 Vadim Bondarev. All rights reserved."))
 )
@@ -304,8 +305,13 @@ libraryDependencies ++= Seq(
   // li haoyi ammonite repl embed
   //("com.lihaoyi" % "ammonite" % "2.3.8-32-64308dc3" % "test").cross(CrossVersion.full)
 
-  ("com.lihaoyi" % "ammonite" % "2.3.8-36-1cce53f3"  % "test").cross(CrossVersion.full)
+  //"com.propensive" %% "magnolia" % "0.17.0",
+
+  "org.scala-lang" % "scala-reflect" % scalaVersion.value
+
+  //("com.lihaoyi" % "ammonite" % "2.3.8-36-1cce53f3"  % "test").cross(CrossVersion.full)
 )
+
 
 
 // transitive dependency of akka 2.5x that is brought in
