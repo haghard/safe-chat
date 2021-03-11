@@ -4,3 +4,4 @@ target
 *.class
 *.log
 /cassandra-db/
+/scylla/
