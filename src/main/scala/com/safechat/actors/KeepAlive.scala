@@ -1,6 +1,6 @@
 // Copyright (c) 2019-2021 Vadim Bondarev. All rights reserved.
-
 /*
+
 package com.safechat.actors
 
 import akka.actor.typed.{ActorRef, Behavior}
@@ -16,13 +16,14 @@ object KeepAlive {
     case object Stop extends Probe
   }
 
-  def apply(chatShardRegion: ActorRef[UserCmd]): Behavior[Probe] =
+  def apply(chatShardRegion: ActorRef[Command[Reply]]): Behavior[Probe] =
     Behaviors.setup { ctx ⇒
       Behaviors.withTimers { timers ⇒
-        timers.startTimerWithFixedDelay(ChatRoomEntity.wakeUpEntityName + "_timer", Probe.Ping, 15.seconds)
+        timers.startTimerWithFixedDelay(ChatRoom.wakeUpEntityName + "_timer", Probe.Ping, 15.seconds)
+
         Behaviors.receiveMessage {
           case Probe.Ping ⇒
-            chatShardRegion.tell(PingShard(ChatRoomEntity.wakeUpEntityName, ctx.self))
+            chatShardRegion.tell(PingShard(ChatRoom.wakeUpEntityName, ctx.self))
             Behaviors.same
           case Probe.Stop ⇒
             Behaviors.stopped

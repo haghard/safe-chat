@@ -10,6 +10,7 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 import ShardedChatRooms._
 import akka.actor.typed.scaladsl.AskPattern._
+import akka.actor.typed.scaladsl.adapter.{ClassicActorRefOps, TypedActorSystemOps}
 import akka.stream.UniqueKillSwitch
 
 import java.util.concurrent.atomic.AtomicReference
@@ -45,7 +46,7 @@ object ShardedChatRooms {
 final class ShardedChatRooms(
   localShards: AtomicReference[scala.collection.immutable.Set[String]],
   kss: AtomicReference[scala.collection.immutable.Set[UniqueKillSwitch]],
-  to: FiniteDuration
+  totalFailoverTimeout: FiniteDuration
 )(implicit
   system: ActorSystem[Nothing]
 ) {
@@ -100,18 +101,15 @@ final class ShardedChatRooms(
   }*/
   //val chatShardRegion = ClusterSharding(system).init(Entity(ChatRoomEntity.entityKey)(behaviorFactory))
 
-  val entity = Entity(ChatRoom.entityKey)(ChatRoom(_, localShards, kss, to))
+  //https://doc.akka.io/docs/akka/current/typed/cluster-sharding.html
+  val entity = Entity(ChatRoom.entityKey)(ChatRoom(_, localShards, kss, totalFailoverTimeout))
     //ShardingMessageExtractor[UserCmd](512)
     .withMessageExtractor(ChatRoomsMsgExtractor[Command[Reply]]( /*numberOfShards*/ ))
     .withSettings(settings)
-    .withStopMessage(Command.Stop)
-
-    //https://doc.akka.io/docs/akka/current/typed/cluster-sharding.html
+    .withStopMessage(Command.handOffRoom)
 
     //For any shardId that has not been allocated it will be allocated to the requesting node (like a sticky session)
-    /*.withAllocationStrategy(
-      new akka.cluster.sharding.external.ExternalShardAllocationStrategy(system, ChatRoomEntity.entityKey.name)
-    )*/
+    //.withAllocationStrategy(new akka.cluster.sharding.external.ExternalShardAllocationStrategy(system, ChatRoomEntity.entityKey.name))
 
     //default AllocationStrategy
     //.withAllocationStrategy(new akka.cluster.sharding.ShardCoordinator.LeastShardAllocationStrategy(1, 3))
@@ -122,8 +120,10 @@ final class ShardedChatRooms(
     )
     .withEntityProps(akka.actor.typed.Props.empty.withDispatcherFromConfig("cassandra-dispatcher"))
 
-  implicit val askTimeout = akka.util.Timeout(to)
-  val chatShardRegion     = sharding.init(entity)
+  implicit val askTimeout = akka.util.Timeout(totalFailoverTimeout)
+
+  //val chatShardRegion = sharding.init(entity)
+  val chatShardRegion = ShardedChatRoomClassic(system.toClassic, totalFailoverTimeout)
 
   //Example how to use explicit client:  akka.kafka.cluster.sharding.KafkaClusterSharding
   //val client             = akka.cluster.sharding.external.ExternalShardAllocation(system).clientFor(ChatRoomEntity.entityKey.name)

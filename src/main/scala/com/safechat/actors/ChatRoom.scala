@@ -18,7 +18,6 @@ import java.time.format.DateTimeFormatter
 import java.time.{Instant, ZoneId, ZonedDateTime}
 import java.util.TimeZone
 import java.util.concurrent.atomic.AtomicReference
-import scala.annotation.tailrec
 import scala.collection.immutable
 import scala.concurrent.duration._
 
@@ -33,62 +32,12 @@ object ChatRoom {
   val wakeUpUserName   = "John Doe"
   val wakeUpEntityName = "dungeon"
 
-  val persistTimeout = akka.util.Timeout(2.second) //write to the journal timeout
+  val persistTimeout = akka.util.Timeout(2.second) //write to journal timeout
 
   val entityKey: EntityTypeKey[Command[Reply]] =
     EntityTypeKey[Command[Reply]]("chat-rooms")
 
   val emptyState = com.safechat.actors.ChatRoomState()
-
-  //if akka.sharding.use-lease
-  @tailrec final def registerChatRoom(
-    liveShards: AtomicReference[immutable.Set[String]],
-    persistenceId: String
-  ): Unit = {
-    val cur = liveShards.get()
-    if (liveShards.compareAndSet(cur, cur + persistenceId)) () else registerChatRoom(liveShards, persistenceId)
-  }
-
-  @tailrec final def registerKS(
-    kss: AtomicReference[immutable.Set[UniqueKillSwitch]],
-    ks: UniqueKillSwitch
-  ): Unit = {
-    val set = kss.get()
-    if (kss.compareAndSet(set, set + ks)) () else registerKS(kss, ks)
-  }
-
-  private def persistFlow(chatId: String, entity: ActorRef[PostText])(implicit
-    persistTimeout: Timeout
-  ): Flow[Message, Reply, akka.NotUsed] = {
-    def persistFlow =
-      ActorFlow
-        .ask[Message, PostText, Reply](1)(entity) { (msg: Message, reply: ActorRef[Reply]) ⇒
-          msg match {
-            case TextMessage.Strict(text) ⇒
-              val segs = text.split(MSG_SEP)
-              if (text.split(MSG_SEP).size == 3)
-                PostText(chatId, segs(0).trim, segs(1).trim, segs(2).trim, reply)
-              else
-                PostText(
-                  chatId,
-                  "null",
-                  "null",
-                  s"Message error. Wrong format $text",
-                  reply
-                )
-
-            case other ⇒
-              throw new Exception(s"Unexpected message type ${other.getClass.getName}")
-          }
-        }
-        .withAttributes(Attributes.inputBuffer(0, 0)) //ActorAttributes.maxFixedBufferSize(1))
-    //ActorAttributes.supervisionStrategy({ case _ => Supervision.Resume }).and(Attributes.inputBuffer(1, 1))
-
-    //TODO: maybe would be better to fail instead of retrying
-    RestartFlow.withBackoff(
-      akka.stream.RestartSettings(1.second, 3.seconds, 0.3)
-    )(() ⇒ persistFlow)
-  }
 
   /** Each `ChatRoomEntity` actor is a single source of true, acting as a consistency boundary for the data that it manages.
     *
@@ -183,22 +132,23 @@ object ChatRoom {
     kksRef: AtomicReference[immutable.Set[UniqueKillSwitch]]
   )(implicit
     sys: ActorSystem[Nothing]
-  ): ChatRoomEvent.ChatRoomHub = {
+  ): ChatRoomHub = {
     //val initBs = sys.settings.config.getInt("akka.stream.materializer.initial-input-buffer-size")
     val bs = 1
     sys.log.warn("Create chatroom {}", persistenceId)
 
-    //import akka.actor.typed.scaladsl.AskPattern._
     val ((sinkHub, ks), sourceHub) =
       MergeHub
         .source[Message](perProducerBufferSize = bs)
+        //import akka.actor.typed.scaladsl.AskPattern._
         //.alsoTo(Sink.foreachAsync(1) { entity.ask[ChatRoomReply](PostText(persistenceId, "", "", "", _))(???, ???) })
         //.alsoTo()
         //.wireTap(m ⇒ sys.log.info("before p: {}", m)) //for rebug
         .via(
           //WsScaffolding.flowWithHeartbeat(30.second).via(persist(persistenceId, entity))
-          persistFlow(persistenceId, entity)(persistTimeout)
-            .collect { case r: TextPostedReply ⇒ TextMessage.Strict(s"${r.chatId}:${r.seqNum} - ${r.content}") }
+          persist(persistenceId /*, entity*/ )(sys.classicSystem, persistTimeout).collect { case r: TextPostedReply ⇒
+            TextMessage.Strict(s"${r.chatId}:${r.seqNum} - ${r.content}")
+          }
         )
         /*
         .via(
@@ -226,7 +176,7 @@ object ChatRoom {
         .run()
 
     registerKS(kksRef, ks)
-    ChatRoomEvent.ChatRoomHub(sinkHub, sourceHub, ks)
+    ChatRoomHub(sinkHub, sourceHub, ks)
   }
 
   /*val commandHandler: (ChatRoomState, Command[Reply]) ⇒ ReplyEffect[ChatRoomEvent, ChatRoomState] = { (state, cmd) ⇒
@@ -244,7 +194,7 @@ object ChatRoom {
     sys: ActorSystem[Nothing]
   ): ReplyEffect[ChatRoomEvent, ChatRoomState] =
     cmd match {
-      case cmd: JoinUser ⇒
+      case cmd: Command.JoinUser ⇒
         Effect
           .persist(ChatRoomEvent.UserJoined(cmd.user, cmd.pubKey))
           .thenReply[JoinReply](cmd.replyTo) { updateState: ChatRoomState ⇒ //That's new state after applying the event
@@ -269,7 +219,7 @@ object ChatRoom {
             }
           }
 
-      case cmd: PostText ⇒
+      case cmd: Command.PostText ⇒
         val seqNum = EventSourcedBehavior.lastSequenceNumber(ctx)
         Effect
           .persist(
@@ -284,10 +234,16 @@ object ChatRoom {
           )
           .thenReply(cmd.replyTo) { updatedState: ChatRoomState ⇒
             //ctx.log.info("online:[{}]", updatedState.online.mkString(","))
-            TextPostedReply(cmd.chatId, seqNum, s"[from:${cmd.sender} -> to:${cmd.receiver}] - ${cmd.content}")
+            TextPostedReply(
+              cmd.chatId,
+              seqNum,
+              cmd.sender,
+              cmd.receiver,
+              s"[from:${cmd.sender} -> to:${cmd.receiver}] - ${cmd.content}"
+            )
           }
 
-      case cmd: Leave ⇒
+      case cmd: Command.Leave ⇒
         Effect
           .persist(ChatRoomEvent.UserDisconnected(cmd.user))
           .thenReply(cmd.replyTo) { updatedState: ChatRoomState ⇒
@@ -295,9 +251,9 @@ object ChatRoom {
             LeaveReply(cmd.chatId, cmd.user)
           }
 
-      case c: Command.StopChatRoom ⇒
+      case cmd: Command.StopChatRoom ⇒
         state.hub.foreach(_.ks.shutdown())
-        ctx.log.info(c.getClass.getName)
+        ctx.log.info(cmd.getClass.getName)
         Effect.none.thenStop().thenNoReply()
     }
 

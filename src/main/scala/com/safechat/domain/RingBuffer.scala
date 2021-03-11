@@ -43,5 +43,5 @@ final class RingBuffer[T: ClassTag] private (capacity: Int, buffer: Array[T]) {
   }
 
   override def toString =
-    s"[$head - $tail]: ${buffer.mkString(",")}"
+    s"RBuf([$head - $tail]: ${buffer.mkString(",")})"
 }

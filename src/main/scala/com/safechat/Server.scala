@@ -15,7 +15,7 @@ import akka.http.scaladsl.server.directives.Credentials
 import akka.stream.UniqueKillSwitch
 
 import scala.jdk.CollectionConverters._
-import com.safechat.actors.ShardedChatRooms
+import com.safechat.actors.{ShardedChatRoomClassic, ShardedChatRooms}
 import com.safechat.rest.ChatRoomApi
 import com.safechat.serializer.SchemaRegistry
 
@@ -45,10 +45,13 @@ object Server extends Ops {
           val localShards =
             new AtomicReference[scala.collection.immutable.Set[String]](scala.collection.immutable.Set[String]())
 
-          val shardAllocationMaxTO = Duration.fromNanos(
+          //stable-after * 2 = 10
+          //https://doc.akka.io/docs/akka-enhancements/current/split-brain-resolver.html#expected-failover-time
+          val totalFailoverTimeout = Duration.fromNanos(
             sys.settings.config
               .getDuration("akka.cluster.split-brain-resolver.stable-after")
-              .plus(java.time.Duration.ofSeconds(4)) //5 + 4
+              .multipliedBy(2)
+              //.plus(java.time.Duration.ofSeconds(4))
               .toNanos
           )
 
@@ -59,8 +62,8 @@ object Server extends Ops {
 
           Bootstrap(
             ChatRoomApi(
-              new ShardedChatRooms(localShards, kksRef, shardAllocationMaxTO)(sys),
-              shardAllocationMaxTO
+              new ShardedChatRooms(localShards, kksRef, totalFailoverTimeout)(sys),
+              totalFailoverTimeout
             ).routes,
             hostName,
             httpPort,
@@ -190,6 +193,7 @@ object Server extends Ops {
     akka.management.cluster.bootstrap.ClusterBootstrap(system.toClassic).start()
 
     //TODO: for debug only
+    /*
     val _ = StdIn.readLine()
     system.log.warn("Shutting down ...")
     system.terminate()
@@ -197,6 +201,7 @@ object Server extends Ops {
       system.whenTerminated,
       cfg.getDuration("akka.coordinated-shutdown.default-phase-timeout", TimeUnit.SECONDS).seconds
     )
+     */
   }
 
   // http 127.0.0.1:8558/cluster/members "Authorization:Basic QWxhZGRpbjpPcGVuU2VzYW1l"

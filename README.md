@@ -156,6 +156,8 @@ https://manuel.bernhardt.io/2018/02/26/tour-akka-cluster-cluster-sharding/
 
 https://blog.softwaremill.com/akka-cluster-split-brain-failures-are-you-ready-for-it-d9406b97e099
 
+https://doc.akka.io/docs/akka-enhancements/current/split-brain-resolver.html#expected-failover-time
+
 https://doc.akka.io/docs/akka-enhancements/current/split-brain-resolver.html#using-the-split-brain-resolver
 
 https://www.youtube.com/watch?v=vc6eTolxGbM
@@ -411,7 +413,14 @@ Akka Persistence and MariaDB:  https://medium.com/@matteodipirro/stateful-actors
 
 ```bash
 
-select persistence_id, sequence_nr, timestamp, ser_id, ser_manifest, writer_uuid from chat_journal where persistence_id='chat-rooms|k' and partition_nr = 0;
+For typed
+
+select persistence_id, sequence_nr, timestamp, ser_id, ser_manifest, writer_uuid from chat_journal where persistence_id='chat-rooms|b' and partition_nr = 0;
+
+
+For classic
+
+select persistence_id, sequence_nr, timestamp, ser_id, ser_manifest, writer_uuid from chat_journal where persistence_id='b' and partition_nr = 0;
 
 chat-rooms|k |81 | 1e4d74a0-7c07-11eb-968c-ed6f87b8049e |  99999 | EVENT_com.safechat.avro.persistent.domain.UserTextAdded | ab4e5ea0-b9c1-46e5-ad35-08ed8942640f
 chat-rooms|k |82 | 1e68ebe0-7c07-11eb-968c-ed6f87b8049e |  99999 | EVENT_com.safechat.avro.persistent.domain.UserTextAdded | ab4e5ea0-b9c1-46e5-ad35-08ed8942640f
@@ -469,7 +478,7 @@ a) Down but not terminate nodes on both sides of your partition.
 
 
 0. Find target <pid> 
-> lsof -i :2551 | grep LISTEN | awk '{print $2}'
+> lsof -i :2550 | grep LISTEN | awk '{print $2}'
 
 1. Suspend the process  
 > kill -stop <pid>
@@ -527,7 +536,6 @@ https://www.youtube.com/watch?v=SrPubnOKJcQ
 https://doc.akka.io/docs/akka/current/typed/cluster-sharding.html
 
 https://github.com/michael-read/akka-typed-distributed-state-blog/blob/master/Blog_Model.png
-
 
 ## Sharding improvements in 2.6.10
 
@@ -588,10 +596,7 @@ https://github.com/akka/akka-samples.git akka-sample-persistence-dc-scala
 https://github.com/akka/akka/tree/146944f99934557eac72e6dc7fa25fc6b2f0f11c/akka-persistence-typed-tests/src/test/scala/docs/akka/persistence/typed
                 
 
-
-
 a.c.sharding.DDataShardCoordinator 
 akka://fsa@192.168.0.30:2551/system/sharding/tenantsCoordinator/singleton/coordinator/RememberEntitiesStore] a.c.s.i.DDataRememberEntitiesCoordinatorStore 
 akka.cluster.sharding.PersistentShardCoordinator
 akka.cluster.sharding.DDataShardCoordinator
-

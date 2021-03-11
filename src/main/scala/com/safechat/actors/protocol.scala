@@ -8,7 +8,7 @@ import akka.http.scaladsl.model.ws.Message
 import akka.persistence.typed.scaladsl.{Effect, ReplyEffect}
 import akka.stream.scaladsl.{Sink, Source}
 import akka.stream.{SinkRef, SourceRef, UniqueKillSwitch}
-import com.safechat.actors.ChatRoomEvent.{ChatRoomHub, UserJoined}
+import com.safechat.actors.ChatRoomEvent.UserJoined
 import com.safechat.actors.Command.{JoinUser, Leave, PostText}
 import com.safechat.domain.RingBuffer
 
@@ -25,19 +25,14 @@ sealed trait Reply {
   def chatId: String
 }
 
-final case class ReconnectReply(
-  chatId: String,
-  user: String,
-  sinkRef: SinkRef[Message]
-) extends Reply
-
 final case class JoinReply(
   chatId: String,
   user: String,
   sinkSourceRef: Option[(SinkRef[Message], SourceRef[Message])]
 ) extends Reply
 
-final case class TextPostedReply(chatId: String, seqNum: Long, content: String) extends Reply
+final case class TextPostedReply(chatId: String, seqNum: Long, userId: String, recipient: String, content: String)
+    extends Reply
 
 final case class LeaveReply(chatId: String, user: String) extends Reply
 
@@ -76,7 +71,7 @@ object Command {
     override val toString = s"Leave($chatId, $user)"
   }
 
-  //
+  //The message that will be sent to entities when they are to be stopped for a rebalance or graceful shutdown of a ShardRegion, e.g. PoisonPill.
   final case class StopChatRoom(
     chatId: String = null,
     user: String = null,
@@ -85,8 +80,7 @@ object Command {
     override val toString = "StopChatRoom"
   }
 
-  val Stop = StopChatRoom()
-
+  val handOffRoom = StopChatRoom()
 }
 
 /*
@@ -212,9 +206,9 @@ object ChatRoomEvent {
   //com.safechat.actors.UserDisconnected
   //com.safechat.actors.ChatRoomEvent.UserDisconnected
   final case class UserDisconnected(userId: String) extends ChatRoomEvent
-
-  final case class ChatRoomHub(sinkHub: Sink[Message, NotUsed], srcHub: Source[Message, NotUsed], ks: UniqueKillSwitch)
 }
+
+final case class ChatRoomHub(sinkHub: Sink[Message, NotUsed], srcHub: Source[Message, NotUsed], ks: UniqueKillSwitch)
 
 /*case object Null extends ChatRoomEvent {
   override def originator: String = ""
@@ -225,7 +219,8 @@ final case class ChatRoomState(
   regUsers: Map[String, String] = Map.empty,
   online: Set[String] = Set.empty,
   recentHistory: RingBuffer[String] = RingBuffer[String](1 << 3),
-  hub: Option[ChatRoomHub] = None
+  hub: Option[ChatRoomHub] = None,
+  obvervedHeartBeatTime: Long = System.currentTimeMillis()
 ) {
 
   def applyCmd(cmd: Command[Reply]): ReplyEffect[ChatRoomEvent, ChatRoomState] =
