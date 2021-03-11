@@ -51,7 +51,6 @@ object Server extends Ops {
             sys.settings.config
               .getDuration("akka.cluster.split-brain-resolver.stable-after")
               .multipliedBy(2)
-              //.plus(java.time.Duration.ofSeconds(4))
               .toNanos
           )
 

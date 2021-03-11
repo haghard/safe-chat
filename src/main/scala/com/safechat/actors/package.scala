@@ -19,8 +19,9 @@ import scala.concurrent.duration.DurationInt
 
 package object actors {
 
-  def persist(chatId: String)(
-    implicit system: ActorSystem, persistTimeout: Timeout
+  def persist(chatId: String)(implicit
+    system: ActorSystem,
+    persistTimeout: Timeout
   ): Flow[Message, Reply, akka.NotUsed] = {
     def persistFlow = {
 

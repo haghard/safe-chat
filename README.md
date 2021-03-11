@@ -417,7 +417,6 @@ For typed
 
 select persistence_id, sequence_nr, timestamp, ser_id, ser_manifest, writer_uuid from chat_journal where persistence_id='chat-rooms|b' and partition_nr = 0;
 
-
 For classic
 
 select persistence_id, sequence_nr, timestamp, ser_id, ser_manifest, writer_uuid from chat_journal where persistence_id='b' and partition_nr = 0;
@@ -541,7 +540,8 @@ https://github.com/michael-read/akka-typed-distributed-state-blog/blob/master/Bl
 
 https://doc.akka.io/docs/akka/2.6/additional/rolling-updates.html
 
-### How to run in docker
+
+### How to run Cassandra or Scylla in docker
 
 ```
 
@@ -552,6 +552,8 @@ docker-compose -f docker/docker-cassandra.yml rm
 docker-compose -f docker/docker-cassandra-cluster.yml up -d 
 docker-compose -f docker/docker-cassandra-cluster.yml rm
 
+
+docker run -d -p 9042:9042/tcp -v /Volumes/dev/github/safe-chat/scylla/chat:/var/lib/scylla scylladb/scylla:4.3.2 --broadcast-address=127.0.0.1 --smp 1 --memory=750M --overprovisioned 1
 
 ```
 
@@ -587,8 +589,7 @@ otherwise we initialize the cluster sharding proxy so no shards are hosted by th
 
 4. Take a look at https://github.com/TanUkkii007/reactive-zookeeper/tree/master/example/src/main/scala/tanukkii/reactivezk/example/zookeeperbook in order to implement ZookeeperLease
 
-5. Replace cassandra with scylla
-https://github.com/FrodeRanders/scylladb-demo
+5. Replace cassandra with scylla https://github.com/FrodeRanders/scylladb-demo
 
 6. Try replicated-event-sourcing 
 https://doc.akka.io/docs/akka/current/typed/replicated-eventsourcing.html#replicated-event-sourcing

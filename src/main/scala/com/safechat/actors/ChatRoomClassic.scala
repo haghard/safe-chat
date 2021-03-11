@@ -10,7 +10,7 @@ import akka.stream.javadsl.StreamRefs
 import akka.stream.scaladsl.{BroadcastHub, Keep, MergeHub, Source}
 import akka.stream.{KillSwitches, StreamRefAttributes}
 import com.safechat.actors.ChatRoom.persistTimeout
-import com.safechat.actors.ChatRoomClassic.{chatRoomHub, HeartBeat}
+import com.safechat.actors.ChatRoomClassic.{HeartBeat, chatRoomHub}
 import com.safechat.domain.RingBuffer
 
 import java.util.TimeZone
@@ -22,11 +22,7 @@ object ChatRoomClassic {
   def msg(persistenceId: String, seqNum: Long, userId: String, recipient: String, content: String) =
     s"[$persistenceId:$seqNum - from:$userId -> to:$recipient] - $content"
 
-  //akka.persistence.typed.PersistenceId.DefaultSeparator
-  val idExtractor: ShardRegion.ExtractEntityId = { case cmd: Command[Reply] ⇒
-    (cmd.chatId, cmd)
-  //(s"${ChatRoom.entityKey.name}|${cmd.chatId}", cmd)
-  }
+  val idExtractor: ShardRegion.ExtractEntityId = { case cmd: Command[Reply] ⇒ (cmd.chatId, cmd) }
 
   val shardExtractor: ShardRegion.ExtractShardId = {
     case cmd: Command[Reply]             ⇒ cmd.chatId
@@ -39,17 +35,18 @@ object ChatRoomClassic {
   def chatRoomHub(persistenceId: String)(implicit
     sys: ActorSystem[Nothing]
   ): ChatRoomHub = {
-    val bs = 1
+    val bs = 1 << 2
     //sys.log.warn("Create chatroom {}", persistenceId)
+
+    val persistFlow = persist(persistenceId)(sys.classicSystem, persistTimeout)
+      .collect { case r: TextPostedReply ⇒
+        TextMessage.Strict(ChatRoomClassic.msg(persistenceId, r.seqNum, r.userId, r.recipient, r.content))
+      }
+
     val ((sinkHub, ks), sourceHub) =
       MergeHub
         .source[Message](perProducerBufferSize = bs)
-        .via(
-          persist(persistenceId)(sys.classicSystem, persistTimeout)
-            .collect { case r: TextPostedReply ⇒
-              TextMessage.Strict(ChatRoomClassic.msg(persistenceId, r.seqNum, r.userId, r.recipient, r.content))
-            }
-        )
+        .via(persistFlow)
         .viaMat(KillSwitches.single)(Keep.both)
         .toMat(BroadcastHub.sink[Message](bufferSize = bs))(Keep.both)
         .run()
@@ -102,10 +99,11 @@ class ChatRoomClassic(totalFailoverTimeout: FiniteDuration)
     }
   }
 
-  def handleEvent[T <: Reply](
+  def onEvent[T <: Reply](
+    cmd: Command[T],
     state: ChatRoomState,
     ev: ChatRoomEvent
-  ): (ChatRoomState, T) = {
+  ): ChatRoomState = {
     val (newState, reply) = ev match {
       case ChatRoomEvent.UserJoined(userId, pubKey) ⇒
         val newState =
@@ -130,10 +128,11 @@ class ChatRoomClassic(totalFailoverTimeout: FiniteDuration)
             val srcRef = (Source.single[Message](TextMessage(recentHistory)) ++ hub.srcHub)
               .runWith(StreamRefs.sourceRef[Message].addAttributes(settings))
             val sinkRef = hub.sinkHub.runWith(StreamRefs.sinkRef[Message].addAttributes(settings))
-            JoinReply(persistenceId, userId, Some(sinkRef, srcRef))
+            JoinReply(persistenceId, userId, Some((sinkRef, srcRef)))
           case None ⇒
             JoinReply(persistenceId, userId, None)
         }
+
         (newState, reply)
 
       case e: ChatRoomEvent.UserTextAdded ⇒
@@ -144,7 +143,9 @@ class ChatRoomClassic(totalFailoverTimeout: FiniteDuration)
       case e: ChatRoomEvent.UserDisconnected ⇒
         (state.copy(online = state.online - e.userId), LeaveReply(persistenceId, e.userId))
     }
-    (newState, reply.asInstanceOf[T])
+
+    cmd.replyTo.tell(reply.asInstanceOf[cmd.T])
+    newState
   }
 
   def notActive(state: ChatRoomState): Receive = {
@@ -152,10 +153,8 @@ class ChatRoomClassic(totalFailoverTimeout: FiniteDuration)
       persist(ChatRoomEvent.UserJoined(cmd.user, cmd.pubKey)) { ev ⇒
         timers.startTimerAtFixedRate(persistenceId, HeartBeat, tickTo)
 
-        val (newState, reply) = handleEvent[JoinReply](state, ev)
-        cmd.replyTo ! reply
+        val newState = onEvent(cmd, state, ev)
         unstashAll()
-
         context become active(newState.copy(obvervedHeartBeatTime = System.currentTimeMillis))
       }
     case other ⇒
@@ -169,14 +168,13 @@ class ChatRoomClassic(totalFailoverTimeout: FiniteDuration)
       val msSinceLastTick = System.currentTimeMillis - state.obvervedHeartBeatTime
       if (msSinceLastTick < totalFailoverTimeout.toMillis)
         persist(ChatRoomEvent.UserJoined(cmd.user, cmd.pubKey)) { ev ⇒
-          val (newState, reply) = handleEvent[JoinReply](state, ev)
-          cmd.replyTo ! reply
+          val newState = onEvent(cmd, state, ev)
           context become active(newState)
         }
       else log.error("Ignore {}. {} ms", cmd, msSinceLastTick)
 
     case cmd: Command.PostText ⇒
-      log.info("{}", lastSequenceNr)
+      //log.info("{}", lastSequenceNr)
       val msSinceLastTick = System.currentTimeMillis - state.obvervedHeartBeatTime
       //Thread.sleep(400)
       if (msSinceLastTick < totalFailoverTimeout.toMillis) {
@@ -190,8 +188,7 @@ class ChatRoomClassic(totalFailoverTimeout: FiniteDuration)
             TimeZone.getDefault.getID
           )
         ) { ev ⇒
-          val (newState, reply) = handleEvent[TextPostedReply](state, ev)
-          cmd.replyTo ! reply
+          val newState = onEvent(cmd, state, ev)
           context become active(newState)
         }
       } else log.error("Ignore {}. {} ms", cmd, msSinceLastTick)
@@ -200,8 +197,7 @@ class ChatRoomClassic(totalFailoverTimeout: FiniteDuration)
       val msSinceLastTick = System.currentTimeMillis - state.obvervedHeartBeatTime
       if (msSinceLastTick < totalFailoverTimeout.toMillis)
         persist(ChatRoomEvent.UserDisconnected(cmd.user)) { ev ⇒
-          val (newState, reply) = handleEvent[LeaveReply](state, ev)
-          cmd.replyTo ! reply
+          val newState = onEvent(cmd, state, ev)
           context become active(newState)
         }
       else log.error("Ignore {}. {} ms", cmd, msSinceLastTick)
