@@ -156,9 +156,8 @@ object ChatRoom {
         //.wireTap(m ⇒ sys.log.info("before p: {}", m)) //for rebug
         .via(
           //WsScaffolding.flowWithHeartbeat(30.second).via(persist(persistenceId, entity))
-          persist(persistenceId /*, entity*/ )(sys.classicSystem, persistTimeout).collect {
-            case r: Reply.TextPostedReply ⇒
-              TextMessage.Strict(s"${r.chatId}:${r.seqNum} - ${r.content}")
+          persist(persistenceId)(sys.classicSystem, persistTimeout).collect { case r: Reply.TextPostedReply ⇒
+            TextMessage.Strict(s"${r.chatId}:${r.seqNum} - ${r.content}")
           }
         )
         /*

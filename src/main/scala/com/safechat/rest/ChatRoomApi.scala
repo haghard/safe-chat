@@ -95,9 +95,7 @@ final case class ChatRoomApi(rooms: ShardedChatRooms, to: FiniteDuration)(implic
   val routes: Route =
     (path("chat" / Segment / "user" / Segment) & parameter("pub".as[String])) { (chatId, user, pubKey) ⇒
       val flow =
-        //When ChatRoomEntities get rebalanced, a flow(src, sink) we got once may no longed be valid so we need to restart it transparently for the clients
-        //TODO: When reconnect, filter out recent chat history
-        //to, to + 1.seconds
+        //When ChatRoom entities get rebalanced, a flow(src, sink) we've got once may no longed be working so we need to restart it transparently for the clients              
         RestartFlow.withBackoff(akka.stream.RestartSettings(2.seconds, 4.seconds, 0.4))(() ⇒
           Flow.futureFlow(chatRoomWsFlow(rooms, chatId, user, pubKey))
         )

@@ -89,7 +89,7 @@ object Handler {
   def apply[C <: Command[_]](c: C, e: C#Event, s: ChatRoomState)(implicit
     h: Handler[C],
     sys: ActorSystem[Nothing],
-    totalFailoverTimeout: FiniteDuration,
+    failoverTimeout: FiniteDuration,
     kksRef: AtomicReference[immutable.Set[UniqueKillSwitch]]
   ) = h(c, e, s)
 }
