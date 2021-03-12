@@ -81,10 +81,20 @@ package object actors {
   }
 
   @tailrec final def registerKS(
-    kss: AtomicReference[immutable.Set[UniqueKillSwitch]],
+    kssRef: AtomicReference[immutable.Set[UniqueKillSwitch]],
     ks: UniqueKillSwitch
   ): Unit = {
-    val set = kss.get()
-    if (kss.compareAndSet(set, set + ks)) () else registerKS(kss, ks)
+    val kss = kssRef.get()
+    if (kssRef.compareAndSet(kss, kss + ks)) () else registerKS(kssRef, ks)
+  }
+
+  @tailrec final def unregisterKS(
+    kssRef: AtomicReference[immutable.Set[UniqueKillSwitch]],
+    ks: UniqueKillSwitch
+  ): Unit = {
+    val kss = kssRef.get()
+    if (kss.contains(ks))
+      if (kssRef.compareAndSet(kss, kss - ks)) () else unregisterKS(kssRef, ks)
+    else ()
   }
 }

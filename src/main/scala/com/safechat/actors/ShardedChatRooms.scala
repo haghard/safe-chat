@@ -145,10 +145,10 @@ final class ShardedChatRooms(
       .ask[ChatRoomReply](DisconnectUser(chatId, user, _))
    */
 
-  def leave(chatId: String, user: String): Future[LeaveReply] =
-    chatShardRegion.ask[LeaveReply](Command.Leave(chatId, user, _))
+  def leave(chatId: String, user: String): Future[Reply.LeaveReply] =
+    chatShardRegion.ask[Reply.LeaveReply](Command.Leave(chatId, user, _))
 
-  def join(chatId: String, login: String, pubKey: String): Future[JoinReply] =
+  def join(chatId: String, login: String, pubKey: String): Future[Reply.JoinReply] =
     //chatShardRegion.askWithStatus()
-    chatShardRegion.ask[JoinReply](Command.JoinUser(chatId, login, pubKey, _))
+    chatShardRegion.ask[Reply.JoinReply](Command.JoinUser(chatId, login, pubKey, _))
 }

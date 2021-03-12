@@ -50,10 +50,10 @@ final case class ChatRoomApi(rooms: ShardedChatRooms, to: FiniteDuration)(implic
     chatId: String,
     user: String,
     pubKey: String
-  ): Future[JoinReply] =
+  ): Future[Reply.JoinReply] =
     rooms
       .join(chatId, user, pubKey)
-      .mapTo[JoinReply]
+      .mapTo[Reply.JoinReply]
   //.recoverWith { case scala.util.control.NonFatal(ex) ⇒ getChatRoomFlow(rooms, chatId, user, pubKey) }
 
   private def chatRoomWsFlow(
@@ -62,7 +62,7 @@ final case class ChatRoomApi(rooms: ShardedChatRooms, to: FiniteDuration)(implic
     user: String,
     pubKey: String
   ): Future[Flow[Message, Message, Future[NotUsed]]] =
-    getChatRoomFlow(rooms, chatId, user, pubKey).map { case JoinReply(chatId, user, sinkSourceRef) ⇒
+    getChatRoomFlow(rooms, chatId, user, pubKey).map { case Reply.JoinReply(chatId, user, sinkSourceRef) ⇒
       sinkSourceRef match {
         case Some((sinkRef, sourceRef)) ⇒
           Flow.fromMaterializer { (mat, attr) ⇒

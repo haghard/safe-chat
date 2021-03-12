@@ -156,8 +156,9 @@ object ChatRoom {
         //.wireTap(m ⇒ sys.log.info("before p: {}", m)) //for rebug
         .via(
           //WsScaffolding.flowWithHeartbeat(30.second).via(persist(persistenceId, entity))
-          persist(persistenceId /*, entity*/ )(sys.classicSystem, persistTimeout).collect { case r: TextPostedReply ⇒
-            TextMessage.Strict(s"${r.chatId}:${r.seqNum} - ${r.content}")
+          persist(persistenceId /*, entity*/ )(sys.classicSystem, persistTimeout).collect {
+            case r: Reply.TextPostedReply ⇒
+              TextMessage.Strict(s"${r.chatId}:${r.seqNum} - ${r.content}")
           }
         )
         /*
@@ -207,7 +208,7 @@ object ChatRoom {
       case cmd: Command.JoinUser ⇒
         Effect
           .persist(ChatRoomEvent.UserJoined(cmd.user, cmd.pubKey))
-          .thenReply[JoinReply](cmd.replyTo) { updateState: ChatRoomState ⇒ //That's new state after applying the event
+          .thenReply(cmd.replyTo) { updateState: ChatRoomState ⇒ //That's new state after applying the event
 
             val settings =
               StreamRefAttributes.subscriptionTimeout(to) //.and(akka.stream.Attributes.inputBuffer(bs, bs))
@@ -221,9 +222,9 @@ object ChatRoom {
 
                 //Add new consumers on the fly. The rate of the producer will be automatically adapted to the slowest consumer
                 val sinkRefF = hub.sinkHub.runWith(StreamRefs.sinkRef[Message].addAttributes(settings))
-                JoinReply(cmd.chatId, cmd.user, Some(sinkRefF, srcRefF))
+                Reply.JoinReply(cmd.chatId, cmd.user, Some(sinkRefF, srcRefF))
               case None ⇒
-                JoinReply(cmd.chatId, cmd.user, None)
+                Reply.JoinReply(cmd.chatId, cmd.user, None)
             }
           }
 
@@ -242,7 +243,7 @@ object ChatRoom {
           )
           .thenReply(cmd.replyTo) { updatedState: ChatRoomState ⇒
             //ctx.log.info("online:[{}]", updatedState.online.mkString(","))
-            TextPostedReply(
+            Reply.TextPostedReply(
               cmd.chatId,
               seqNum,
               cmd.sender,
@@ -256,7 +257,7 @@ object ChatRoom {
           .persist(ChatRoomEvent.UserDisconnected(cmd.user))
           .thenReply(cmd.replyTo) { updatedState: ChatRoomState ⇒
             ctx.log.info("{} disconnected - online:[{}]", cmd.user, updatedState.online.mkString(""))
-            LeaveReply(cmd.chatId, cmd.user)
+            Reply.LeaveReply(cmd.chatId, cmd.user)
           }
 
       case cmd: Command.StopChatRoom ⇒

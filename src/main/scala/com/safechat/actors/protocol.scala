@@ -31,21 +31,29 @@ sealed trait Reply {
   def chatId: String
 }
 
-final case class JoinReply(
-  chatId: String,
-  user: String,
-  sinkSourceRef: Option[(SinkRef[Message], SourceRef[Message])]
-) extends Reply
+object Reply {
 
-final case class TextPostedReply(chatId: String, seqNum: Long, userId: String, recipient: String, content: String)
-    extends Reply
+  final case class JoinReply(
+    chatId: String,
+    user: String,
+    sinkSourceRef: Option[(SinkRef[Message], SourceRef[Message])]
+  ) extends Reply
 
-final case class LeaveReply(chatId: String, user: String) extends Reply
+  final case class TextPostedReply(chatId: String, seqNum: Long, userId: String, recipient: String, content: String)
+      extends Reply
+
+  final case class LeaveReply(chatId: String, user: String) extends Reply
+
+}
 
 sealed trait Command[+R <: Reply] {
   type T <: R
+  type Event <: ChatRoomEvent
+
   def chatId: String
   def replyTo: ActorRef[T]
+  //
+  def ident(event: Event): Event = event
 }
 
 object Command {
@@ -54,8 +62,9 @@ object Command {
     chatId: String,
     user: String,
     pubKey: String,
-    replyTo: ActorRef[JoinReply]
-  ) extends Command[JoinReply] {
+    replyTo: ActorRef[Reply.JoinReply]
+  ) extends Command[Reply.JoinReply] {
+    override type Event = ChatRoomEvent.UserJoined
     override val toString = s"JoinUser($chatId, $user, $pubKey)"
   }
 
@@ -64,16 +73,18 @@ object Command {
     sender: String,
     receiver: String,
     content: String,
-    replyTo: ActorRef[TextPostedReply]
-  ) extends Command[TextPostedReply] {
+    replyTo: ActorRef[Reply.TextPostedReply]
+  ) extends Command[Reply.TextPostedReply] {
+    override type Event = ChatRoomEvent.UserTextAdded
     override val toString = s"PostText($chatId, $sender, $receiver)"
   }
 
   final case class Leave(
     chatId: String,
     user: String,
-    replyTo: ActorRef[LeaveReply]
-  ) extends Command[LeaveReply] {
+    replyTo: ActorRef[Reply.LeaveReply]
+  ) extends Command[Reply.LeaveReply] {
+    override type Event = ChatRoomEvent.UserDisconnected
     override val toString = s"Leave($chatId, $user)"
   }
 
@@ -83,6 +94,7 @@ object Command {
     user: String = null,
     replyTo: ActorRef[Nothing] = null //akka.actor.ActorRef.noSender.toTyped[Nothing]
   ) extends Command[Nothing] {
+    override type Event = Nothing
     override val toString = "StopChatRoom"
   }
 

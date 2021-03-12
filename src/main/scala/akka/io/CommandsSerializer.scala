@@ -10,9 +10,7 @@ import akka.remote.serialization.ProtobufSerializer
 import akka.serialization.ByteBufferSerializer
 import akka.serialization.SerializerWithStringManifest
 import com.safechat.actors.Command
-import com.safechat.actors.JoinReply
-import com.safechat.actors.LeaveReply
-import com.safechat.actors.TextPostedReply
+import com.safechat.actors.Reply
 import com.safechat.avro.command.CmdEnvelope
 import org.apache.avro.Schema
 import org.apache.avro.io.BinaryEncoder
@@ -89,7 +87,9 @@ object CommandsSerializer {
           env.getChatId.toString,
           c.getUser.toString,
           c.getPubKey.toString,
-          ProtobufSerializer.deserializeActorRef(system, ActorRefData.parseFrom(env.getReplyTo)).toTyped[JoinReply]
+          ProtobufSerializer
+            .deserializeActorRef(system, ActorRefData.parseFrom(env.getReplyTo))
+            .toTyped[Reply.JoinReply]
         )
       case c: com.safechat.avro.command.PostText ⇒
         Command.PostText(
@@ -99,13 +99,15 @@ object CommandsSerializer {
           c.getContent.toString,
           ProtobufSerializer
             .deserializeActorRef(system, ActorRefData.parseFrom(env.getReplyTo))
-            .toTyped[TextPostedReply]
+            .toTyped[Reply.TextPostedReply]
         )
       case c: com.safechat.avro.command.Leave ⇒
         Command.Leave(
           env.getChatId.toString,
           c.getUser.toString,
-          ProtobufSerializer.deserializeActorRef(system, ActorRefData.parseFrom(env.getReplyTo)).toTyped[LeaveReply]
+          ProtobufSerializer
+            .deserializeActorRef(system, ActorRefData.parseFrom(env.getReplyTo))
+            .toTyped[Reply.LeaveReply]
         )
       case _: com.safechat.avro.command.StopChatRoom ⇒
         Command.handOffRoom
@@ -119,7 +121,7 @@ object CommandsSerializer {
       baos.toByteArray
     }
 
-  /*def write1(cmd: com.safechat.actors.Command[_], schema: Schema): Array[Byte] = {
+  /*def toBytes1(cmd: com.safechat.actors.Command[_], schema: Schema): Array[Byte] = {
     val bb = ByteBuffer.allocate(1024)
     Using.resource(new ByteBufferOutputStream(bb)) { baos ⇒
       Using.resource(EncoderFactory.get.directBinaryEncoder(baos, null)) { enc ⇒

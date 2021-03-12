@@ -93,6 +93,7 @@ final case class Bootstrap(
       shutdown.addTask(PhaseServiceRequestsDone, "kss.shutdown") { () ⇒
         Future.successful {
           val kks = kksRef.get()
+          classicSystem.log.info(s"★ ★ ★ CoordinatedShutdown [kss.shutdown:${kks.size}]  ★ ★ ★")
           kks.foreach(_.shutdown())
           Done
         }

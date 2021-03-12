@@ -194,14 +194,15 @@ object Server extends Ops {
 
     //TODO: for debug only
     /*
-    val _ = StdIn.readLine()
+    val _ = scala.io.StdIn.readLine()
     system.log.warn("Shutting down ...")
     system.terminate()
-    Await.result(
+    scala.concurrent.Await.result(
       system.whenTerminated,
       cfg.getDuration("akka.coordinated-shutdown.default-phase-timeout", TimeUnit.SECONDS).seconds
     )
      */
+
   }
 
   // http 127.0.0.1:8558/cluster/members "Authorization:Basic QWxhZGRpbjpPcGVuU2VzYW1l"
