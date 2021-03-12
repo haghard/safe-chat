@@ -144,7 +144,7 @@ object ChatRoom {
     sys: ActorSystem[Nothing]
   ): ChatRoomHub = {
     //val initBs = sys.settings.config.getInt("akka.stream.materializer.initial-input-buffer-size")
-    val bs = 1
+    val bs = 1 << 2
     sys.log.warn("Create chatroom {}", persistenceId)
 
     val ((sinkHub, ks), sourceHub) =

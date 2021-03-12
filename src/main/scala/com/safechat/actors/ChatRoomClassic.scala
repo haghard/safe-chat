@@ -152,7 +152,7 @@ class ChatRoomClassic()(implicit
     case cmd: Command.JoinUser ⇒
       persist(ChatRoomEvent.UserJoined(cmd.user, cmd.pubKey)) { ev ⇒
         timers.startTimerAtFixedRate(persistenceId, HeartBeat, tickTo)
-        val newState = maybeSnapshot(Handler(cmd, cmd.ident(ev), state))
+        val newState = maybeSnapshot(Handler(cmd, cmd.coerceEvent(ev), state))
         unstashAll()
         context become active(newState.copy(obvervedHeartBeatTime = System.currentTimeMillis))
       }
@@ -167,7 +167,7 @@ class ChatRoomClassic()(implicit
       val msSinceLastTick = System.currentTimeMillis - state.obvervedHeartBeatTime
       if (msSinceLastTick < totalFailoverTimeout.toMillis)
         persist(ChatRoomEvent.UserJoined(cmd.user, cmd.pubKey)) { ev ⇒
-          val newState = maybeSnapshot(Handler(cmd, cmd.ident(ev), state))
+          val newState = maybeSnapshot(Handler(cmd, cmd.coerceEvent(ev), state))
           context become active(newState)
         }
       else log.error("Ignore {} to avoid possible journal corruption. {} ms", cmd, msSinceLastTick)
@@ -187,7 +187,7 @@ class ChatRoomClassic()(implicit
             TimeZone.getDefault.getID
           )
         ) { ev ⇒
-          val newState = maybeSnapshot(Handler(cmd, cmd.ident(ev), state))
+          val newState = maybeSnapshot(Handler(cmd, cmd.coerceEvent(ev), state))
           context become active(newState)
         }
       } else log.error("Ignore {} to avoid possible journal corruption. {} ms", cmd, msSinceLastTick)
@@ -196,7 +196,7 @@ class ChatRoomClassic()(implicit
       val msSinceLastTick = System.currentTimeMillis - state.obvervedHeartBeatTime
       if (msSinceLastTick < totalFailoverTimeout.toMillis)
         persist(ChatRoomEvent.UserDisconnected(cmd.user)) { ev ⇒
-          val newState = maybeSnapshot(Handler(cmd, cmd.ident(ev), state))
+          val newState = maybeSnapshot(Handler(cmd, cmd.coerceEvent(ev), state))
           context become active(newState)
         }
       else log.error("Ignore {} to avoid possible journal corruption. {} ms", cmd, msSinceLastTick)

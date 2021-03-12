@@ -16,6 +16,7 @@ import com.safechat.actors.ChatRoomEvent.UserJoined
 import com.safechat.actors.Command.JoinUser
 import com.safechat.actors.Command.Leave
 import com.safechat.actors.Command.PostText
+import com.safechat.actors.Command.StopChatRoom
 import com.safechat.domain.RingBuffer
 
 /*
@@ -25,8 +26,8 @@ import com.safechat.domain.RingBuffer
 
   val a: ActorRef[JoinReply] = null.asInstanceOf[ActorRef[Reply]]
   val b: ActorRef[Reply] = null.asInstanceOf[ActorRef[JoinReply]] //error unless .narrow[Reply]
-
  */
+
 sealed trait Reply {
   def chatId: String
 }
@@ -46,14 +47,13 @@ object Reply {
 
 }
 
-sealed trait Command[+R <: Reply] {
-  type T <: R
+sealed trait Command[+T <: Reply] {
+  type R <: T
   type Event <: ChatRoomEvent
 
   def chatId: String
-  def replyTo: ActorRef[T]
-  //
-  def ident(event: Event): Event = event
+  def replyTo: ActorRef[R]
+  def coerceEvent(event: Event): Event = event
 }
 
 object Command {
@@ -226,10 +226,6 @@ object ChatRoomEvent {
 
 final case class ChatRoomHub(sinkHub: Sink[Message, NotUsed], srcHub: Source[Message, NotUsed], ks: UniqueKillSwitch)
 
-/*case object Null extends ChatRoomEvent {
-  override def originator: String = ""
-}*/
-
 //https://doc.akka.io/docs/akka/current/typed/style-guide.html#functional-versus-object-oriented-style
 final case class ChatRoomState(
   regUsers: Map[String, String] = Map.empty,
@@ -242,9 +238,10 @@ final case class ChatRoomState(
 
   def applyCmd(cmd: Command[Reply]): ReplyEffect[ChatRoomEvent, ChatRoomState] =
     cmd match {
-      case c: JoinUser ⇒ Effect.persist(UserJoined(c.user, c.pubKey)).thenNoReply()
-      case _: PostText ⇒ Effect.noReply
-      case _: Leave    ⇒ Effect.noReply
+      case c: JoinUser     ⇒ Effect.persist(UserJoined(c.user, c.pubKey)).thenNoReply()
+      case _: PostText     ⇒ Effect.noReply
+      case _: Leave        ⇒ Effect.noReply
+      case _: StopChatRoom ⇒ Effect.noReply
     }
 
   def applyEvent(event: ChatRoomEvent): ChatRoomState =
