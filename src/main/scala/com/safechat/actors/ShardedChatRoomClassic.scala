@@ -5,17 +5,24 @@ import akka.actor.typed.scaladsl.adapter.ClassicActorRefOps
 import akka.cluster.sharding.ClusterSharding
 import akka.cluster.sharding.ClusterShardingSettings
 import akka.cluster.sharding.ShardCoordinator
+import akka.stream.UniqueKillSwitch
 
+import java.util.concurrent.atomic.AtomicReference
+import scala.collection.immutable
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.duration.FiniteDuration
 
 object ShardedChatRoomClassic {
 
-  def apply(system: akka.actor.ActorSystem, to: FiniteDuration): ActorRef[Command[Reply]] = {
+  def apply(
+    system: akka.actor.ActorSystem,
+    totalFailoverTimeout: FiniteDuration,
+    kksRef: AtomicReference[immutable.Set[UniqueKillSwitch]]
+  ): ActorRef[Command[Reply]] = {
 
     val chatRoomRegion = ClusterSharding(system).start(
       typeName = ChatRoom.entityKey.name, //shared
-      entityProps = ChatRoomClassic.props(to),
+      entityProps = ChatRoomClassic.props(totalFailoverTimeout, kksRef),
       settings = ClusterShardingSettings(system).withPassivateIdleAfter(5.minutes), //20.seconds
       extractShardId = ChatRoomClassic.shardExtractor,
       extractEntityId = ChatRoomClassic.idExtractor,

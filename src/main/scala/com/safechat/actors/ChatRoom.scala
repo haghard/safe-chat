@@ -22,7 +22,6 @@ import akka.stream.scaladsl.Keep
 import akka.stream.scaladsl.MergeHub
 import akka.stream.scaladsl.Source
 import akka.stream.scaladsl.StreamRefs
-import com.safechat.actors.Command._
 
 import java.time.Instant
 import java.time.ZoneId
@@ -140,7 +139,6 @@ object ChatRoom {
     */
   def chatRoomHub(
     persistenceId: String,
-    entity: ActorRef[PostText],
     kksRef: AtomicReference[immutable.Set[UniqueKillSwitch]]
   )(implicit
     sys: ActorSystem[Nothing]
@@ -217,13 +215,11 @@ object ChatRoom {
             updateState.hub match {
               case Some(hub) ⇒
                 val chatHistory = updateState.recentHistory.entries.mkString("\n")
-                //Add new producer on the fly
-                //If the consumer cannot keep up, all producers will be backpressured
+                //Add new producer on the fly.  If the consumer cannot keep up, all producers will be backpressured
                 val srcRefF = (Source.single[Message](TextMessage(chatHistory)) ++ hub.srcHub)
                   .runWith(StreamRefs.sourceRef[Message].addAttributes(settings))
 
-                //Add new consumers on the fly
-                //The rate of the producer will be automatically adapted to the slowest consumer
+                //Add new consumers on the fly. The rate of the producer will be automatically adapted to the slowest consumer
                 val sinkRefF = hub.sinkHub.runWith(StreamRefs.sinkRef[Message].addAttributes(settings))
                 JoinReply(cmd.chatId, cmd.user, Some(sinkRefF, srcRefF))
               case None ⇒
@@ -286,7 +282,7 @@ object ChatRoom {
             state.copy(
               regUsers = state.regUsers + (login → pubKey),
               online = Set(login),
-              hub = Some(chatRoomHub(persistenceId, ctx.self.narrow[PostText], kksRef))
+              hub = Some(chatRoomHub(persistenceId, kksRef))
             )
         else
           state.copy(

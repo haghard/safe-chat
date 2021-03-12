@@ -224,7 +224,8 @@ final case class ChatRoomState(
   online: Set[String] = Set.empty,
   recentHistory: RingBuffer[String] = RingBuffer[String](1 << 3),
   hub: Option[ChatRoomHub] = None,
-  obvervedHeartBeatTime: Long = System.currentTimeMillis()
+  obvervedHeartBeatTime: Long = System.currentTimeMillis(),
+  commandsWithoutCheckpoint: Int = 0
 ) {
 
   def applyCmd(cmd: Command[Reply]): ReplyEffect[ChatRoomEvent, ChatRoomState] =

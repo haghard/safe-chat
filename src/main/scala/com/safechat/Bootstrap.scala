@@ -89,7 +89,7 @@ final case class Bootstrap(
 
       //PhaseServiceRequestsDone - process in-flight requests
 
-      //graceful termination of chatroom streams
+      //graceful termination of chatroom hubs
       shutdown.addTask(PhaseServiceRequestsDone, "kss.shutdown") { () ⇒
         Future.successful {
           val kks = kksRef.get()
@@ -112,10 +112,9 @@ final case class Bootstrap(
 
       //forcefully kills connections and kill switches that are still open
       shutdown.addTask(PhaseServiceStop, "close.connections") { () ⇒
+        val kks = kksRef.get()
+        kks.foreach(_.abort(new Exception("abort")))
         Http().shutdownAllConnectionPools().map { _ ⇒
-          val kks = kksRef.get()
-          //kks.foreach(_.shutdown())
-          kks.foreach(_.abort(new Exception("abort")))
           classicSystem.log.info("★ ★ ★ CoordinatedShutdown [close.connections] ★ ★ ★")
           Done
         }

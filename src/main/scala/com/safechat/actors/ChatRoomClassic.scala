@@ -11,8 +11,12 @@ import akka.http.scaladsl.model.ws.Message
 import akka.http.scaladsl.model.ws.TextMessage
 import akka.persistence.PersistentActor
 import akka.persistence.RecoveryCompleted
+import akka.persistence.SaveSnapshotFailure
+import akka.persistence.SaveSnapshotSuccess
+import akka.persistence.SnapshotOffer
 import akka.stream.KillSwitches
 import akka.stream.StreamRefAttributes
+import akka.stream.UniqueKillSwitch
 import akka.stream.javadsl.StreamRefs
 import akka.stream.scaladsl.BroadcastHub
 import akka.stream.scaladsl.Keep
@@ -21,13 +25,18 @@ import akka.stream.scaladsl.Source
 import com.safechat.actors.ChatRoom.persistTimeout
 import com.safechat.actors.ChatRoomClassic.HeartBeat
 import com.safechat.actors.ChatRoomClassic.chatRoomHub
+import com.safechat.actors.ChatRoomClassic.snapshotEveryN
 import com.safechat.domain.RingBuffer
 
 import java.util.TimeZone
+import java.util.concurrent.atomic.AtomicReference
+import scala.collection.immutable
 import scala.concurrent.duration._
 
 object ChatRoomClassic {
   case object HeartBeat
+
+  val snapshotEveryN = 30
 
   def msg(persistenceId: String, seqNum: Long, userId: String, recipient: String, content: String) =
     s"[$persistenceId:$seqNum - from:$userId -> to:$recipient] - $content"
@@ -39,10 +48,10 @@ object ChatRoomClassic {
     case ShardRegion.StartEntity(chatId) ⇒ chatId
   }
 
-  def props(to: FiniteDuration) =
-    Props(new ChatRoomClassic(to)).withDispatcher("cassandra-dispatcher")
+  def props(totalFailoverTimeout: FiniteDuration, kksRef: AtomicReference[immutable.Set[UniqueKillSwitch]]) =
+    Props(new ChatRoomClassic(totalFailoverTimeout, kksRef)).withDispatcher("cassandra-dispatcher")
 
-  def chatRoomHub(persistenceId: String)(implicit
+  def chatRoomHub(persistenceId: String, kksRef: AtomicReference[immutable.Set[UniqueKillSwitch]])(implicit
     sys: ActorSystem[Nothing]
   ): ChatRoomHub = {
     val bs = 1 << 2
@@ -61,11 +70,12 @@ object ChatRoomClassic {
         .toMat(BroadcastHub.sink[Message](bufferSize = bs))(Keep.both)
         .run()
 
+    registerKS(kksRef, ks)
     ChatRoomHub(sinkHub, sourceHub, ks)
   }
 }
 
-class ChatRoomClassic(totalFailoverTimeout: FiniteDuration)
+class ChatRoomClassic(totalFailoverTimeout: FiniteDuration, kksRef: AtomicReference[immutable.Set[UniqueKillSwitch]])
     extends Timers
     with PersistentActor
     with ActorLogging
@@ -83,25 +93,32 @@ class ChatRoomClassic(totalFailoverTimeout: FiniteDuration)
   override def receiveRecover: Receive = {
     var regUsers: Map[String, String]     = Map.empty
     var online: Set[String]               = Set.empty
-    val recentHistory: RingBuffer[String] = RingBuffer[String](1 << 3)
+    var recentHistory: RingBuffer[String] = RingBuffer[String](1 << 3)
     var hub: Option[ChatRoomHub]          = None
 
     {
       case ChatRoomEvent.UserJoined(userId, pubKey) ⇒
         if (userId != ChatRoom.wakeUpUserName) {
           if (hub.isEmpty) {
-            hub = Some(chatRoomHub(persistenceId))
+            hub = Some(chatRoomHub(persistenceId, kksRef))
           }
           regUsers = regUsers + (userId → pubKey)
           online = online + userId
         }
 
       case e: ChatRoomEvent.UserTextAdded ⇒
-        val historyItem = ChatRoomClassic.msg(persistenceId, e.seqNum, e.userId, e.recipient, e.content)
-        recentHistory :+ historyItem
+        recentHistory :+ ChatRoomClassic.msg(persistenceId, e.seqNum, e.userId, e.recipient, e.content)
 
       case e: ChatRoomEvent.UserDisconnected ⇒
         online = online - e.userId
+
+      case SnapshotOffer(metadata, snapshot) ⇒
+        log.info(s"Recovered snapshot: $metadata")
+        val state = snapshot.asInstanceOf[ChatRoomState]
+        regUsers = state.regUsers
+        online = state.online
+        recentHistory = state.recentHistory
+        hub = Some(chatRoomHub(persistenceId, kksRef))
 
       case RecoveryCompleted ⇒
         timers.startTimerWithFixedDelay(persistenceId, HeartBeat, tickTo)
@@ -109,10 +126,6 @@ class ChatRoomClassic(totalFailoverTimeout: FiniteDuration)
     }
   }
 
-  /** Does 2 things
-    * 1) Update current state
-    * 2) Send reply back
-    */
   def onEvent[T <: Reply](
     cmd: Command[T],
     state: ChatRoomState,
@@ -127,7 +140,7 @@ class ChatRoomClassic(totalFailoverTimeout: FiniteDuration)
               state.copy(
                 regUsers = state.regUsers + (userId → pubKey),
                 online = Set(userId),
-                hub = Some(ChatRoomClassic.chatRoomHub(persistenceId))
+                hub = Some(ChatRoomClassic.chatRoomHub(persistenceId, kksRef))
               )
           } else
             state.copy(
@@ -149,8 +162,7 @@ class ChatRoomClassic(totalFailoverTimeout: FiniteDuration)
         (newState, reply)
 
       case e: ChatRoomEvent.UserTextAdded ⇒
-        val historyItem = ChatRoomClassic.msg(persistenceId, e.seqNum, e.userId, e.recipient, e.content)
-        state.recentHistory :+ historyItem
+        state.recentHistory :+ ChatRoomClassic.msg(persistenceId, e.seqNum, e.userId, e.recipient, e.content)
         (state, TextPostedReply(persistenceId, e.seqNum, e.userId, e.recipient, e.content))
 
       case e: ChatRoomEvent.UserDisconnected ⇒
@@ -158,8 +170,14 @@ class ChatRoomClassic(totalFailoverTimeout: FiniteDuration)
     }
 
     cmd.replyTo.tell(reply.asInstanceOf[cmd.T])
-    newState
+    maybeSnapshot(newState)
   }
+
+  def maybeSnapshot(state: ChatRoomState): ChatRoomState =
+    if (state.commandsWithoutCheckpoint >= snapshotEveryN) {
+      saveSnapshot(state)
+      state.copy(commandsWithoutCheckpoint = 0)
+    } else state.copy(commandsWithoutCheckpoint = state.commandsWithoutCheckpoint + 1)
 
   def notActive(state: ChatRoomState): Receive = {
     case cmd: Command.JoinUser ⇒
@@ -184,7 +202,7 @@ class ChatRoomClassic(totalFailoverTimeout: FiniteDuration)
           val newState = onEvent(cmd, state, ev)
           context become active(newState)
         }
-      else log.error("Ignore {} to avoid  possible journal corruption. {} ms", cmd, msSinceLastTick)
+      else log.error("Ignore {} to avoid possible journal corruption. {} ms", cmd, msSinceLastTick)
 
     case cmd: Command.PostText ⇒
       //log.info("{}", lastSequenceNr)
@@ -204,7 +222,7 @@ class ChatRoomClassic(totalFailoverTimeout: FiniteDuration)
           val newState = onEvent(cmd, state, ev)
           context become active(newState)
         }
-      } else log.error("Ignore {} to avoid  possible journal corruption. {} ms", cmd, msSinceLastTick)
+      } else log.error("Ignore {} to avoid possible journal corruption. {} ms", cmd, msSinceLastTick)
 
     case cmd: Command.Leave ⇒
       val msSinceLastTick = System.currentTimeMillis - state.obvervedHeartBeatTime
@@ -213,7 +231,7 @@ class ChatRoomClassic(totalFailoverTimeout: FiniteDuration)
           val newState = onEvent(cmd, state, ev)
           context become active(newState)
         }
-      else log.error("Ignore {} to avoid  possible journal corruption. {} ms", cmd, msSinceLastTick)
+      else log.error("Ignore {} to avoid possible journal corruption. {} ms", cmd, msSinceLastTick)
 
     case _: Command.StopChatRoom ⇒
       state.hub.foreach(_.ks.shutdown())
@@ -227,16 +245,23 @@ class ChatRoomClassic(totalFailoverTimeout: FiniteDuration)
       val newState = state.copy(obvervedHeartBeatTime = System.currentTimeMillis)
       context become active(newState)
 
-    /*
-    case ReceiveTimeout ⇒
-      context.parent ! ShardRegion.Passivate(stopMessage = HandOff)
+    // snapshot-related messages
+    case SaveSnapshotSuccess(metadata) ⇒
+      log.info(s"Saving snapshot succeeded: $metadata")
 
-    case PassivatePA ⇒
-      log.info("PassivatePA")
-      state.hub.foreach(_.ks.shutdown())
-      context.stop(self)
-     */
+    case SaveSnapshotFailure(metadata, reason) ⇒
+      log.warning(s"Saving snapshot $metadata failed because of $reason")
   }
 
   override def receiveCommand: Receive = notActive(ChatRoomState())
 }
+
+/*
+  case ReceiveTimeout ⇒
+    context.parent ! ShardRegion.Passivate(stopMessage = HandOff)
+
+  case PassivatePA ⇒
+    log.info("PassivatePA")
+    state.hub.foreach(_.ks.shutdown())
+    context.stop(self)
+ */

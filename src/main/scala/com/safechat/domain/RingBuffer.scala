@@ -2,16 +2,14 @@
 
 package com.safechat.domain
 
-import scala.reflect.ClassTag
-
 object RingBuffer {
   def nextPowerOfTwo(value: Int): Int =
     1 << (32 - Integer.numberOfLeadingZeros(value - 1))
 
-  def apply[T: ClassTag](capacity: Int) = new RingBuffer[T](capacity)
+  def apply[T: scala.reflect.ClassTag](capacity: Int) = new RingBuffer[T](capacity)
 }
 
-final class RingBuffer[T: ClassTag] private (capacity: Int, buffer: Array[T]) {
+final class RingBuffer[T: scala.reflect.ClassTag] private (capacity: Int, buffer: Array[T]) {
   private var tail: Long = 0L
   private var head: Long = 0L
 

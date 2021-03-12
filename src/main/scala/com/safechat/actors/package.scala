@@ -23,17 +23,27 @@ import scala.concurrent.duration.DurationInt
 package object actors {
 
   def persist(chatId: String)(implicit
-    system: ActorSystem,
+    classicSystem: ActorSystem,
     persistTimeout: Timeout
   ): Flow[Message, Reply, akka.NotUsed] = {
     def persistFlow = {
 
-      //to deal with Idle timeout
-      val entity =
-        ClusterSharding(system).shardRegion(ChatRoom.entityKey.name).toTyped[PostText]
+      @tailrec
+      def lookup(f: ⇒ ActorRef[PostText], n: Int): ActorRef[PostText] =
+        scala.util.Try(f) match {
+          case scala.util.Success(r) ⇒ r
+          case scala.util.Failure(ex) ⇒
+            if (n > 0) {
+              Thread.sleep(1000) //
+              lookup(f, n - 1)
+            } else throw ex
+        }
+
+      val shardRegion =
+        lookup(ClusterSharding(classicSystem).shardRegion(ChatRoom.entityKey.name).toTyped[PostText], 20)
 
       ActorFlow
-        .ask[Message, PostText, Reply](1)(entity) { (msg: Message, reply: ActorRef[Reply]) ⇒
+        .ask[Message, PostText, Reply](1)(shardRegion) { (msg: Message, reply: ActorRef[Reply]) ⇒
           msg match {
             case TextMessage.Strict(text) ⇒
               val segs = text.split(MSG_SEP)
@@ -56,15 +66,12 @@ package object actors {
     }
     //ActorAttributes.supervisionStrategy({ case _ => Supervision.Resume }).and(Attributes.inputBuffer(1, 1))
 
-    persistFlow
-
     //TODO: maybe would be better to fail instead of retrying
     RestartFlow.withBackoff(
       akka.stream.RestartSettings(1.second, 3.seconds, 0.3)
     )(() ⇒ persistFlow)
   }
 
-  //if akka.sharding.use-lease
   @tailrec final def registerChatRoom(
     liveShards: AtomicReference[immutable.Set[String]],
     persistenceId: String

@@ -125,7 +125,7 @@ final class ShardedChatRooms(
   implicit val askTimeout = akka.util.Timeout(totalFailoverTimeout)
 
   //val chatShardRegion = sharding.init(entity)
-  val chatShardRegion = ShardedChatRoomClassic(system.toClassic, totalFailoverTimeout)
+  val chatShardRegion = ShardedChatRoomClassic(system.toClassic, totalFailoverTimeout, kss)
 
   //Example how to use explicit client:  akka.kafka.cluster.sharding.KafkaClusterSharding
   //val client             = akka.cluster.sharding.external.ExternalShardAllocation(system).clientFor(ChatRoomEntity.entityKey.name)
