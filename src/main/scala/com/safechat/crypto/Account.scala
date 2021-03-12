@@ -3,17 +3,21 @@
 package com.safechat
 package crypto
 
-import java.math.BigInteger
-import java.security.{KeyFactory, KeyPairGenerator, SecureRandom}
-import java.security.interfaces.{RSAPrivateCrtKey, RSAPublicKey}
-import java.security.spec._
-import java.nio.file.{Files, Path, Paths}
-
-import scala.io.Source
-import scala.language.implicitConversions
-import scala.util.Try
 import spray.json._
+
+import java.math.BigInteger
 import java.nio.charset.StandardCharsets.UTF_8
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.Paths
+import java.security.KeyFactory
+import java.security.KeyPairGenerator
+import java.security.SecureRandom
+import java.security.interfaces.RSAPrivateCrtKey
+import java.security.interfaces.RSAPublicKey
+import java.security.spec._
+import scala.io.Source
+import scala.util.Try
 
 case class AccountSnapshot(e: BigInt, n: BigInt, d: BigInt, p: BigInt, q: BigInt, dp: BigInt, dq: BigInt, qi: BigInt)
 

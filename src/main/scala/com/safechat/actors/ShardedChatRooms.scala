@@ -3,17 +3,19 @@
 package com.safechat.actors
 
 import akka.actor.typed.ActorSystem
-import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, Entity}
-import akka.cluster.sharding.typed.{ClusterShardingSettings, ShardingMessageExtractor}
-
-import scala.concurrent.Future
-import scala.concurrent.duration._
-import ShardedChatRooms._
 import akka.actor.typed.scaladsl.AskPattern._
-import akka.actor.typed.scaladsl.adapter.{ClassicActorRefOps, TypedActorSystemOps}
+import akka.actor.typed.scaladsl.adapter.TypedActorSystemOps
+import akka.cluster.sharding.typed.ClusterShardingSettings
+import akka.cluster.sharding.typed.ShardingMessageExtractor
+import akka.cluster.sharding.typed.scaladsl.ClusterSharding
+import akka.cluster.sharding.typed.scaladsl.Entity
 import akka.stream.UniqueKillSwitch
 
 import java.util.concurrent.atomic.AtomicReference
+import scala.concurrent.Future
+import scala.concurrent.duration._
+
+import ShardedChatRooms._
 
 object ShardedChatRooms {
 

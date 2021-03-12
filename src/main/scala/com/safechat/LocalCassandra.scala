@@ -2,10 +2,10 @@
 
 package com.safechat
 
+import akka.persistence.cassandra.testkit.CassandraLauncher
+
 import java.io.File
 import java.util.concurrent.CountDownLatch
-
-import akka.persistence.cassandra.testkit.CassandraLauncher
 
 //https://github.com/akka/akka-samples/blob/52054a5f8b8244e2cf37aa58085f362bba0f808e/akka-sample-persistence-dc-scala/src/main/scala/sample/persistence/multidc/ThumbsUpApp.scala
 object LocalCassandra {

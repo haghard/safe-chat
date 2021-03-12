@@ -2,7 +2,10 @@
 
 package com.safechat
 
-import akka.actor.typed.{Behavior, BehaviorInterceptor, Signal, TypedActorContext}
+import akka.actor.typed.Behavior
+import akka.actor.typed.BehaviorInterceptor
+import akka.actor.typed.Signal
+import akka.actor.typed.TypedActorContext
 import akka.actor.typed.scaladsl.Behaviors
 import org.slf4j.Logger
 

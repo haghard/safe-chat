@@ -1,6 +1,11 @@
 package akka.coordination.lease.cassandra
 
-import akka.actor.{ActorSystem, ClassicActorSystemProvider, ExtendedActorSystem, Extension, ExtensionId, ExtensionIdProvider}
+import akka.actor.ActorSystem
+import akka.actor.ClassicActorSystemProvider
+import akka.actor.ExtendedActorSystem
+import akka.actor.Extension
+import akka.actor.ExtensionId
+import akka.actor.ExtensionIdProvider
 import akka.persistence.cassandra.query.scaladsl.CassandraReadJournal
 import akka.persistence.query.PersistenceQuery
 import akka.stream.alpakka.cassandra.scaladsl.CassandraSession

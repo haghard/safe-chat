@@ -2,9 +2,10 @@
 
 package com.safechat
 
-import java.net.{InetAddress, NetworkInterface}
-
-import scala.collection.{Map, Seq}
+import java.net.InetAddress
+import java.net.NetworkInterface
+import scala.collection.Map
+import scala.collection.Seq
 import scala.jdk.CollectionConverters._
 
 trait Ops {

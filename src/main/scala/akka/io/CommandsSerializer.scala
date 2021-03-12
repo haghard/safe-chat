@@ -1,17 +1,25 @@
 package akka.io
 
 import akka.actor.ExtendedActorSystem
-import akka.actor.typed.scaladsl.adapter.{ClassicActorRefOps, TypedActorRefOps}
+import akka.actor.typed.scaladsl.adapter.ClassicActorRefOps
+import akka.actor.typed.scaladsl.adapter.TypedActorRefOps
 import akka.cluster.ddata.protobuf.SerializationSupport
 import akka.io.CommandsSerializer._
 import akka.remote.WireFormats.ActorRefData
 import akka.remote.serialization.ProtobufSerializer
-import akka.serialization.{ByteBufferSerializer, SerializerWithStringManifest}
-import com.safechat.actors.{Command, JoinReply, LeaveReply, TextPostedReply}
+import akka.serialization.ByteBufferSerializer
+import akka.serialization.SerializerWithStringManifest
+import com.safechat.actors.Command
+import com.safechat.actors.JoinReply
+import com.safechat.actors.LeaveReply
+import com.safechat.actors.TextPostedReply
 import com.safechat.avro.command.CmdEnvelope
 import org.apache.avro.Schema
-import org.apache.avro.io.{BinaryEncoder, DecoderFactory, EncoderFactory}
-import org.apache.avro.specific.{SpecificDatumReader, SpecificDatumWriter}
+import org.apache.avro.io.BinaryEncoder
+import org.apache.avro.io.DecoderFactory
+import org.apache.avro.io.EncoderFactory
+import org.apache.avro.specific.SpecificDatumReader
+import org.apache.avro.specific.SpecificDatumWriter
 
 import java.io.NotSerializableException
 import java.nio.ByteBuffer

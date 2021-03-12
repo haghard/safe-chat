@@ -2,9 +2,12 @@ package com.safechat.actors
 
 import akka.actor.typed.ActorRef
 import akka.actor.typed.scaladsl.adapter.ClassicActorRefOps
-import akka.cluster.sharding.{ClusterSharding, ClusterShardingSettings, ShardCoordinator}
+import akka.cluster.sharding.ClusterSharding
+import akka.cluster.sharding.ClusterShardingSettings
+import akka.cluster.sharding.ShardCoordinator
 
-import scala.concurrent.duration.{DurationInt, FiniteDuration}
+import scala.concurrent.duration.DurationInt
+import scala.concurrent.duration.FiniteDuration
 
 object ShardedChatRoomClassic {
 

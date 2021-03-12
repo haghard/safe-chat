@@ -2,9 +2,8 @@
 
 package com.safechat
 
-import java.util.Base64
 import java.security.MessageDigest
-
+import java.util.Base64
 import scala.util.Try
 
 package object crypto {

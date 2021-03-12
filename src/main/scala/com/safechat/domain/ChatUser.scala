@@ -3,12 +3,15 @@
 package com.safechat
 package domain
 
-import java.math.BigInteger
-import java.security.{KeyPairGenerator, SecureRandom}
-import java.security.interfaces.{RSAPrivateCrtKey, RSAPublicKey}
-import java.security.spec.RSAKeyGenParameterSpec
 import com.safechat.crypto.Handle
 import spray.json._
+
+import java.math.BigInteger
+import java.security.KeyPairGenerator
+import java.security.SecureRandom
+import java.security.interfaces.RSAPrivateCrtKey
+import java.security.interfaces.RSAPublicKey
+import java.security.spec.RSAKeyGenParameterSpec
 
 case class ChatUserSnapshot(e: BigInt, n: BigInt, d: BigInt, p: BigInt, q: BigInt, dp: BigInt, dq: BigInt, qi: BigInt)
 

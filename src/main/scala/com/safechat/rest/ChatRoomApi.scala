@@ -8,7 +8,8 @@ import akka.actor.typed.scaladsl.adapter._
 import akka.http.scaladsl.model.ws.Message
 import akka.http.scaladsl.server._
 import akka.stream.OverflowStrategy
-import akka.stream.scaladsl.{Flow, RestartFlow}
+import akka.stream.scaladsl.Flow
+import akka.stream.scaladsl.RestartFlow
 import com.safechat.actors._
 
 import scala.concurrent.Future

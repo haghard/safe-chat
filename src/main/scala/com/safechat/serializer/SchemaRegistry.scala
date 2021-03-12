@@ -2,12 +2,12 @@
 
 package com.safechat.serializer
 
-import org.apache.avro.Schema
-import java.io.{File, FileInputStream}
-
 import com.typesafe.config.Config
+import org.apache.avro.Schema
 import org.apache.commons.codec.digest.DigestUtils
 
+import java.io.File
+import java.io.FileInputStream
 import scala.jdk.CollectionConverters._
 
 //https://medium.com/data-rocks/schema-evolution-is-not-that-complex-b7cf7eb567ac

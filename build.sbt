@@ -1,6 +1,9 @@
 import sbt._
 import sbtdocker.ImageName
 
+import java.util.concurrent.TimeUnit
+import scala.concurrent.duration.FiniteDuration
+
 val projectName   = "safe-chat"
 val Version       = "0.3.0-SNAPSHOT"
 
@@ -303,15 +306,11 @@ libraryDependencies ++= Seq(
   //"org.typelevel" %% "algebra" % "2.1.0",
 
   // li haoyi ammonite repl embed
-  //("com.lihaoyi" % "ammonite" % "2.3.8-32-64308dc3" % "test").cross(CrossVersion.full)
-
-  //"com.propensive" %% "magnolia" % "0.17.0",
+  //("com.lihaoyi" % "ammonite" % "2.3.8-36-1cce53f3"  % "test").cross(CrossVersion.full),
 
   "org.scala-lang" % "scala-reflect" % scalaVersion.value
 
-  //("com.lihaoyi" % "ammonite" % "2.3.8-36-1cce53f3"  % "test").cross(CrossVersion.full)
 )
-
 
 
 // transitive dependency of akka 2.5x that is brought in
@@ -324,6 +323,14 @@ dependencyOverrides += "com.typesafe.akka" %% "akka-coordination"   % akkaVersio
 
 scalafmtOnCompile := true
 
+
+// Scalafix
+ThisBuild / scalafixDependencies += "com.github.liancheng" %% "organize-imports" % "0.5.0"
+
+Global / semanticdbEnabled := true
+Global / semanticdbVersion := scalafixSemanticdb.revision
+Global / watchAntiEntropy := FiniteDuration(2000, TimeUnit.MILLISECONDS)
+
 //AvroConfig / stringType := "String"
 
 AvroConfig / fieldVisibility := "private"
@@ -333,8 +340,10 @@ AvroConfig / enableDecimalLogicalType := true
 
 // ammonite repl
 // test:run
+/*
 sourceGenerators in Test += Def.task {
   val file = (sourceManaged in Test).value / "amm.scala"
   IO.write(file, """object amm extends App { ammonite.Main().run() }""")
   Seq(file)
 }.taskValue
+*/

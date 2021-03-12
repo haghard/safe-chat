@@ -2,30 +2,31 @@
 
 package com.safechat
 
+import akka.actor.typed.ActorSystem
+import akka.actor.typed.Behavior
+import akka.actor.typed.scaladsl.Behaviors
+import akka.actor.typed.scaladsl.adapter._
+import akka.cluster.typed.Cluster
+import akka.cluster.typed.SelfUp
+import akka.cluster.typed.Unsubscribe
+import akka.http.scaladsl.server.directives.Credentials
+import akka.stream.UniqueKillSwitch
+import com.safechat.actors.ShardedChatRooms
+import com.safechat.rest.ChatRoomApi
+import com.safechat.serializer.SchemaRegistry
+import com.typesafe.config.Config
+import com.typesafe.config.ConfigFactory
+
 import java.io.File
 import java.lang.management.ManagementFactory
 import java.time.LocalDateTime
 import java.util.TimeZone
-import akka.actor.typed.{ActorSystem, Behavior, DispatcherSelector}
-import akka.actor.typed.scaladsl.Behaviors
-import akka.cluster.typed.{Cluster, SelfUp, Unsubscribe}
-import com.typesafe.config.{Config, ConfigFactory}
-import akka.actor.typed.scaladsl.adapter._
-import akka.http.scaladsl.server.directives.Credentials
-import akka.stream.UniqueKillSwitch
-
-import scala.jdk.CollectionConverters._
-import com.safechat.actors.{ShardedChatRoomClassic, ShardedChatRooms}
-import com.safechat.rest.ChatRoomApi
-import com.safechat.serializer.SchemaRegistry
-
-import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
-import scala.collection.{immutable, Map}
-import scala.concurrent.{Await, Future}
-import scala.io.StdIn
-import scala.util.Try
+import scala.collection.Map
+import scala.concurrent.Future
 import scala.concurrent.duration._
+import scala.jdk.CollectionConverters._
+import scala.util.Try
 
 object Server extends Ops {
 

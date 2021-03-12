@@ -3,19 +3,24 @@
 package akka
 package io
 
-import java.io.{ByteArrayOutputStream, NotSerializableException}
-import java.nio.ByteBuffer
-import java.util
-import java.util.{TimeZone, UUID}
 import akka.actor.ExtendedActorSystem
 import akka.serialization.SerializerWithStringManifest
 import com.safechat.actors.ChatRoomEvent
 import com.safechat.serializer.SchemaRegistry
 import org.apache.avro.Schema
-import org.apache.avro.io.{BinaryEncoder, DecoderFactory, EncoderFactory}
-import org.apache.avro.specific.{SpecificDatumReader, SpecificDatumWriter}
+import org.apache.avro.io.BinaryEncoder
+import org.apache.avro.io.DecoderFactory
+import org.apache.avro.io.EncoderFactory
+import org.apache.avro.specific.SpecificDatumReader
+import org.apache.avro.specific.SpecificDatumWriter
 import org.apache.avro.util.ByteBufferInputStream
 
+import java.io.ByteArrayOutputStream
+import java.io.NotSerializableException
+import java.nio.ByteBuffer
+import java.util
+import java.util.TimeZone
+import java.util.UUID
 import scala.util.Using
 import scala.util.Using.Releasable
 

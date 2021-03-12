@@ -4,7 +4,6 @@ package com.safechat
 package crypto
 
 import java.security.interfaces.RSAKey
-
 import scala.util.Try
 
 abstract class Base64EncodedBytes {

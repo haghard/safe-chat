@@ -8,7 +8,8 @@ import akka.util.ConstantFun
 import akka.util.JavaDurationConverters.JavaDurationOps
 import com.datastax.oss.driver.api.core.ConsistencyLevel
 import com.datastax.oss.driver.api.core.cql.SimpleStatement
-import com.datastax.oss.driver.api.core.servererrors.{WriteTimeoutException, WriteType}
+import com.datastax.oss.driver.api.core.servererrors.WriteTimeoutException
+import com.datastax.oss.driver.api.core.servererrors.WriteType
 
 import java.util.concurrent.atomic.AtomicBoolean
 import scala.compat.java8.FutureConverters.CompletionStageOps

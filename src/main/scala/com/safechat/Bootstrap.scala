@@ -3,22 +3,27 @@
 package com.safechat
 
 import akka.Done
+import akka.actor.Address
+import akka.actor.CoordinatedShutdown
+import akka.actor.CoordinatedShutdown.PhaseActorSystemTerminate
+import akka.actor.CoordinatedShutdown.PhaseBeforeServiceUnbind
+import akka.actor.CoordinatedShutdown.PhaseServiceRequestsDone
+import akka.actor.CoordinatedShutdown.PhaseServiceStop
+import akka.actor.CoordinatedShutdown.PhaseServiceUnbind
+import akka.actor.CoordinatedShutdown.Reason
+import akka.coordination.lease.scaladsl.Lease
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Route
-
-import scala.util.{Failure, Success}
-import scala.concurrent.duration._
-import akka.actor.{Address, CoordinatedShutdown}
-import akka.actor.CoordinatedShutdown.{PhaseActorSystemTerminate, PhaseBeforeServiceUnbind, PhaseServiceRequestsDone, PhaseServiceStop, PhaseServiceUnbind, Reason}
-import akka.coordination.lease.scaladsl.Lease
 import akka.management.scaladsl.AkkaManagement
 import akka.stream.UniqueKillSwitch
-
-import scala.concurrent.Future
 import akka.stream.scaladsl.Sink
 
 import java.util.concurrent.atomic.AtomicReference
 import scala.collection.immutable
+import scala.concurrent.Future
+import scala.concurrent.duration._
+import scala.util.Failure
+import scala.util.Success
 
 object Bootstrap {
   final private case object BindFailure extends Reason

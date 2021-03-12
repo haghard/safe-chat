@@ -1,16 +1,26 @@
 package com.safechat.actors
 
+import akka.actor.ActorLogging
+import akka.actor.Props
+import akka.actor.Stash
+import akka.actor.Timers
 import akka.actor.typed.ActorSystem
 import akka.actor.typed.scaladsl.adapter.ClassicActorSystemOps
-import akka.actor.{ActorLogging, Props, Stash, Timers}
 import akka.cluster.sharding.ShardRegion
-import akka.http.scaladsl.model.ws.{Message, TextMessage}
-import akka.persistence.{PersistentActor, RecoveryCompleted}
+import akka.http.scaladsl.model.ws.Message
+import akka.http.scaladsl.model.ws.TextMessage
+import akka.persistence.PersistentActor
+import akka.persistence.RecoveryCompleted
+import akka.stream.KillSwitches
+import akka.stream.StreamRefAttributes
 import akka.stream.javadsl.StreamRefs
-import akka.stream.scaladsl.{BroadcastHub, Keep, MergeHub, Source}
-import akka.stream.{KillSwitches, StreamRefAttributes}
+import akka.stream.scaladsl.BroadcastHub
+import akka.stream.scaladsl.Keep
+import akka.stream.scaladsl.MergeHub
+import akka.stream.scaladsl.Source
 import com.safechat.actors.ChatRoom.persistTimeout
-import com.safechat.actors.ChatRoomClassic.{HeartBeat, chatRoomHub}
+import com.safechat.actors.ChatRoomClassic.HeartBeat
+import com.safechat.actors.ChatRoomClassic.chatRoomHub
 import com.safechat.domain.RingBuffer
 
 import java.util.TimeZone
@@ -99,12 +109,16 @@ class ChatRoomClassic(totalFailoverTimeout: FiniteDuration)
     }
   }
 
+  /** Does 2 things
+    * 1) Update current state
+    * 2) Send reply back
+    */
   def onEvent[T <: Reply](
     cmd: Command[T],
     state: ChatRoomState,
-    ev: ChatRoomEvent
+    event: ChatRoomEvent
   ): ChatRoomState = {
-    val (newState, reply) = ev match {
+    val (newState, reply) = event match {
       case ChatRoomEvent.UserJoined(userId, pubKey) ⇒
         val newState =
           if (state.online.isEmpty && state.hub.isEmpty) {
@@ -132,7 +146,6 @@ class ChatRoomClassic(totalFailoverTimeout: FiniteDuration)
           case None ⇒
             JoinReply(persistenceId, userId, None)
         }
-
         (newState, reply)
 
       case e: ChatRoomEvent.UserTextAdded ⇒
@@ -171,7 +184,7 @@ class ChatRoomClassic(totalFailoverTimeout: FiniteDuration)
           val newState = onEvent(cmd, state, ev)
           context become active(newState)
         }
-      else log.error("Ignore {}. {} ms", cmd, msSinceLastTick)
+      else log.error("Ignore {} to avoid  possible journal corruption. {} ms", cmd, msSinceLastTick)
 
     case cmd: Command.PostText ⇒
       //log.info("{}", lastSequenceNr)
@@ -191,7 +204,7 @@ class ChatRoomClassic(totalFailoverTimeout: FiniteDuration)
           val newState = onEvent(cmd, state, ev)
           context become active(newState)
         }
-      } else log.error("Ignore {}. {} ms", cmd, msSinceLastTick)
+      } else log.error("Ignore {} to avoid  possible journal corruption. {} ms", cmd, msSinceLastTick)
 
     case cmd: Command.Leave ⇒
       val msSinceLastTick = System.currentTimeMillis - state.obvervedHeartBeatTime
@@ -200,7 +213,7 @@ class ChatRoomClassic(totalFailoverTimeout: FiniteDuration)
           val newState = onEvent(cmd, state, ev)
           context become active(newState)
         }
-      else log.error("Ignore {}. {} ms", cmd, msSinceLastTick)
+      else log.error("Ignore {} to avoid  possible journal corruption. {} ms", cmd, msSinceLastTick)
 
     case _: Command.StopChatRoom ⇒
       state.hub.foreach(_.ks.shutdown())

@@ -5,11 +5,17 @@ package com.safechat.actors
 import akka.NotUsed
 import akka.actor.typed.ActorRef
 import akka.http.scaladsl.model.ws.Message
-import akka.persistence.typed.scaladsl.{Effect, ReplyEffect}
-import akka.stream.scaladsl.{Sink, Source}
-import akka.stream.{SinkRef, SourceRef, UniqueKillSwitch}
+import akka.persistence.typed.scaladsl.Effect
+import akka.persistence.typed.scaladsl.ReplyEffect
+import akka.stream.SinkRef
+import akka.stream.SourceRef
+import akka.stream.UniqueKillSwitch
+import akka.stream.scaladsl.Sink
+import akka.stream.scaladsl.Source
 import com.safechat.actors.ChatRoomEvent.UserJoined
-import com.safechat.actors.Command.{JoinUser, Leave, PostText}
+import com.safechat.actors.Command.JoinUser
+import com.safechat.actors.Command.Leave
+import com.safechat.actors.Command.PostText
 import com.safechat.domain.RingBuffer
 
 /*
@@ -203,8 +209,6 @@ object ChatRoomEvent {
     tz: String
   ) extends ChatRoomEvent
 
-  //com.safechat.actors.UserDisconnected
-  //com.safechat.actors.ChatRoomEvent.UserDisconnected
   final case class UserDisconnected(userId: String) extends ChatRoomEvent
 }
 
