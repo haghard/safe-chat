@@ -28,6 +28,7 @@ import com.safechat.domain.RingBuffer
 import java.util.TimeZone
 import java.util.concurrent.atomic.AtomicReference
 import scala.collection.immutable
+import scala.collection.mutable
 import scala.concurrent.duration._
 
 object ChatRoomClassic {
@@ -106,10 +107,10 @@ class ChatRoomClassic()(implicit
     timers.cancel(persistenceId)
 
   override def receiveRecover: Receive = {
-    var regUsers: Map[String, String]     = Map.empty
-    var online: Set[String]               = Set.empty
-    var recentHistory: RingBuffer[String] = RingBuffer[String](1 << 3)
-    var hub: Option[ChatRoomHub]          = None
+    var regUsers: mutable.Map[String, String] = mutable.Map.empty
+    var online: mutable.Set[String]           = mutable.Set.empty
+    var recentHistory: RingBuffer[String]     = RingBuffer[String](1 << 3)
+    var hub: Option[ChatRoomHub]              = None
 
     {
       case ChatRoomEvent.UserJoined(userId, pubKey) ⇒
@@ -117,15 +118,15 @@ class ChatRoomClassic()(implicit
           if (hub.isEmpty) {
             hub = Some(chatRoomHub(persistenceId, kksRef))
           }
-          regUsers = regUsers + (userId → pubKey)
-          online = online + userId
+          regUsers.put(userId, pubKey)
+          online += userId
         }
 
       case e: ChatRoomEvent.UserTextAdded ⇒
         recentHistory :+ ChatRoomClassic.msg(persistenceId, e.seqNum, e.userId, e.recipient, e.content)
 
       case e: ChatRoomEvent.UserDisconnected ⇒
-        online = online - e.userId
+        online -= e.userId
 
       case SnapshotOffer(metadata, snapshot) ⇒
         log.info(s"Recovered snapshot: $metadata")

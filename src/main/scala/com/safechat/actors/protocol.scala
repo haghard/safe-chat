@@ -19,6 +19,8 @@ import com.safechat.actors.Command.PostText
 import com.safechat.actors.Command.StopChatRoom
 import com.safechat.domain.RingBuffer
 
+import scala.collection.mutable
+
 /*
   Making T contravariant in ActorRef implies that
   for two types JoinReply and Reply where JoinReply is a subtype of Reply, ActorRef[Reply] is a subtype of ActorRef[JoinReply]
@@ -228,8 +230,8 @@ final case class ChatRoomHub(sinkHub: Sink[Message, NotUsed], srcHub: Source[Mes
 
 //https://doc.akka.io/docs/akka/current/typed/style-guide.html#functional-versus-object-oriented-style
 final case class ChatRoomState(
-  regUsers: Map[String, String] = Map.empty,
-  online: Set[String] = Set.empty,
+  regUsers: mutable.Map[String, String] = mutable.Map.empty,
+  online: mutable.Set[String] = mutable.Set.empty,
   recentHistory: RingBuffer[String] = RingBuffer[String](1 << 3),
   hub: Option[ChatRoomHub] = None,
   obvervedHeartBeatTime: Long = System.currentTimeMillis(),

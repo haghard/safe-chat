@@ -21,6 +21,7 @@ import java.nio.ByteBuffer
 import java.util
 import java.util.TimeZone
 import java.util.UUID
+import scala.collection.mutable
 import scala.util.Using
 import scala.util.Using.Releasable
 
@@ -173,8 +174,8 @@ object JournalEventsSerializer {
       }
     } else if (manifest.startsWith(STATE_PREF)) {
       val state    = readFromArray[com.safechat.avro.persistent.state.ChatRoomState](bts, writerSchema, readerSchema)
-      var userKeys = Map.empty[String, String]
-      state.getRegisteredUsers.forEach((login, pubKey) ⇒ userKeys = userKeys + (login.toString → pubKey.toString))
+      val userKeys = mutable.Map.empty[String, String]
+      state.getRegisteredUsers.forEach((login, pubKey) ⇒ userKeys.put(login.toString, pubKey.toString))
 
       val s = com.safechat.actors.ChatRoomState(regUsers = userKeys)
       state.getRecentHistory.forEach(e ⇒ s.recentHistory.:+(e.toString))

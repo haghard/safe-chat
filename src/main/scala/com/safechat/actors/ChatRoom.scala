@@ -278,17 +278,16 @@ object ChatRoom {
         if (state.online.isEmpty && state.hub.isEmpty)
           if (login == ChatRoom.wakeUpUserName)
             state
-          else
-            state.copy(
-              regUsers = state.regUsers + (login → pubKey),
-              online = Set(login),
-              hub = Some(chatRoomHub(persistenceId, kksRef))
-            )
-        else
-          state.copy(
-            regUsers = state.regUsers + (login → pubKey),
-            online = state.online + login
-          )
+          else {
+            state.regUsers.put(login, pubKey)
+            state.online.+=(login)
+            state.copy(hub = Some(chatRoomHub(persistenceId, kksRef)))
+          }
+        else {
+          state.regUsers.put(login, pubKey)
+          state.online.+=(login)
+          state
+        }
       case ChatRoomEvent.UserTextAdded(seqNum, originator, receiver, content, when, tz) ⇒
         val zoneDT = ZonedDateTime.ofInstant(Instant.ofEpochMilli(when), ZoneId.of(tz))
         state.recentHistory :+ s"[$seqNum at ${frmtr.format(zoneDT)}] - $originator -> $receiver:$content"
