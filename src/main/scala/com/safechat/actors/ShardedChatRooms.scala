@@ -10,6 +10,7 @@ import akka.cluster.sharding.typed.ShardingMessageExtractor
 import akka.cluster.sharding.typed.scaladsl.ClusterSharding
 import akka.cluster.sharding.typed.scaladsl.Entity
 import akka.stream.UniqueKillSwitch
+import com.safechat.Server.AppCfg
 
 import java.util.concurrent.atomic.AtomicReference
 import scala.concurrent.Future
@@ -48,7 +49,8 @@ object ShardedChatRooms {
 final class ShardedChatRooms(
   localShards: AtomicReference[scala.collection.immutable.Set[String]],
   kss: AtomicReference[scala.collection.immutable.Set[UniqueKillSwitch]],
-  totalFailoverTimeout: FiniteDuration
+  totalFailoverTimeout: FiniteDuration,
+  appCfg: AppCfg
 )(implicit
   system: ActorSystem[Nothing]
 ) {
@@ -108,7 +110,7 @@ final class ShardedChatRooms(
     //ShardingMessageExtractor[UserCmd](512)
     .withMessageExtractor(ChatRoomsMsgExtractor[Command[Reply]]( /*numberOfShards*/ ))
     .withSettings(settings)
-    .withStopMessage(Command.handOffRoom)
+    .withStopMessage(Command.handOffChatRoom)
 
     //For any shardId that has not been allocated it will be allocated to the requesting node (like a sticky session)
     //.withAllocationStrategy(new akka.cluster.sharding.external.ExternalShardAllocationStrategy(system, ChatRoomEntity.entityKey.name))
@@ -125,7 +127,7 @@ final class ShardedChatRooms(
   implicit val askTimeout = akka.util.Timeout(totalFailoverTimeout)
 
   //val chatShardRegion = sharding.init(entity)
-  val chatShardRegion = ShardedChatRoomClassic(system.toClassic, totalFailoverTimeout, kss)
+  val chatShardRegion = ShardedChatRoomClassic(system.toClassic, totalFailoverTimeout, kss, appCfg)
 
   //Example how to use explicit client:  akka.kafka.cluster.sharding.KafkaClusterSharding
   //val client             = akka.cluster.sharding.external.ExternalShardAllocation(system).clientFor(ChatRoomEntity.entityKey.name)

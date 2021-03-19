@@ -13,10 +13,10 @@ import akka.stream.UniqueKillSwitch
 import akka.stream.scaladsl.Sink
 import akka.stream.scaladsl.Source
 import com.safechat.actors.ChatRoomEvent.UserJoined
+import com.safechat.actors.Command.HandOffChatRoom
 import com.safechat.actors.Command.JoinUser
 import com.safechat.actors.Command.Leave
 import com.safechat.actors.Command.PostText
-import com.safechat.actors.Command.StopChatRoom
 import com.safechat.domain.RingBuffer
 
 import scala.collection.mutable
@@ -91,16 +91,16 @@ object Command {
   }
 
   //The message that will be sent to entities when they are to be stopped for a rebalance or graceful shutdown of a ShardRegion, e.g. PoisonPill.
-  final case class StopChatRoom(
+  final case class HandOffChatRoom(
     chatId: String = null,
     user: String = null,
     replyTo: ActorRef[Nothing] = null //akka.actor.ActorRef.noSender.toTyped[Nothing]
   ) extends Command[Nothing] {
     override type Event = Nothing
-    override val toString = "StopChatRoom"
+    override val toString = "HandOffChatRoom"
   }
 
-  val handOffRoom = StopChatRoom()
+  val handOffChatRoom = HandOffChatRoom()
 }
 
 /*
@@ -230,20 +230,19 @@ final case class ChatRoomHub(sinkHub: Sink[Message, NotUsed], srcHub: Source[Mes
 
 //https://doc.akka.io/docs/akka/current/typed/style-guide.html#functional-versus-object-oriented-style
 final case class ChatRoomState(
-  regUsers: mutable.Map[String, String] = mutable.Map.empty,
-  online: mutable.Set[String] = mutable.Set.empty,
+  users: mutable.Map[String, String] = mutable.Map.empty,
+  usersOnline: mutable.Set[String] = mutable.Set.empty,
   recentHistory: RingBuffer[String] = RingBuffer[String](1 << 3),
   hub: Option[ChatRoomHub] = None,
-  obvervedHeartBeatTime: Long = System.currentTimeMillis(),
   commandsWithoutCheckpoint: Int = 0
 ) {
 
   def applyCmd(cmd: Command[Reply]): ReplyEffect[ChatRoomEvent, ChatRoomState] =
     cmd match {
-      case c: JoinUser     ⇒ Effect.persist(UserJoined(c.user, c.pubKey)).thenNoReply()
-      case _: PostText     ⇒ Effect.noReply
-      case _: Leave        ⇒ Effect.noReply
-      case _: StopChatRoom ⇒ Effect.noReply
+      case c: JoinUser        ⇒ Effect.persist(UserJoined(c.user, c.pubKey)).thenNoReply()
+      case _: PostText        ⇒ Effect.noReply
+      case _: Leave           ⇒ Effect.noReply
+      case _: HandOffChatRoom ⇒ Effect.noReply
     }
 
   def applyEvent(event: ChatRoomEvent): ChatRoomState =

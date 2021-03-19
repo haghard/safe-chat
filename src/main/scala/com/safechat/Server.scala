@@ -3,25 +3,17 @@
 package com.safechat
 
 import akka.actor.typed.ActorSystem
-import akka.actor.typed.Behavior
-import akka.actor.typed.scaladsl.Behaviors
-import akka.actor.typed.scaladsl.adapter._
-import akka.cluster.typed.Cluster
-import akka.cluster.typed.SelfUp
-import akka.cluster.typed.Unsubscribe
 import akka.http.scaladsl.server.directives.Credentials
-import akka.stream.UniqueKillSwitch
-import com.safechat.actors.ShardedChatRooms
-import com.safechat.rest.ChatRoomApi
+import com.safechat.actors.Guardian
 import com.safechat.serializer.SchemaRegistry
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
+import pureconfig.generic.auto.exportReader
 
 import java.io.File
 import java.lang.management.ManagementFactory
 import java.time.LocalDateTime
 import java.util.TimeZone
-import java.util.concurrent.atomic.AtomicReference
 import scala.collection.Map
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -32,76 +24,42 @@ object Server extends Ops {
 
   val AkkaSystemName = "safe-chat"
 
-  def guardian(hostName: String, httpPort: Int): Behavior[Nothing] =
-    Behaviors
-      .setup[SelfUp] { ctx ⇒
-        implicit val sys = ctx.system
-        val cluster      = Cluster(ctx.system)
-        cluster.subscriptions ! akka.cluster.typed.Subscribe(ctx.self, classOf[SelfUp])
+  //docker run -d -p 2551:2551 -p 8080:8080 -e HTTP_PORT=8080 -e CASSANDRA=84.201.150.26:9042,84.201.146.112:9042 -e CONTACT_POINTS=10.130.0.22:2551 -e CAS_USER=... -e CAS_PWS=... -m 700MB haghard/safe-chat:0.4.0
+  val ENV_VAR            = "ENV"
+  val HTTP_PORT_VAR      = "HTTP_PORT"
+  val CONFIG_VAR         = "CONFIG"
+  val CONTACT_POINTS_VAR = "CONTACT_POINTS"
 
-        Behaviors.receive { (ctx, _) ⇒
-          //ctx.log.info(info)
-          cluster.subscriptions ! Unsubscribe(ctx.self)
+  val CASSANDRA_VAR = "CASSANDRA"
+  val CAS_USR_VAR   = "CAS_USR"
+  val CAS_PSW_VAR   = "CAS_PWS"
 
-          val localShards =
-            new AtomicReference[scala.collection.immutable.Set[String]](scala.collection.immutable.Set[String]())
-
-          //stable-after * 2 = 10
-          //https://doc.akka.io/docs/akka-enhancements/current/split-brain-resolver.html#expected-failover-time
-          val totalFailoverTimeout = Duration.fromNanos(
-            sys.settings.config
-              .getDuration("akka.cluster.split-brain-resolver.stable-after")
-              .multipliedBy(2)
-              .toNanos
-          )
-
-          val kksRef =
-            new AtomicReference[scala.collection.immutable.Set[UniqueKillSwitch]](
-              scala.collection.immutable.Set[UniqueKillSwitch]()
-            )
-
-          Bootstrap(
-            ChatRoomApi(
-              new ShardedChatRooms(localShards, kksRef, totalFailoverTimeout)(sys),
-              totalFailoverTimeout
-            ).routes,
-            hostName,
-            httpPort,
-            localShards,
-            kksRef
-          )(sys.toClassic)
-          Behaviors.empty
-        }
-      }
-      .narrow
+  final case class AppCfg(
+    passivationAfter: FiniteDuration,
+    snapshotEvery: Int
+  )
 
   def main(args: Array[String]): Unit = {
     val opts: Map[String, String] = argsToOpts(args.toList)
     applySystemProperties(opts)
 
-    val confPath = sys.props.get("CONFIG").getOrElse(throw new Exception("Env var CONFIG is expected"))
-    val env      = sys.props.get("ENV").getOrElse(throw new Exception("Env var ENV is expected"))
-    val discoveryMethod =
-      sys.props.get("DISCOVERY_METHOD").getOrElse(throw new Exception("Env var DISCOVERY_METHOD is expected"))
-
-    val akkaExternalHostName = sys.props
-      .get("HOSTNAME")
-      .getOrElse(throw new Exception("Env var HOSTNAME is expected"))
-
-    //Inside the Docker container we bind to all available network interfaces
-    val dockerAddr = internalAddr.map(_.getHostAddress).getOrElse("0.0.0.0")
+    val env = sys.props.get(ENV_VAR).getOrElse(throw new Exception(s"$ENV_VAR not found"))
+    val configFile = sys.props
+      .get(CONFIG_VAR)
+      .map(confPath ⇒ new File(s"${new File(confPath).getAbsolutePath}/$env.conf"))
+      .getOrElse(throw new Exception(s"Env var $CONFIG_VAR not found"))
 
     val akkaPort = sys.props
-      .get("AKKA_PORT")
+      .get("akka.remote.artery.canonical.port") //AKKA_PORT
       .flatMap(r ⇒ Try(r.toInt).toOption)
-      .getOrElse(throw new Exception("Env var AKKA_PORT is expected"))
+      .getOrElse(throw new Exception("akka.remote.artery.canonical.port not found"))
 
     val httpPort = sys.props
-      .get("HTTP_PORT")
+      .get(HTTP_PORT_VAR)
       .flatMap(r ⇒ Try(r.toInt).toOption)
-      .getOrElse(throw new Exception("HTTP_PORT is expected"))
+      .getOrElse(throw new Exception(s"$HTTP_PORT_VAR not found"))
 
-    val akkaSeeds = sys.props.get("SEEDS").map { seeds ⇒
+    /*val akkaSeeds = sys.props.get("SEEDS").map { seeds ⇒
       val seedNodesString = seeds
         .split(",")
         .map { node ⇒
@@ -110,29 +68,70 @@ object Server extends Ops {
         }
         .mkString("\n")
       (ConfigFactory parseString seedNodesString).resolve
-    }
+    }*/
 
-    val configFile = new File(s"${new File(confPath).getAbsolutePath}/" + env + ".conf")
-
-    val dbPsw  = sys.props.get("cassandra.psw").getOrElse(throw new Exception("cassandra.psw env var is expected"))
-    val dbUser = sys.props.get("cassandra.user").getOrElse(throw new Exception("cassandra.user env var is expected"))
-
-    val dbConf = sys.props.get("cassandra.hosts").map { hosts ⇒
-      val contactPointsString = hosts
-        .split(",")
-        .map { hostPort ⇒
-          val ap = hostPort.split(":")
-          s"""datastax-java-driver.basic.contact-points += "${ap(0)}:${ap(1)}""""
+    val contactPoints =
+      sys.props
+        .get(CONTACT_POINTS_VAR)
+        .map { points ⇒
+          val array = points.split(",")
+          if (array.size == 2) array
+          else throw new Exception(s"$CONTACT_POINTS_VAR expected size should be 2")
         }
-        .mkString("\n")
-      (ConfigFactory parseString contactPointsString).resolve
-        .withFallback(ConfigFactory.parseString(s"datastax-java-driver.advanced.auth-provider.username=$dbUser"))
-        .withFallback(ConfigFactory.parseString(s"datastax-java-driver.advanced.auth-provider.password=$dbPsw"))
-    }
+        .getOrElse(throw new Exception(s"$CONTACT_POINTS_VAR not found"))
+
+    val dbConf = {
+      val dbUser = sys.props.get(CAS_USR_VAR).getOrElse(throw new Exception(s"$CAS_USR_VAR not found"))
+      val dbPsw  = sys.props.get(CAS_PSW_VAR).getOrElse(throw new Exception(s"$CAS_PSW_VAR not found"))
+      sys.props.get(CASSANDRA_VAR).map { hosts ⇒
+        val contactPointsString = hosts
+          .split(",")
+          .map { hostPort ⇒
+            val ap = hostPort.split(":")
+            s"""datastax-java-driver.basic.contact-points += "${ap(0)}:${ap(1)}""""
+          }
+          .mkString("\n")
+        (ConfigFactory parseString contactPointsString).resolve
+          .withFallback(ConfigFactory.parseString(s"datastax-java-driver.advanced.auth-provider.username=$dbUser"))
+          .withFallback(ConfigFactory.parseString(s"datastax-java-driver.advanced.auth-provider.password=$dbPsw"))
+      }
+    }.getOrElse(throw new Exception(s"$CASSANDRA_VAR | $CAS_USR_VAR | $CAS_PSW_VAR not found"))
+
+    val hostName = sys.props
+      .get("akka.remote.artery.canonical.hostname")
+      .getOrElse(throw new Exception("akka.remote.artery.canonical.hostname is expected"))
+
+    //https://doc.akka.io/docs/akka/current/remoting-artery.html#akka-behind-nat-or-in-a-docker-container
+    //https://youtu.be/EPNBF5PXb84?list=PLbZ2T3O9BuvczX5j03bWMrMFzK5OAs9mZ&t=1075
+    //Inside the Docker container we bind to all available network interfaces
+    val dockerHostName = internalDockerAddr
+      .map(_.getHostAddress)
+      // TODO: for local debug !!!!!!!!!!!!!!!!!
+      .getOrElse(hostName)
+    //.getOrElse("0.0.0.0")
+
+    val httpManagementPort = httpPort - 1
+
+    applySystemProperties(
+      Map(
+        //-Dakka.remote.artery.canonical.hostname =   192.168.0.3
+        //management
+        "-Dakka.management.http.hostname" → hostName, //192.168.0.3
+        "-Dakka.management.http.port"     → httpManagementPort.toString, //8079
+        //internal hostname
+        "-Dakka.remote.artery.bind.hostname"   → dockerHostName, //172.17.0.3
+        "-Dakka.remote.artery.bind.port"       → akkaPort.toString,
+        "-Dakka.management.http.bind-hostname" → dockerHostName, //172.17.0.3
+        "-Dakka.management.http.bind-port"     → httpManagementPort.toString
+      )
+    )
+
+    val appCfg =
+      pureconfig.ConfigSource.file(configFile).at(AkkaSystemName).loadOrThrow[Server.AppCfg]
 
     val cfg: Config = {
       //https://doc.akka.io/docs/akka-management/current/akka-management.html
-      val managementConf =
+      /*val managementConf =
         s"""
           |akka.management {
           |  http {
@@ -151,57 +150,65 @@ object Server extends Ops {
           |     }
           |  }
           |}
-          |""".stripMargin
+          |""".stripMargin*/
 
-      val general = ConfigFactory.empty()
-      val local   = dbConf.fold(general)(c ⇒ general.withFallback(c))
-      akkaSeeds
-        .fold(local)(c ⇒ local.withFallback(c))
-        .withFallback(ConfigFactory.parseString(s"akka.remote.artery.canonical.bind.hostname=$dockerAddr"))
-        .withFallback(ConfigFactory.parseString(s"akka.remote.artery.canonical.bind.port=$akkaPort"))
-        .withFallback(ConfigFactory.parseString(s"akka.remote.artery.canonical.hostname=$akkaExternalHostName"))
-        .withFallback(ConfigFactory.parseString(s"akka.remote.artery.canonical.port=$akkaPort"))
-        .withFallback(ConfigFactory.parseString(managementConf))
+      //seed nodes | contact points
+      //https://doc.akka.io/docs/akka-management/current/bootstrap/local-config.html
+      //https://github.com/akka/akka-management/blob/master/integration-test/local/src/test/scala/akka/management/LocalBootstrapTest.scala
+      //Configuration based discovery can be used to set the Cluster Bootstrap process locally within an IDE or from the command line.
+      val bootstrapEndpoints = {
+        val endpointsList = contactPoints.map(s ⇒ s"{host=$s,port=$httpManagementPort}").mkString(",")
+        ConfigFactory
+          .parseString(s"akka.discovery.config.services { $AkkaSystemName = { endpoints = [ $endpointsList ] }}")
+          .resolve()
+      }
+
+      bootstrapEndpoints
+        .withFallback(dbConf)
         .withFallback(ConfigFactory.parseFile(configFile).resolve())
-        .withFallback(pureconfig.ConfigSource.default.loadOrThrow[Config]) //.at(AkkaSystemName)
-      //.withFallback(ConfigFactory.load())
+        .withFallback(ConfigFactory.load())
+      //.withFallback(pureconfig.ConfigSource.default.loadOrThrow[Config]) //.at(AkkaSystemName)
     }
 
     //check dispatcher name
     //cfg.getObject(Dispatcher)
 
-    val eventMapping =
+    val eventsSchemaMapping =
       SchemaRegistry.journalEvents(cfg.getConfig("akka.actor.serialization-bindings"))
 
-    val system =
-      akka.actor.typed.ActorSystem[Nothing](guardian(akkaExternalHostName, httpPort), AkkaSystemName, cfg)
-
-    val greeting = showGreeting(
+    val gr = greeting(
       cfg,
       httpPort,
-      akkaExternalHostName,
-      cfg.getStringList("akka.cluster.seed-nodes").asScala.mkString(", "),
-      eventMapping
+      s"$hostName/$dockerHostName",
+      contactPoints.mkString(","),
+      eventsSchemaMapping
     )
-    system.log.info(greeting)
 
-    // Akka Management hosts the HTTP routes used by bootstrap
+    val system =
+      akka.actor.typed.ActorSystem[Nothing](Guardian(dockerHostName, httpPort, gr, appCfg), AkkaSystemName, cfg)
+
     //akka.management.scaladsl.AkkaManagement(system).start(_.withAuth(basicAuth(system)))
+    // Akka Management hosts the HTTP routes used by bootstrap
     akka.management.scaladsl.AkkaManagement(system).start()
 
     // Starting the bootstrap process needs to be done explicitly
-    akka.management.cluster.bootstrap.ClusterBootstrap(system.toClassic).start()
+    akka.management.cluster.bootstrap.ClusterBootstrap(system).start()
+
+    /*akka.cluster.Cluster(system).registerOnMemberUp {
+      val ts = system.toTyped
+      ts.systemActorOf(guardian(dockerHostName, httpPort), "guardian", akka.actor.typed.Props.empty)
+      //ts.printTree
+      //ts.tell(SpawnProtocol.Spawn(guardian(dockerHostName, httpPort), "guardian", akka.actor.typed.Props.empty, ts.ignoreRef))
+    }*/
 
     //TODO: for debug only
-    /*
     val _ = scala.io.StdIn.readLine()
     system.log.warn("Shutting down ...")
     system.terminate()
     scala.concurrent.Await.result(
       system.whenTerminated,
-      cfg.getDuration("akka.coordinated-shutdown.default-phase-timeout", TimeUnit.SECONDS).seconds
+      cfg.getDuration("akka.coordinated-shutdown.default-phase-timeout", java.util.concurrent.TimeUnit.SECONDS).seconds
     )
-     */
 
   }
 
@@ -215,12 +222,12 @@ object Server extends Ops {
       case _ ⇒ Future.successful(None)
     }
 
-  def showGreeting(
+  def greeting(
     cfg: Config,
     httpPort: Int,
     host: String,
-    seedNodes: String,
-    eventMapping: Map[String, String]
+    contactPoints: String,
+    eventSchemaMapping: Map[String, String]
   ): String = {
     //cfg.getDuration("akka.http.server.idle-timeout")
     //cfg.getDuration("akka.http.host-connection-pool.idle-timeout")
@@ -230,21 +237,24 @@ object Server extends Ops {
       .append("=================================================================================================")
       .append('\n')
       .append(
-        s"★ ★ ★   Node ${cfg.getString("akka.remote.artery.canonical.hostname")}:${cfg.getInt("akka.remote.artery.canonical.port")}   ★ ★ ★"
+        s"★ ★ ★   akka-node $host   ★ ★ ★"
       )
       .append('\n')
-      .append(s"★ ★ ★   Seed nodes: [$seedNodes]  ★ ★ ★")
+      .append(s"★ ★ ★   Contact points: [$contactPoints]  ★ ★ ★")
       .append('\n')
       .append(
         s"★ ★ ★   Cassandra: ${cfg.getStringList("datastax-java-driver.basic.contact-points").asScala.mkString(",")} "
       )
+      .append('\n')
+      .append(s"★ ★ ★   Management host ${cfg.getString("akka.management.http.hostname")}  ★ ★ ★")
+      .append('\n')
       .append(
         s"  Journal partition size: ${cfg.getInt("akka.persistence.cassandra.journal.target-partition-size")} ★ ★ ★"
       )
       .append('\n')
       .append("★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★  Persistent events schema mapping ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★")
       .append('\n')
-      .append(eventMapping.mkString("\n"))
+      .append(eventSchemaMapping.mkString("\n"))
       .append('\n')
       .append("★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★")
       .append('\n')

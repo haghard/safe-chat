@@ -118,7 +118,7 @@ object JournalEventsSerializer {
         Using.resource(new ByteArrayOutputStream(256)) { baos ⇒
           Using.resource(EncoderFactory.get.directBinaryEncoder(baos, null)) { enc ⇒
             val users = new java.util.HashMap[CharSequence, CharSequence]()
-            state.regUsers.foreach { case (login, pubKey) ⇒
+            state.users.foreach { case (login, pubKey) ⇒
               users.put(login, pubKey)
             }
             val history = new util.ArrayList[CharSequence]()
@@ -177,7 +177,7 @@ object JournalEventsSerializer {
       val userKeys = mutable.Map.empty[String, String]
       state.getRegisteredUsers.forEach((login, pubKey) ⇒ userKeys.put(login.toString, pubKey.toString))
 
-      val s = com.safechat.actors.ChatRoomState(regUsers = userKeys)
+      val s = com.safechat.actors.ChatRoomState(users = userKeys)
       state.getRecentHistory.forEach(e ⇒ s.recentHistory.:+(e.toString))
       s
     } else

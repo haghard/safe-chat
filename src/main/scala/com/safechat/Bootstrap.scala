@@ -34,20 +34,16 @@ object Bootstrap {
     if (addr.port.isDefined) sb.append(':').append(addr.port.get)
     sb.toString
   }
-
 }
 
 final case class Bootstrap(
   routes: Route,
-  host: String,
+  httpBindHostName: String,
   port: Int,
   localShards: AtomicReference[immutable.Set[String]],
   kksRef: AtomicReference[immutable.Set[UniqueKillSwitch]]
-)(implicit
-  classicSystem: akka.actor.ActorSystem
-) {
+)(implicit classicSystem: akka.actor.ActorSystem) {
   implicit val ec = classicSystem.dispatcher
-  val ua          = akka.cluster.Cluster(classicSystem).selfUniqueAddress
   val shutdown    = CoordinatedShutdown(classicSystem)
   val terminationDeadline = classicSystem.settings.config
     .getDuration("akka.coordinated-shutdown.default-phase-timeout")
@@ -55,7 +51,7 @@ final case class Bootstrap(
     .second
 
   val f = Http()
-    .newServerAt(host, port)
+    .newServerAt(httpBindHostName, port)
     .connectionSource()
     .to(Sink.foreach { con ⇒
       classicSystem.log.info("Accept connection from {}", con.remoteAddress)
@@ -67,7 +63,7 @@ final case class Bootstrap(
 
   f.onComplete {
     case Failure(ex) ⇒
-      classicSystem.log.error(s"Shutting down because can't bind to $host:$port", ex)
+      classicSystem.log.error(s"Shutting down because can't bind to $httpBindHostName:$port", ex)
       shutdown.run(Bootstrap.BindFailure)
     case Success(binding) ⇒
       classicSystem.log.info(s"★ ★ ★ Listening for HTTP connections on ${binding.localAddress} * * *")

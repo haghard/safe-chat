@@ -40,9 +40,6 @@ object ChatRoom {
   val snapshotEveryN = 300 //TODO should be configurable
   val MSG_SEP        = ":"
 
-  val wakeUpUserName   = "John Doe"
-  val wakeUpEntityName = "dungeon"
-
   val persistTimeout = akka.util.Timeout(2.second) //write to journal timeout
 
   val entityKey: EntityTypeKey[Command[Reply]] =
@@ -94,16 +91,16 @@ object ChatRoom {
             case (state, RecoveryCompleted) ⇒
               //val leaseName = s"${sys.name}-shard-${ChatRoomEntity.entityKey.name}-${entityCtx.entityId}"
               //captureChatRoom(localChatRooms, leaseName)
-              ctx.log.info(s"★ Recovered: [${state.regUsers.keySet.mkString(",")}] ★")
+              ctx.log.info(s"★ Recovered: [${state.users.keySet.mkString(",")}] ★")
             case (state, PreRestart) ⇒
-              ctx.log.info(s"★ Pre-restart ${state.regUsers.keySet.mkString(",")} ★")
+              ctx.log.info(s"★ Pre-restart ${state.users.keySet.mkString(",")} ★")
             case (state, PostStop) ⇒
               state.hub.foreach(_.ks.shutdown())
               ctx.log.info("★ PostStop. Clean up resources ★")
             case (state, SnapshotCompleted(_)) ⇒
-              ctx.log.info(s"★ SnapshotCompleted [${state.regUsers.keySet.mkString(",")}]")
+              ctx.log.info(s"★ SnapshotCompleted [${state.users.keySet.mkString(",")}]")
             case (state, SnapshotFailed(_, ex)) ⇒
-              ctx.log.error(s"★ SnapshotFailed ${state.regUsers.keySet.mkString(",")}", ex)
+              ctx.log.error(s"★ SnapshotFailed ${state.users.keySet.mkString(",")}", ex)
             case (_, RecoveryFailed(cause)) ⇒
               ctx.log.error(s"★ RecoveryFailed $cause", cause)
             case (_, signal) ⇒
@@ -150,6 +147,7 @@ object ChatRoom {
     val ((sinkHub, ks), sourceHub) =
       MergeHub
         .source[Message](perProducerBufferSize = bs)
+        .flatMapConcat(_.asTextMessage.getStreamedText.fold("")(_ + _)) //.recoverWithRetries()
         //import akka.actor.typed.scaladsl.AskPattern._
         //.alsoTo(Sink.foreachAsync(1) { entity.ask[ChatRoomReply](PostText(persistenceId, "", "", "", _))(???, ???) })
         //.alsoTo()
@@ -255,11 +253,11 @@ object ChatRoom {
         Effect
           .persist(ChatRoomEvent.UserDisconnected(cmd.user))
           .thenReply(cmd.replyTo) { updatedState: ChatRoomState ⇒
-            ctx.log.info("{} disconnected - online:[{}]", cmd.user, updatedState.online.mkString(""))
+            ctx.log.info("{} disconnected - online:[{}]", cmd.user, updatedState.usersOnline.mkString(""))
             Reply.LeaveReply(cmd.chatId, cmd.user)
           }
 
-      case cmd: Command.StopChatRoom ⇒
+      case cmd: Command.HandOffChatRoom ⇒
         state.hub.foreach(_.ks.shutdown())
         ctx.log.info(cmd.getClass.getName)
         Effect.none.thenStop().thenNoReply()
@@ -275,25 +273,20 @@ object ChatRoom {
   ): ChatRoomState =
     event match {
       case ChatRoomEvent.UserJoined(login, pubKey) ⇒
-        if (state.online.isEmpty && state.hub.isEmpty)
-          if (login == ChatRoom.wakeUpUserName)
-            state
-          else {
-            state.regUsers.put(login, pubKey)
-            state.online.+=(login)
-            state.copy(hub = Some(chatRoomHub(persistenceId, kksRef)))
-          }
-        else {
-          state.regUsers.put(login, pubKey)
-          state.online.+=(login)
-          state
-        }
+        val newState =
+          if (state.usersOnline.isEmpty && state.hub.isEmpty) state.copy(hub = Some(chatRoomHub(persistenceId, kksRef)))
+          else state
+
+        newState.users.put(login, pubKey)
+        newState.usersOnline.+=(login)
+        newState
+
       case ChatRoomEvent.UserTextAdded(seqNum, originator, receiver, content, when, tz) ⇒
         val zoneDT = ZonedDateTime.ofInstant(Instant.ofEpochMilli(when), ZoneId.of(tz))
         state.recentHistory :+ s"[$seqNum at ${frmtr.format(zoneDT)}] - $originator -> $receiver:$content"
         state
       case ChatRoomEvent.UserDisconnected(login) ⇒
-        state.copy(online = state.online - login)
+        state.copy(usersOnline = state.usersOnline - login)
     }
 
   def snapshotPredicate(

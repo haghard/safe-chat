@@ -5,7 +5,7 @@ import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.FiniteDuration
 
 val projectName   = "safe-chat"
-val Version       = "0.3.0-SNAPSHOT"
+val Version       = "0.4.0"
 
 val akkaVersion     = "2.6.13"
 val akkaHttpVersion = "10.2.4"
@@ -70,7 +70,6 @@ lazy val scalacSettings = Seq(
     "-Ywarn-value-discard"      // Warn when non-Unit expression results are unused.
   )*/
 )
-
 
 lazy val commonSettings = Seq(
   name := projectName,
@@ -245,11 +244,12 @@ lazy val root = project
   .enablePlugins(sbtdocker.DockerPlugin, BuildInfoPlugin)
 
 libraryDependencies ++= Seq(
-  "com.typesafe.akka"       %% "akka-slf4j"         % akkaVersion,
-  "com.github.pureconfig"   %% "pureconfig"         % "0.12.3",
-  //"com.typesafe.akka"       %% "akka-actor-typed"   % akkaVersion,
-  "com.typesafe.akka"       %% "akka-stream-typed"  % akkaVersion,
-  "com.typesafe.akka"       %% "akka-cluster-typed" % akkaVersion,
+  "com.typesafe.akka"       %% "akka-slf4j"             % akkaVersion,
+  "com.github.pureconfig"   %% "pureconfig"             % "0.12.3",
+
+  "com.typesafe.akka"       %% "akka-stream-typed"      % akkaVersion,
+  "com.typesafe.akka"       %% "akka-cluster-typed"     % akkaVersion,
+  "com.typesafe.akka"       %% "akka-cluster-metrics"   % akkaVersion,
 
   //"com.github.TanUkkii007" %% "akka-cluster-custom-downing" % "0.0.13-SNAPSHOT", //local build that uses CoordinatedShutdown to down self
   //"org.sisioh"        %% "akka-cluster-custom-downing" % "0.1.0",
@@ -323,6 +323,12 @@ dependencyOverrides += "com.typesafe.akka" %% "akka-coordination"   % akkaVersio
 
 scalafmtOnCompile := true
 
+//AvroConfig / stringType := "String"
+
+AvroConfig / fieldVisibility := "private"
+AvroConfig / enableDecimalLogicalType := true
+//AvroConfig / sourceDirectory := baseDirectory.value / "src" / "main" / "resources" / "avro"
+
 
 // Scalafix
 ThisBuild / scalafixDependencies += "com.github.liancheng" %% "organize-imports" % "0.5.0"
@@ -330,12 +336,6 @@ ThisBuild / scalafixDependencies += "com.github.liancheng" %% "organize-imports"
 Global / semanticdbEnabled := true
 Global / semanticdbVersion := scalafixSemanticdb.revision
 Global / watchAntiEntropy := FiniteDuration(2000, TimeUnit.MILLISECONDS)
-
-//AvroConfig / stringType := "String"
-
-AvroConfig / fieldVisibility := "private"
-AvroConfig / enableDecimalLogicalType := true
-//AvroConfig / sourceDirectory := baseDirectory.value / "src" / "main" / "resources" / "avro"
 
 
 // ammonite repl

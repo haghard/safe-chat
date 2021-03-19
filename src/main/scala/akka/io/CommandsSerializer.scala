@@ -65,11 +65,11 @@ object CommandsSerializer {
           replyTo,
           new com.safechat.avro.command.Leave(user)
         )
-      case _: Command.StopChatRoom ⇒
+      case _: Command.HandOffChatRoom ⇒
         new com.safechat.avro.command.CmdEnvelope(
-          Command.handOffRoom.chatId,
+          Command.handOffChatRoom.chatId,
           null,
-          new com.safechat.avro.command.StopChatRoom(Command.handOffRoom.chatId, Command.handOffRoom.user)
+          new com.safechat.avro.command.HandOffChatRoom(Command.handOffChatRoom.chatId, Command.handOffChatRoom.user)
         )
     }
   }
@@ -109,8 +109,8 @@ object CommandsSerializer {
             .deserializeActorRef(system, ActorRefData.parseFrom(env.getReplyTo))
             .toTyped[Reply.LeaveReply]
         )
-      case _: com.safechat.avro.command.StopChatRoom ⇒
-        Command.handOffRoom
+      case _: com.safechat.avro.command.HandOffChatRoom ⇒
+        Command.handOffChatRoom
     }
 
   def toBytes(cmd: com.safechat.actors.Command[_], schema: Schema): Array[Byte] =

@@ -30,12 +30,11 @@ APP_OPTS="-server \
           -DENV=${ENV} \
           -DHTTP_PORT=${HTTP_PORT} \
           -DCONFIG=${CONFIG} \
-          -DSEEDS=${SEEDS} \
-          -DHOSTNAME=${HOSTNAME} \
-          -DAKKA_PORT=${AKKA_PORT} \
-          -DDISCOVERY_METHOD=${DISCOVERY_METHOD} \
-          -Dcassandra.hosts=${CASSANDRA} \
-          -Dcassandra.user=${CAS_USER} \
-          -Dcassandra.psw="${CAS_PWS}
+          -DCONTACT_POINTS=${CONTACT_POINTS} \
+          -Dakka.remote.artery.canonical.hostname=${HOSTNAME} \
+          -Dakka.remote.artery.canonical.port=${AKKA_PORT} \
+          -DCASSANDRA=${CASSANDRA} \
+          -DCAS_USER=${CAS_USER} \
+          -DCAS_PWS="${CAS_PWS}
 
 java ${APP_OPTS} -cp ${APP_BASE}/conf -jar ${APP_BASE}/safe-chat-${VERSION}.jar

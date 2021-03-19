@@ -4,8 +4,6 @@ import akka.actor.ActorSystem
 import akka.actor.typed.ActorRef
 import akka.actor.typed.scaladsl.adapter.ClassicActorRefOps
 import akka.cluster.sharding.ClusterSharding
-import akka.http.scaladsl.model.ws.Message
-import akka.http.scaladsl.model.ws.TextMessage
 import akka.stream.Attributes
 import akka.stream.UniqueKillSwitch
 import akka.stream.scaladsl.Flow
@@ -25,7 +23,7 @@ package object actors {
   def persist(chatId: String)(implicit
     classicSystem: ActorSystem,
     persistTimeout: Timeout
-  ): Flow[Message, Reply, akka.NotUsed] = {
+  ): Flow[String, Reply, akka.NotUsed] = {
     def persistFlow = {
 
       @tailrec
@@ -43,24 +41,10 @@ package object actors {
         lookup(ClusterSharding(classicSystem).shardRegion(ChatRoom.entityKey.name).toTyped[PostText], 20)
 
       ActorFlow
-        .ask[Message, PostText, Reply](1)(shardRegion) { (msg: Message, reply: ActorRef[Reply]) ⇒
-          msg match {
-            case TextMessage.Strict(text) ⇒
-              val segs = text.split(MSG_SEP)
-              if (text.split(MSG_SEP).size == 3)
-                PostText(chatId, segs(0).trim, segs(1).trim, segs(2).trim, reply)
-              else
-                PostText(
-                  chatId,
-                  "null",
-                  "null",
-                  s"Message error. Wrong format $text",
-                  reply
-                )
-
-            case other ⇒
-              throw new Exception(s"Unexpected message type ${other.getClass.getName}")
-          }
+        .ask[String, PostText, Reply](1)(shardRegion) { (msg: String, reply: ActorRef[Reply]) ⇒
+          val segs = msg.split(MSG_SEP)
+          if (segs.size == 3) PostText(chatId, segs(0).trim, segs(1).trim, segs(2).trim, reply)
+          else PostText(chatId, "", "", s"Message error.Wrong format: $msg", reply)
         }
         .withAttributes(Attributes.inputBuffer(0, 0)) //ActorAttributes.maxFixedBufferSize(1))
     }

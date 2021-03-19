@@ -6,24 +6,28 @@ import akka.NotUsed
 import akka.actor.typed.ActorSystem
 import akka.actor.typed.scaladsl.adapter._
 import akka.http.scaladsl.model.ws.Message
+import akka.http.scaladsl.model.ws.TextMessage
 import akka.http.scaladsl.server._
 import akka.stream.OverflowStrategy
 import akka.stream.scaladsl.Flow
 import akka.stream.scaladsl.RestartFlow
+import akka.stream.scaladsl.Source
 import com.safechat.actors._
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-final case class ChatRoomApi(rooms: ShardedChatRooms, to: FiniteDuration)(implicit sys: ActorSystem[Nothing])
-    extends Directives {
+final case class ChatRoomApi(rooms: ShardedChatRooms, to: FiniteDuration)(implicit
+  sys: ActorSystem[Nothing]
+) extends Directives {
   implicit val cx         = sys.executionContext
   implicit val sch        = sys.scheduler
-  implicit val classicSch = sys.toClassic.scheduler
+  implicit val classicSys = sys.toClassic
+  implicit val classicSch = classicSys.scheduler
 
-  //Wake up ChatRoom shard region using a fake user
-  //sharding would start a new entity on first message sent to it.
-  sch.scheduleOnce(
+  /*
+    Wake up ChatRoom shard region using a fake user.  We need this because sharding would start a new entity on first message sent to it.
+    sch.scheduleOnce(
     500.millis,
     () ⇒
       akka.pattern.retry(
@@ -35,7 +39,7 @@ final case class ChatRoomApi(rooms: ShardedChatRooms, to: FiniteDuration)(implic
         3,
         1.second
       )
-  )
+  )*/
 
   //web socket flow
   /*
@@ -70,21 +74,53 @@ final case class ChatRoomApi(rooms: ShardedChatRooms, to: FiniteDuration)(implic
             //val disp                        = attr.get[ActorAttributes.Dispatcher].get
             //println("attributes: " + attr.attributeList.mkString(","))
 
+            /*
+            cannot create top-level actor from the outside on ActorSystem with custom user guardian !!!!!!
+            val room = sys.toClassic.actorOf(Room.props(chatId))
+            Flow[Message]
+              //the websocket spec says that a single msg over web socket can be streamed (multiple chunks)
+              .flatMapConcat(_.asTextMessage.getStreamedText.fold("")(_ + _))
+              .groupedWithin(128, 100.second)
+              .mapAsync(4) { batchOfStr ⇒
+                implicit val t = akka.util.Timeout(2.seconds)
+                room.ask(batchOfStr).mapTo[akka.Done]
+              //Future { /*ask bulk insert*/ () }(mat.executionContext)
+              }*/
+
+            /*import akka.actor.typed.scaladsl.AskPattern._
+            val f: Future[ActorRef[Int]] = sys
+              .narrow[Int]
+              .ask { ref: ActorRef[ActorRef[Nothing]] ⇒
+                SpawnProtocol.Spawn(Behaviors.same[Int], "room-manager", akka.actor.typed.Props.empty, ref)
+              }(akka.util.Timeout(3.seconds), sys.scheduler)
+
+            sys.narrow[Int]
+              .tell(SpawnProtocol.Spawn(Behaviors.same[Int], "room-manager", akka.actor.typed.Props.empty, sys.ignoreRef))
+             */
+
             val buf = attr.get[akka.stream.Attributes.InputBuffer].get
             Flow
-              .fromSinkAndSourceCoupled(sinkRef.sink, sourceRef.source)
+              .fromSinkAndSourceCoupled(
+                sinkRef.sink,
+                sourceRef.source
+              )
+              //
+              .merge(
+                Source.tick(10.seconds, 10.seconds, TextMessage.Strict("none:none:commercial")),
+                eagerComplete = true
+              )
               .buffer(buf.max, OverflowStrategy.backpressure)
               .backpressureTimeout(3.seconds) //automatic cleanup for very slow subscribers.
-              .watchTermination() { (_, c) ⇒
-                c.flatMap { _ ⇒
-                  sys.log.info("{}@{} flow has been terminated", user, chatId)
+              .watchTermination() { (_, done) ⇒
+                done.flatMap { _ ⇒
+                  classicSys.log.info("{}@{} flow has been terminated", user, chatId)
                   rooms.leave(chatId, user)
                 }
                 NotUsed
               }
           }
         case None ⇒
-          throw new Exception("JoinReplyFailure !!!")
+          throw new Exception(s"$chatId join failure !!!")
       }
     }
 

@@ -3,7 +3,6 @@ package com.safechat.actors
 import akka.actor.ActorLogging
 import akka.actor.Props
 import akka.actor.Stash
-import akka.actor.Timers
 import akka.actor.typed.ActorSystem
 import akka.actor.typed.scaladsl.adapter.ClassicActorSystemOps
 import akka.cluster.sharding.ShardRegion
@@ -19,10 +18,9 @@ import akka.stream.UniqueKillSwitch
 import akka.stream.scaladsl.BroadcastHub
 import akka.stream.scaladsl.Keep
 import akka.stream.scaladsl.MergeHub
+import com.safechat.Server.AppCfg
 import com.safechat.actors.ChatRoom.persistTimeout
-import com.safechat.actors.ChatRoomClassic.HeartBeat
 import com.safechat.actors.ChatRoomClassic.chatRoomHub
-import com.safechat.actors.ChatRoomClassic.snapshotEveryN
 import com.safechat.domain.RingBuffer
 
 import java.util.TimeZone
@@ -32,9 +30,6 @@ import scala.collection.mutable
 import scala.concurrent.duration._
 
 object ChatRoomClassic {
-  case object HeartBeat
-
-  val snapshotEveryN = 1 << 8
 
   def msg(persistenceId: String, seqNum: Long, userId: String, recipient: String, content: String) =
     s"[$persistenceId:$seqNum - from:$userId -> to:$recipient] - $content"
@@ -46,8 +41,12 @@ object ChatRoomClassic {
     case ShardRegion.StartEntity(chatId) ⇒ chatId
   }
 
-  def props(totalFailoverTimeout: FiniteDuration, kksRef: AtomicReference[immutable.Set[UniqueKillSwitch]]) =
-    Props(new ChatRoomClassic()(kksRef, totalFailoverTimeout)).withDispatcher("cassandra-dispatcher")
+  def props(
+    totalFailoverTimeout: FiniteDuration,
+    kksRef: AtomicReference[immutable.Set[UniqueKillSwitch]],
+    appCfg: AppCfg
+  ) =
+    Props(new ChatRoomClassic()(kksRef, totalFailoverTimeout, appCfg)).withDispatcher("cassandra-dispatcher")
 
   def chatRoomHub(
     persistenceId: String,
@@ -69,6 +68,7 @@ object ChatRoomClassic {
     val ((sinkHub, ks), sourceHub) =
       MergeHub
         .source[Message](perProducerBufferSize = bs)
+        .flatMapConcat(_.asTextMessage.getStreamedText.fold("")(_ + _)) //.recoverWithRetries()
         .via(persistFlow)
         .viaMat(KillSwitches.single)(Keep.both)
         .toMat(BroadcastHub.sink[Message](bufferSize = bs))(Keep.both)
@@ -89,22 +89,18 @@ object ChatRoomClassic {
   }
 }
 
-class ChatRoomClassic()(implicit
+class ChatRoomClassic(implicit
   kksRef: AtomicReference[immutable.Set[UniqueKillSwitch]],
-  totalFailoverTimeout: FiniteDuration
-) extends Timers
-    with PersistentActor
+  totalFailoverTimeout: FiniteDuration,
+  appCfg: AppCfg
+) extends PersistentActor
+    with Passivation
     with ActorLogging
     with Stash {
-  //
-  val tickTo = 3.seconds
 
   implicit val sys = context.system.toTyped
 
   override val persistenceId = self.path.name
-
-  override def postStop(): Unit =
-    timers.cancel(persistenceId)
 
   override def receiveRecover: Receive = {
     var regUsers: mutable.Map[String, String] = mutable.Map.empty
@@ -114,13 +110,11 @@ class ChatRoomClassic()(implicit
 
     {
       case ChatRoomEvent.UserJoined(userId, pubKey) ⇒
-        if (userId != ChatRoom.wakeUpUserName) {
-          if (hub.isEmpty) {
-            hub = Some(chatRoomHub(persistenceId, kksRef))
-          }
-          regUsers.put(userId, pubKey)
-          online += userId
-        }
+        if (hub.isEmpty)
+          hub = Some(chatRoomHub(persistenceId, kksRef))
+
+        regUsers.put(userId, pubKey)
+        online += userId
 
       case e: ChatRoomEvent.UserTextAdded ⇒
         recentHistory :+ ChatRoomClassic.msg(persistenceId, e.seqNum, e.userId, e.recipient, e.content)
@@ -131,20 +125,19 @@ class ChatRoomClassic()(implicit
       case SnapshotOffer(metadata, snapshot) ⇒
         log.info(s"Recovered snapshot: $metadata")
         val state = snapshot.asInstanceOf[ChatRoomState]
-        regUsers = state.regUsers
-        online = state.online
+        regUsers = state.users
+        online = state.usersOnline
         recentHistory = state.recentHistory
         hub = Some(chatRoomHub(persistenceId, kksRef))
 
       case RecoveryCompleted ⇒
         log.info(s"Recovered: [${regUsers.keySet.mkString(",")}] - [${online.mkString(",")}] ")
-        timers.startTimerWithFixedDelay(persistenceId, HeartBeat, tickTo)
         context become active(ChatRoomState(regUsers, online, recentHistory, hub))
     }
   }
 
   def maybeSnapshot(state: ChatRoomState): ChatRoomState =
-    if (state.commandsWithoutCheckpoint >= snapshotEveryN) {
+    if (state.commandsWithoutCheckpoint >= appCfg.snapshotEvery) {
       saveSnapshot(state)
       state.copy(commandsWithoutCheckpoint = 0)
     } else state.copy(commandsWithoutCheckpoint = state.commandsWithoutCheckpoint + 1)
@@ -152,10 +145,9 @@ class ChatRoomClassic()(implicit
   def notActive(state: ChatRoomState): Receive = {
     case cmd: Command.JoinUser ⇒
       persist(ChatRoomEvent.UserJoined(cmd.user, cmd.pubKey)) { ev ⇒
-        timers.startTimerAtFixedRate(persistenceId, HeartBeat, tickTo)
         val newState = maybeSnapshot(Handler(cmd, cmd.coerceEvent(ev), state))
         unstashAll()
-        context become active(newState.copy(obvervedHeartBeatTime = System.currentTimeMillis))
+        context become active(newState)
       }
     case other ⇒
       //Shouldn't arrive here
@@ -165,57 +157,41 @@ class ChatRoomClassic()(implicit
 
   def active(state: ChatRoomState): Receive = {
     case cmd: Command.JoinUser ⇒
-      val msSinceLastTick = System.currentTimeMillis - state.obvervedHeartBeatTime
-      if (msSinceLastTick < totalFailoverTimeout.toMillis)
-        persist(ChatRoomEvent.UserJoined(cmd.user, cmd.pubKey)) { ev ⇒
-          val newState = maybeSnapshot(Handler(cmd, cmd.coerceEvent(ev), state))
-          context become active(newState)
-        }
-      else log.error("Ignore {} to avoid possible journal corruption. {} ms", cmd, msSinceLastTick)
+      persist(ChatRoomEvent.UserJoined(cmd.user, cmd.pubKey)) { ev ⇒
+        val newState = maybeSnapshot(Handler(cmd, cmd.coerceEvent(ev), state))
+        context become active(newState)
+      }
 
     case cmd: Command.PostText ⇒
       //log.info("{}", lastSequenceNr)
-      val msSinceLastTick = System.currentTimeMillis - state.obvervedHeartBeatTime
+      log.info("{} - {}", state.users.keySet.mkString(","), state.usersOnline.mkString(","))
       //Thread.sleep(400)
-      if (msSinceLastTick < totalFailoverTimeout.toMillis) {
-        persist(
-          ChatRoomEvent.UserTextAdded(
-            lastSequenceNr,
-            cmd.sender,
-            cmd.receiver,
-            cmd.content,
-            System.currentTimeMillis,
-            TimeZone.getDefault.getID
-          )
-        ) { ev ⇒
-          val newState = maybeSnapshot(Handler(cmd, cmd.coerceEvent(ev), state))
-          context become active(newState)
-        }
-      } else log.error("Ignore {} to avoid possible journal corruption. {} ms", cmd, msSinceLastTick)
+      persist(
+        ChatRoomEvent.UserTextAdded(
+          lastSequenceNr,
+          cmd.sender,
+          cmd.receiver,
+          cmd.content,
+          System.currentTimeMillis,
+          TimeZone.getDefault.getID
+        )
+      ) { ev ⇒
+        val newState = maybeSnapshot(Handler(cmd, cmd.coerceEvent(ev), state))
+        context become active(newState)
+      }
 
     case cmd: Command.Leave ⇒
-      val msSinceLastTick = System.currentTimeMillis - state.obvervedHeartBeatTime
-      if (msSinceLastTick < totalFailoverTimeout.toMillis)
-        persist(ChatRoomEvent.UserDisconnected(cmd.user)) { ev ⇒
-          val newState = maybeSnapshot(Handler(cmd, cmd.coerceEvent(ev), state))
-          context become active(newState)
-        }
-      else log.error("Ignore {} to avoid possible journal corruption. {} ms", cmd, msSinceLastTick)
+      persist(ChatRoomEvent.UserDisconnected(cmd.user)) { ev ⇒
+        val newState = maybeSnapshot(Handler(cmd, cmd.coerceEvent(ev), state))
+        context become active(newState)
+      }
 
-    case HeartBeat ⇒
-      val newState = maybeSnapshot(state.copy(obvervedHeartBeatTime = System.currentTimeMillis))
-      context become active(newState)
-
-    case cmd: Command.StopChatRoom ⇒
+    case cmd: Command.HandOffChatRoom ⇒
       state.hub.foreach { hub ⇒
         hub.ks.shutdown()
         unregisterKS(kksRef, hub.ks)
       }
-
-      log.info(
-        s"${cmd.getClass.getSimpleName}. {} millis since last hb",
-        System.currentTimeMillis - state.obvervedHeartBeatTime
-      )
+      log.info(s"${cmd.getClass.getSimpleName}")
       context.stop(self)
 
     // snapshot-related messages
@@ -228,13 +204,3 @@ class ChatRoomClassic()(implicit
 
   override def receiveCommand: Receive = notActive(ChatRoomState())
 }
-
-/*
-  case ReceiveTimeout ⇒
-    context.parent ! ShardRegion.Passivate(stopMessage = HandOff)
-
-  case PassivatePA ⇒
-    log.info("PassivatePA")
-    state.hub.foreach(_.ks.shutdown())
-    context.stop(self)
- */

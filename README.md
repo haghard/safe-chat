@@ -31,13 +31,14 @@ sbt second
 ### How to build and publish with docker
 
 ```bash
-  sbt -Denv=development docker && docker push haghard/safe-chat:0.1.0
+  sbt -Denv=development docker && docker push haghard/safe-chat:0.4.0
       
 ```
 
 ```bash
 
-docker run --net="host" -d -p 2551:2551 -p 8080:8080 -e HOSTNAME=10.130.0.22 -e HTTP_PORT=8080 -e AKKA_PORT=2551 -e CASSANDRA=84.201.150.26:9042,84.201.146.112:9042 -e SEEDS=10.130.0.22:2551 -e DISCOVERY_METHOD=config -e CAS_USER=... -e CAS_PWS=... -m 700MB haghard/safe-chat:0.1.0
+docker run -d -p 2551:2551 -p 8080:8080 -e HTTP_PORT=8080 -e CASSANDRA=84.201.150.26:9042,84.201.146.112:9042 -e CONTACT_POINTS=10.130.0.22:2551 -e CAS_USER=... -e CAS_PWS=... -m 700MB haghard/safe-chat:0.1.0
+
 
 ```
 
@@ -103,11 +104,24 @@ https://doc.akka.io/docs/akka/current/typed/persistence.html#example
 https://doc.akka.io/docs/akka/current/typed/cluster-sharding.html
 
 
-### Talks about Akka Persistence Typed
+### Akka Persistence Typed
 
 LunaConf 2020 - Akka Persistence Typed by Renato Cavalcanti: https://youtu.be/hYucH6dXGSM?list=LLq_6THQ1qPDuFwd-a_O0pxg
 
 https://github.com/renatocaval/akka-persistence-typed-talk
+
+
+### Akka Persistence Typed ersistence enhancements
+
+https://github.com/leviramsey/akka-shard-enhancement
+
+
+A higher-level approach to defining typed EventSourcedBehaviors which abstracts enough of persistence-typed to allow the definition to be interpreted as a 
+stateful-but-not-persistent Behavior (with a ConcurrentLinkedQueue to tap into the event stream): such Behavior is then potentially (depending on how much
+you're willing to inject through a fixture) testable with the BehaviorTestKit(which will run tests quickly enough to allow for property-based testing)
+
+https://gist.github.com/leviramsey/276e074b0067da25e14ae42843a44af6
+
 
 
 ## Akka
@@ -553,8 +567,6 @@ docker-compose -f docker/docker-cassandra-cluster.yml up -d
 docker-compose -f docker/docker-cassandra-cluster.yml rm
 
 
-docker run -d -p 9042:9042/tcp -v /Volumes/dev/github/safe-chat/scylla/chat:/var/lib/scylla scylladb/scylla:4.3.2 --broadcast-address=127.0.0.1 --smp 2 --memory=750M --overprovisioned 1
-
 ```
 
 ### Lease for shards
@@ -564,7 +576,7 @@ https://doc.akka.io/docs/akka/current/typed/cluster-sharding.html#lease
 
 ### Git
 
-git tag -a v0.2.0 -m "v0.2.0" &&  git push --tags
+git tag -a v0.4.0 -m "v0.4.0" &&  git push --tags
 
 
 ## How to run

@@ -14,7 +14,7 @@ trait Ops {
   val ethName      = "eth0"
   val ipExpression = """\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3}"""
 
-  def internalAddr: Option[InetAddress] =
+  def internalDockerAddr: Option[InetAddress] =
     NetworkInterface.getNetworkInterfaces.asScala.toList
       .find(_.getName == ethName)
       .flatMap(x ⇒ x.getInetAddresses.asScala.toList.find(i ⇒ i.getHostAddress.matches(ipExpression)))
@@ -34,6 +34,13 @@ trait Ops {
       println(s"Config override: $key = $value")
       System.setProperty(key, value)
     }
+  }
+
+  def setEnv(key: String, value: String) = {
+    val field = System.getenv().getClass.getDeclaredField("m")
+    field.setAccessible(true)
+    val map = field.get(System.getenv()).asInstanceOf[java.util.Map[java.lang.String, java.lang.String]]
+    map.put(key, value)
   }
 
 }

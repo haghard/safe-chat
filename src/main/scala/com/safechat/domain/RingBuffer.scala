@@ -17,6 +17,8 @@ final class RingBuffer[T: scala.reflect.ClassTag] private (capacity: Int, buffer
     this(RingBuffer.nextPowerOfTwo(capacity), Array.ofDim[T](RingBuffer.nextPowerOfTwo(capacity)))
   }
 
+  def add(e: T): Unit = :+(e)
+
   // append
   def :+(e: T): Unit = {
     val wrapPoint = tail - capacity

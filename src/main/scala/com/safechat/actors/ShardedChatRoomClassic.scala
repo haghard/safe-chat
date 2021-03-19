@@ -6,10 +6,10 @@ import akka.cluster.sharding.ClusterSharding
 import akka.cluster.sharding.ClusterShardingSettings
 import akka.cluster.sharding.ShardCoordinator
 import akka.stream.UniqueKillSwitch
+import com.safechat.Server.AppCfg
 
 import java.util.concurrent.atomic.AtomicReference
 import scala.collection.immutable
-import scala.concurrent.duration.DurationInt
 import scala.concurrent.duration.FiniteDuration
 
 object ShardedChatRoomClassic {
@@ -17,18 +17,19 @@ object ShardedChatRoomClassic {
   def apply(
     system: akka.actor.ActorSystem,
     totalFailoverTimeout: FiniteDuration,
-    kksRef: AtomicReference[immutable.Set[UniqueKillSwitch]]
+    kksRef: AtomicReference[immutable.Set[UniqueKillSwitch]],
+    appCfg: AppCfg
   ): ActorRef[Command[Reply]] = {
 
     val chatRoomRegion = ClusterSharding(system).start(
       typeName = ChatRoom.entityKey.name, //shared
-      entityProps = ChatRoomClassic.props(totalFailoverTimeout, kksRef),
-      settings = ClusterShardingSettings(system).withPassivateIdleAfter(5.minutes), //20.seconds
+      entityProps = ChatRoomClassic.props(totalFailoverTimeout, kksRef, appCfg),
+      settings = ClusterShardingSettings(system).withPassivateIdleAfter(appCfg.passivationAfter), //20.seconds 5.minutes
       extractShardId = ChatRoomClassic.shardExtractor,
       extractEntityId = ChatRoomClassic.idExtractor,
       allocationStrategy = ShardCoordinator.ShardAllocationStrategy.leastShardAllocationStrategy(20, 0.5),
       //allocationStrategy = new external.ExternalShardAllocationStrategy(system, users.serviceName),
-      handOffStopMessage = Command.handOffRoom //akka.actor.PoisonPill
+      handOffStopMessage = Command.handOffChatRoom //akka.actor.PoisonPill
     )
 
     chatRoomRegion.toTyped[Command[Reply]]
