@@ -17,7 +17,6 @@ import com.safechat.actors.Command.HandOffChatRoom
 import com.safechat.actors.Command.JoinUser
 import com.safechat.actors.Command.Leave
 import com.safechat.actors.Command.PostText
-import com.safechat.actors.Command.PostTexts
 import com.safechat.domain.RingBuffer
 
 import scala.collection.mutable
@@ -86,6 +85,7 @@ object Command {
     override val toString = s"PostText($chatId, $sender, $receiver)"
   }
 
+  /*
   final case class PostTexts(
     chatId: String,
     content: Seq[Content],
@@ -93,7 +93,7 @@ object Command {
   ) extends Command[Reply.TextsPostedReply] {
     override type Event = ChatRoomEvent.UserTextsAdded
     override val toString = s"PostTexts($chatId, ${content.size})"
-  }
+  }*/
 
   final case class Leave(
     chatId: String,
@@ -237,6 +237,7 @@ object ChatRoomEvent {
     when: Long,
     tz: String
   ) extends ChatRoomEvent
+  /*
 
   final case class UserTextsAdded(
     seqNum: Long,
@@ -244,6 +245,7 @@ object ChatRoomEvent {
     when: Long,
     tz: String
   ) extends ChatRoomEvent
+   */
 
   final case class UserDisconnected(userId: String) extends ChatRoomEvent
 }
@@ -265,7 +267,6 @@ final case class ChatRoomState(
     cmd match {
       case c: JoinUser        ⇒ Effect.persist(UserJoined(c.user, -1, c.pubKey)).thenNoReply()
       case _: PostText        ⇒ Effect.noReply
-      case _: PostTexts       ⇒ Effect.noReply
       case _: Leave           ⇒ Effect.noReply
       case _: HandOffChatRoom ⇒ Effect.noReply
     }

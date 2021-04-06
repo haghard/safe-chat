@@ -195,10 +195,11 @@ class ChatRoomClassic(implicit
           case ChatRoomEvent.UserTextAdded(userId, seqNum, recipient, content, _, _) ⇒
             recentHistory :+ ChatRoomClassic.msg(persistenceId, seqNum, userId, recipient, content)
 
+          /*
           case ChatRoomEvent.UserTextsAdded(seqNum, msgs, _, _) ⇒
             msgs.foreach { ev ⇒
               recentHistory :+ ChatRoomClassic.msg(persistenceId, seqNum, ev.userId, ev.recipient, ev.content)
-            }
+            }*/
 
           case ChatRoomEvent.UserDisconnected(userId) ⇒
             online -= userId
@@ -229,7 +230,7 @@ class ChatRoomClassic(implicit
   def notActive(state: ChatRoomState): Receive = {
     case cmd: Command.JoinUser ⇒
       persist(ChatRoomEvent.UserJoined(cmd.user, lastSequenceNr + 1, cmd.pubKey)) { ev ⇒
-        val newState = maybeSnapshot(Processor(cmd, cmd.correspondingEvent(ev), state))
+        val newState = maybeSnapshot(EventHandler(cmd, cmd.correspondingEvent(ev), state))
         unstashAll()
         context become active(newState)
       }
@@ -242,18 +243,18 @@ class ChatRoomClassic(implicit
   def active(state: ChatRoomState): Receive = {
     case cmd: Command.JoinUser ⇒
       persist(ChatRoomEvent.UserJoined(cmd.user, lastSequenceNr + 1, cmd.pubKey)) { ev ⇒
-        val newState = maybeSnapshot(Processor(cmd, cmd.correspondingEvent(ev), state))
+        val newState = maybeSnapshot(EventHandler(cmd, cmd.correspondingEvent(ev), state))
         context become active(newState)
       }
 
-    case cmd: Command.PostTexts ⇒
+    /*case cmd: Command.PostTexts ⇒
       log.info("{} - {}", state.users.keySet.mkString(","), state.usersOnline.mkString(","))
       val msgs = cmd.content.map(c ⇒ Content(c.userId, c.recipient, c.content))
       persist(ChatRoomEvent.UserTextsAdded(lastSequenceNr, msgs, System.currentTimeMillis, TimeZone.getDefault.getID)) {
         ev ⇒
-          val newState = maybeSnapshot(Processor(cmd, cmd.correspondingEvent(ev), state))
+          val newState = maybeSnapshot(EventHandler(cmd, cmd.correspondingEvent(ev), state))
           context become active(newState)
-      }
+      }*/
 
     case cmd: Command.PostText ⇒
       log.info("{} - {}", state.users.keySet.mkString(","), state.usersOnline.mkString(","))
@@ -267,13 +268,13 @@ class ChatRoomClassic(implicit
           TimeZone.getDefault.getID
         )
       ) { ev ⇒
-        val newState = maybeSnapshot(Processor(cmd, cmd.correspondingEvent(ev), state))
+        val newState = maybeSnapshot(EventHandler(cmd, cmd.correspondingEvent(ev), state))
         context become active(newState)
       }
 
     case cmd: Command.Leave ⇒
       persist(ChatRoomEvent.UserDisconnected(cmd.user)) { ev ⇒
-        val newState = maybeSnapshot(Processor(cmd, cmd.correspondingEvent(ev), state))
+        val newState = maybeSnapshot(EventHandler(cmd, cmd.correspondingEvent(ev), state))
         context become active(newState)
       }
 

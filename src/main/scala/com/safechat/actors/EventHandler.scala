@@ -12,7 +12,7 @@ import java.util.concurrent.atomic.AtomicReference
 import scala.collection.immutable
 import scala.concurrent.duration.FiniteDuration
 
-sealed trait Processor[C <: Command[_]] {
+sealed trait EventHandler[C <: Command[_]] {
   def apply(cmd: C, event: C#Event, state: ChatRoomState)(implicit
     sys: akka.actor.ActorSystem,
     failoverTimeout: FiniteDuration,
@@ -21,9 +21,9 @@ sealed trait Processor[C <: Command[_]] {
   ): ChatRoomState
 }
 
-object Processor {
+object EventHandler {
 
-  implicit object Join extends Processor[Command.JoinUser] {
+  implicit object Join extends EventHandler[Command.JoinUser] {
     def apply(cmd: Command.JoinUser, event: ChatRoomEvent.UserJoined, state: ChatRoomState)(implicit
       sys: akka.actor.ActorSystem,
       failoverTimeout: FiniteDuration,
@@ -56,7 +56,7 @@ object Processor {
     }
   }
 
-  implicit object Post extends Processor[Command.PostText] {
+  implicit object Post extends EventHandler[Command.PostText] {
     def apply(cmd: Command.PostText, event: ChatRoomEvent.UserTextAdded, state: ChatRoomState)(implicit
       sys: akka.actor.ActorSystem,
       failoverTimeout: FiniteDuration,
@@ -72,7 +72,8 @@ object Processor {
     }
   }
 
-  implicit object PostN extends Processor[Command.PostTexts] {
+  /*
+  implicit object PostN extends EventHandler[Command.PostTexts] {
     def apply(cmd: Command.PostTexts, event: ChatRoomEvent.UserTextsAdded, state: ChatRoomState)(implicit
       sys: akka.actor.ActorSystem,
       failoverTimeout: FiniteDuration,
@@ -87,8 +88,9 @@ object Processor {
       state
     }
   }
+   */
 
-  implicit object Leave extends Processor[Command.Leave] {
+  implicit object Leave extends EventHandler[Command.Leave] {
     def apply(cmd: Command.Leave, event: ChatRoomEvent.UserDisconnected, state: ChatRoomState)(implicit
       sys: akka.actor.ActorSystem,
       failoverTimeout: FiniteDuration,
@@ -102,10 +104,10 @@ object Processor {
   }
 
   def apply[C <: Command[_]](c: C, e: C#Event, state: ChatRoomState)(implicit
-    h: Processor[C],
+    P: EventHandler[C],
     sys: akka.actor.ActorSystem,
     failoverTimeout: FiniteDuration,
     kksRef: AtomicReference[immutable.Set[UniqueKillSwitch]],
     appCfg: AppCfg
-  ) = h(c, e, state)
+  ) = P(c, e, state)
 }

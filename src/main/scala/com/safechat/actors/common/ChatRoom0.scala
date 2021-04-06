@@ -46,7 +46,7 @@ final class ChatRoom0(appCfg: AppCfg)
             TimeZone.getDefault.getID
           )
         )
-      case _: Command.PostTexts       ⇒ NoEvent(ValidationRejection(""))
+
       case _: Command.Leave           ⇒ NoEvent(ValidationRejection(""))
       case _: Command.HandOffChatRoom ⇒ NoEvent(ValidationRejection(""))
     }
@@ -57,7 +57,6 @@ final class ChatRoom0(appCfg: AppCfg)
       e match {
         case _: ChatRoomEvent.UserJoined       ⇒ prevState
         case _: ChatRoomEvent.UserTextAdded    ⇒ prevState
-        case _: ChatRoomEvent.UserTextsAdded   ⇒ prevState
         case _: ChatRoomEvent.UserDisconnected ⇒ prevState
       }
   }

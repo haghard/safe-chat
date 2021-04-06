@@ -87,6 +87,41 @@ http GET 188.68.210.125:8080/cluster/shards/chat-rooms
 ```
 
 
+### Schema evolution
+
+Schema evolution allows you to update the schema used to write new data, while maintaining backwards compatibility with the schema(s) of your old data.
+Then you can read it all together, as if all of the data has one schema. Of course there are precise rules governing the changes
+allowed, to maintain compatibility.
+
+Avro provides full compatibility support.
+Backward compatibility is necessary for reading the old version of events.
+Forward compatibility is required for rolling updates when at the same time old and new versions of events
+can be exchanged between processes.
+
+1.  Backward compatible change - write with V1 and read with V2
+2.  Forward compatible change -  write with V2 and read with V1
+3.  Fully compatible if your change is Backward and Forward compatible
+4.  Breaking is non of those
+
+Advice when writing Avro schema
+ * Add field with defaults
+ * Remove only fields which have defaults
+
+If you target full compatibility follows these rules:
+ * Removing fields with defaults is fully compatible change
+ * Adding fields with defaults is fully compatible change
+
+  Enum can't evolve over time.
+
+  When evolving schema, ALWAYS give defaults.
+
+  When evolving schema, NEVER
+ * rename fields
+ * remove required fields
+
+Schema-evolution-is-not-that-complex: https://medium.com/data-rocks/schema-evolution-is-not-that-complex-b7cf7eb567ac
+                                 
+
 ## Links
 
 http://allaboutscala.com/scala-frameworks/akka/

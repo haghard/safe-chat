@@ -5,9 +5,7 @@ package io
 
 import akka.actor.ExtendedActorSystem
 import akka.serialization.SerializerWithStringManifest
-import com.safechat.actors.ChatRoomClassic
 import com.safechat.actors.ChatRoomEvent
-import com.safechat.actors.Content
 import com.safechat.domain.RingBuffer
 import com.safechat.serializer.SchemaRegistry
 import org.apache.avro.Schema
@@ -61,8 +59,7 @@ If you target full compatibility follows these rules:
  * rename fields
  * remove required fields
 
- Schema-evolution-is-not-that-complex:
-  https://medium.com/data-rocks/schema-evolution-is-not-that-complex-b7cf7eb567ac
+ Schema-evolution-is-not-that-complex: https://medium.com/data-rocks/schema-evolution-is-not-that-complex-b7cf7eb567ac
 
  */
 object JournalEventsSerializer {
@@ -163,7 +160,7 @@ object JournalEventsSerializer {
 
         case p: com.safechat.avro.persistent.domain.UserTextAdded ⇒
           ChatRoomEvent.UserTextAdded(
-            p.getUser.toString,                       
+            p.getUser.toString,
             p.getSeqNum,
             p.getReceiver.toString,
             p.getText.toString,
@@ -171,6 +168,7 @@ object JournalEventsSerializer {
             envelope.getTz.toString
           )
 
+        /*
         case p: com.safechat.avro.persistent.domain.UserTextsAdded ⇒
           var c = Vector.empty[Content]
           p.getContent.forEach { line ⇒
@@ -181,6 +179,7 @@ object JournalEventsSerializer {
             c = c.:+(Content(sender, receiver, content))
           }
           ChatRoomEvent.UserTextsAdded(p.getSeqNum, c, envelope.getWhen, envelope.getTz.toString)
+         */
 
         case p: com.safechat.avro.persistent.domain.UserDisconnected ⇒
           ChatRoomEvent.UserDisconnected(p.getLogin.toString)
@@ -223,6 +222,7 @@ object JournalEventsSerializer {
           tz,
           new com.safechat.avro.persistent.domain.UserTextAdded(seqNum, userId, receiver, content)
         )
+      /*
 
       case e: ChatRoomEvent.UserTextsAdded ⇒
         val content = new util.ArrayList[CharSequence](e.msgs.size)
@@ -235,6 +235,7 @@ object JournalEventsSerializer {
           e.tz,
           new com.safechat.avro.persistent.domain.UserTextsAdded(e.seqNum, content)
         )
+       */
 
       case e: ChatRoomEvent.UserDisconnected ⇒
         new com.safechat.avro.persistent.domain.EventEnvelope(
