@@ -5,7 +5,10 @@ package io
 
 import akka.actor.ExtendedActorSystem
 import akka.serialization.SerializerWithStringManifest
+import com.safechat.actors.ChatRoomClassic
 import com.safechat.actors.ChatRoomEvent
+import com.safechat.actors.Content
+import com.safechat.domain.RingBuffer
 import com.safechat.serializer.SchemaRegistry
 import org.apache.avro.Schema
 import org.apache.avro.io.BinaryEncoder
@@ -143,7 +146,8 @@ object JournalEventsSerializer {
     bts: Array[Byte],
     manifest: String,
     activeSchemaHash: String,
-    schemaMap: Map[String, Schema]
+    schemaMap: Map[String, Schema],
+    recentHistorySize: Int
   ): AnyRef = {
     val writerSchemaKey = manifest.split(SEP)(1)
     //println(s"fromBinary Schemas:[writer:$writerSchemaKey reader:$activeSchemaHash]")
@@ -155,16 +159,29 @@ object JournalEventsSerializer {
       val payload  = envelope.getPayload.asInstanceOf[org.apache.avro.specific.SpecificRecordBase]
       payload match {
         case p: com.safechat.avro.persistent.domain.UserJoined ⇒
-          ChatRoomEvent.UserJoined(p.getLogin.toString, p.getPubKey.toString)
+          ChatRoomEvent.UserJoined(p.getLogin.toString, p.getSeqNum, p.getPubKey.toString)
+
         case p: com.safechat.avro.persistent.domain.UserTextAdded ⇒
           ChatRoomEvent.UserTextAdded(
+            p.getUser.toString,                       
             p.getSeqNum,
-            p.getUser.toString,
             p.getReceiver.toString,
             p.getText.toString,
             envelope.getWhen,
             envelope.getTz.toString
           )
+
+        case p: com.safechat.avro.persistent.domain.UserTextsAdded ⇒
+          var c = Vector.empty[Content]
+          p.getContent.forEach { line ⇒
+            val segs     = line.toString.split(ChatRoomClassic.MSG_SEP)
+            val sender   = segs(0)
+            val receiver = segs(1)
+            val content  = segs(2)
+            c = c.:+(Content(sender, receiver, content))
+          }
+          ChatRoomEvent.UserTextsAdded(p.getSeqNum, c, envelope.getWhen, envelope.getTz.toString)
+
         case p: com.safechat.avro.persistent.domain.UserDisconnected ⇒
           ChatRoomEvent.UserDisconnected(p.getLogin.toString)
         case _ ⇒
@@ -176,8 +193,7 @@ object JournalEventsSerializer {
       val state    = readFromArray[com.safechat.avro.persistent.state.ChatRoomState](bts, writerSchema, readerSchema)
       val userKeys = mutable.Map.empty[String, String]
       state.getRegisteredUsers.forEach((login, pubKey) ⇒ userKeys.put(login.toString, pubKey.toString))
-
-      val s = com.safechat.actors.ChatRoomState(users = userKeys)
+      val s = com.safechat.actors.ChatRoomState(users = userKeys, recentHistory = RingBuffer(recentHistorySize))
       state.getRecentHistory.forEach(e ⇒ s.recentHistory.:+(e.toString))
       s
     } else
@@ -193,15 +209,33 @@ object JournalEventsSerializer {
           UUID.randomUUID.toString,
           System.currentTimeMillis,
           TimeZone.getDefault.getID,
-          com.safechat.avro.persistent.domain.UserJoined.newBuilder.setLogin(e.userId).setPubKey(e.pubKey).build()
+          com.safechat.avro.persistent.domain.UserJoined.newBuilder
+            .setLogin(e.userId)
+            .setPubKey(e.pubKey)
+            .setSeqNum(e.seqNum)
+            .build()
         )
-      case ChatRoomEvent.UserTextAdded(seqNum, originator, receiver, content, when, tz) ⇒
+
+      case ChatRoomEvent.UserTextAdded(userId, seqNum, receiver, content, when, tz) ⇒
         new com.safechat.avro.persistent.domain.EventEnvelope(
           UUID.randomUUID.toString,
           when,
           tz,
-          new com.safechat.avro.persistent.domain.UserTextAdded(seqNum, originator, receiver, content)
+          new com.safechat.avro.persistent.domain.UserTextAdded(seqNum, userId, receiver, content)
         )
+
+      case e: ChatRoomEvent.UserTextsAdded ⇒
+        val content = new util.ArrayList[CharSequence](e.msgs.size)
+        e.msgs.foreach(c ⇒
+          content.add(s"${c.userId}${ChatRoomClassic.MSG_SEP}${c.recipient}${ChatRoomClassic.MSG_SEP}${c.content}")
+        )
+        new com.safechat.avro.persistent.domain.EventEnvelope(
+          UUID.randomUUID.toString,
+          e.when,
+          e.tz,
+          new com.safechat.avro.persistent.domain.UserTextsAdded(e.seqNum, content)
+        )
+
       case e: ChatRoomEvent.UserDisconnected ⇒
         new com.safechat.avro.persistent.domain.EventEnvelope(
           UUID.randomUUID.toString,
@@ -209,6 +243,7 @@ object JournalEventsSerializer {
           TimeZone.getDefault.getID,
           com.safechat.avro.persistent.domain.UserDisconnected.newBuilder.setLogin(e.userId).build
         )
+
     }
 }
 
@@ -222,6 +257,7 @@ object JournalEventsSerializer {
   * https://blog.softwaremill.com/akka-references-serialization-with-protobufs-up-to-akka-2-5-87890c4b6cb0
   */
 final class JournalEventsSerializer(system: ExtendedActorSystem) extends SerializerWithStringManifest {
+  val recentHistorySize = system.settings.config.getInt("safe-chat.recent-history-size")
 
   /*StreamRefSerializer(system)*/
   /*lazy val streamRefSerializer =
@@ -249,7 +285,7 @@ final class JournalEventsSerializer(system: ExtendedActorSystem) extends Seriali
     JournalEventsSerializer.toArray(obj, activeSchemaHash, schemaMap)
 
   override def fromBinary(bytes: Array[Byte], manifest: String): AnyRef =
-    JournalEventsSerializer.fromArray(bytes, manifest, activeSchemaHash, schemaMap)
+    JournalEventsSerializer.fromArray(bytes, manifest, activeSchemaHash, schemaMap, recentHistorySize)
 }
 
 /*

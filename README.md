@@ -429,7 +429,7 @@ Akka Persistence and MariaDB:  https://medium.com/@matteodipirro/stateful-actors
 
 For typed
 
-select persistence_id, sequence_nr, timestamp, ser_id, ser_manifest, writer_uuid from chat_journal where persistence_id='chat-rooms|b' and partition_nr = 0;
+select persistence_id, sequence_nr, timestamp, ser_id, ser_manifest, writer_uuid from chat_journal where persistence_id='aaa' and partition_nr = 0;
 
 For classic
 

@@ -66,7 +66,7 @@ final case class ChatRoomApi(rooms: ShardedChatRooms, to: FiniteDuration)(implic
     user: String,
     pubKey: String
   ): Future[Flow[Message, Message, Future[NotUsed]]] =
-    getChatRoomFlow(rooms, chatId, user, pubKey).map { case Reply.JoinReply(chatId, user, sinkSourceRef) ⇒
+    getChatRoomFlow(rooms, chatId, user, pubKey).map { case Reply.JoinReply(chatId, user, sinkSourceRef, _) ⇒
       sinkSourceRef match {
         case Some((sinkRef, sourceRef)) ⇒
           Flow.fromMaterializer { (mat, attr) ⇒
@@ -105,9 +105,10 @@ final case class ChatRoomApi(rooms: ShardedChatRooms, to: FiniteDuration)(implic
                 sourceRef.source
               )
               //
-              .merge(
-                Source.tick(10.seconds, 10.seconds, TextMessage.Strict("none:none:commercial")),
-                eagerComplete = true
+              .mergePreferred(
+                Source.tick(30.seconds, 30.seconds, TextMessage.Strict("none:none:commercial")),
+                false,
+                true
               )
               .buffer(buf.max, OverflowStrategy.backpressure)
               .backpressureTimeout(3.seconds) //automatic cleanup for very slow subscribers.

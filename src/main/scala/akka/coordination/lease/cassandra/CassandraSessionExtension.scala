@@ -9,6 +9,7 @@ import akka.actor.ExtensionIdProvider
 import akka.persistence.cassandra.query.scaladsl.CassandraReadJournal
 import akka.persistence.query.PersistenceQuery
 import akka.stream.alpakka.cassandra.scaladsl.CassandraSession
+import com.safechat.Server
 
 import scala.concurrent.duration._
 
@@ -27,9 +28,9 @@ object CassandraSessionExtension extends ExtensionId[CassandraSessionExtension] 
 class CassandraSessionExtension(system: ActorSystem) extends Extension {
   val retryTimeout = 2.second
 
-  //val logger       = akka.event.Logging(system, getClass)
-
   lazy val keyspace = system.settings.config.getString("akka.persistence.cassandra.journal.keyspace")
+
+  implicit val ec = system.dispatchers.lookup(Server.dbDispatcher)
 
   lazy val session: CassandraSession = {
 
@@ -39,7 +40,7 @@ class CassandraSessionExtension(system: ActorSystem) extends Extension {
 
     //TODO: avoid blocking
     scala.concurrent.Await.result(
-      akka.pattern.retry(() ⇒ createLeaseTable(cassandraSession), 10)(system.dispatcher),
+      akka.pattern.retry(() ⇒ createLeaseTable(cassandraSession), 10)(ec),
       Duration.Inf
     )
     cassandraSession

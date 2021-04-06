@@ -52,7 +52,7 @@ package object actors {
 
     //TODO: maybe would be better to fail instead of retrying
     RestartFlow.withBackoff(
-      akka.stream.RestartSettings(1.second, 3.seconds, 0.3)
+      akka.stream.RestartSettings(1.second, 3.seconds, 0.5)
     )(() ⇒ persistFlow)
   }
 

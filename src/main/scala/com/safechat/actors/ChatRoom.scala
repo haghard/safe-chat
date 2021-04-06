@@ -22,6 +22,8 @@ import akka.stream.scaladsl.Keep
 import akka.stream.scaladsl.MergeHub
 import akka.stream.scaladsl.Source
 import akka.stream.scaladsl.StreamRefs
+import com.safechat.Server.AppCfg
+import com.safechat.domain.RingBuffer
 
 import java.time.Instant
 import java.time.ZoneId
@@ -42,10 +44,7 @@ object ChatRoom {
 
   val persistTimeout = akka.util.Timeout(2.second) //write to journal timeout
 
-  val entityKey: EntityTypeKey[Command[Reply]] =
-    EntityTypeKey[Command[Reply]]("chat-rooms")
-
-  val emptyState = com.safechat.actors.ChatRoomState()
+  val entityKey: EntityTypeKey[Command[Reply]] = EntityTypeKey[Command[Reply]]("chat-rooms")
 
   /** Each `ChatRoomEntity` actor is a single source of true, acting as a consistency boundary for the data that it manages.
     *
@@ -58,7 +57,8 @@ object ChatRoom {
     entityCtx: EntityContext[Command[Reply]],
     localChatRooms: AtomicReference[immutable.Set[String]],
     kks: AtomicReference[immutable.Set[UniqueKillSwitch]],
-    to: FiniteDuration
+    to: FiniteDuration,
+    appCfg: AppCfg
   ): Behavior[Command[Reply]] =
     Behaviors.setup { ctx ⇒
       implicit val sys      = ctx.system
@@ -69,7 +69,7 @@ object ChatRoom {
       fp style
       EventSourcedBehavior.withEnforcedReplies[UserCmd, ChatRoomEvent, ChatRoomState](
         pId,
-        empty,
+        com.safechat.actors.ChatRoomState(),
         (state, cmd) ⇒ state.applyCmd(cmd),
         (state, event) ⇒ state.applyEvn(event)
       )*/
@@ -78,7 +78,7 @@ object ChatRoom {
         EventSourcedBehavior
           .withEnforcedReplies[Command[Reply], ChatRoomEvent, ChatRoomState](
             pId,
-            ChatRoomState(),
+            ChatRoomState(recentHistory = RingBuffer[String](appCfg.recentHistorySize)),
             onCommand(ctx, to),
             //commandHandler,
             onEvent(ctx.self.path.name, kks, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss Z"))
@@ -204,7 +204,7 @@ object ChatRoom {
     cmd match {
       case cmd: Command.JoinUser ⇒
         Effect
-          .persist(ChatRoomEvent.UserJoined(cmd.user, cmd.pubKey))
+          .persist(ChatRoomEvent.UserJoined(cmd.user, EventSourcedBehavior.lastSequenceNumber(ctx) + 1, cmd.pubKey))
           .thenReply(cmd.replyTo) { updateState: ChatRoomState ⇒ //That's new state after applying the event
 
             val settings =
@@ -230,8 +230,8 @@ object ChatRoom {
         Effect
           .persist(
             ChatRoomEvent.UserTextAdded(
-              seqNum,
               cmd.sender,
+              seqNum,
               cmd.receiver,
               cmd.content,
               System.currentTimeMillis,
@@ -272,7 +272,7 @@ object ChatRoom {
     ctx: ActorContext[Command[Reply]]
   ): ChatRoomState =
     event match {
-      case ChatRoomEvent.UserJoined(login, pubKey) ⇒
+      case ChatRoomEvent.UserJoined(login, _, pubKey) ⇒
         val newState =
           if (state.usersOnline.isEmpty && state.hub.isEmpty) state.copy(hub = Some(chatRoomHub(persistenceId, kksRef)))
           else state

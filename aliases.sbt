@@ -90,5 +90,5 @@ addCommandAlias("sFixCheck", "scalafix --check OrganizeImports; test:scalafix --
 
 //https://hub.docker.com/r/scylladb/scylla/
 
-//docker run -d -p 9042:9042/tcp -v /Volumes/dev/github/safe-chat/scylla/chat:/var/lib/scylla scylladb/scylla:4.3.2 --broadcast-address=127.0.0.1 --smp 1 --memory=750M --overprovisioned 1
+//docker run -d -p 9042:9042/tcp -v /Volumes/dev/github/safe-chat/scylla/chat:/var/lib/scylla scylladb/scylla:4.3.2 --broadcast-address=127.0.0.1 --smp 2 --memory=750M --overprovisioned 1
 //docker exec -it <hash> cqlsh

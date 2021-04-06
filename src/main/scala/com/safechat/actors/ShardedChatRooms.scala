@@ -10,6 +10,7 @@ import akka.cluster.sharding.typed.ShardingMessageExtractor
 import akka.cluster.sharding.typed.scaladsl.ClusterSharding
 import akka.cluster.sharding.typed.scaladsl.Entity
 import akka.stream.UniqueKillSwitch
+import com.safechat.Server
 import com.safechat.Server.AppCfg
 
 import java.util.concurrent.atomic.AtomicReference
@@ -106,7 +107,7 @@ final class ShardedChatRooms(
   //val chatShardRegion = ClusterSharding(system).init(Entity(ChatRoomEntity.entityKey)(behaviorFactory))
 
   //https://doc.akka.io/docs/akka/current/typed/cluster-sharding.html
-  val entity = Entity(ChatRoom.entityKey)(ChatRoom(_, localShards, kss, totalFailoverTimeout))
+  val entity = Entity(ChatRoom.entityKey)(ChatRoom(_, localShards, kss, totalFailoverTimeout, appCfg))
     //ShardingMessageExtractor[UserCmd](512)
     .withMessageExtractor(ChatRoomsMsgExtractor[Command[Reply]]( /*numberOfShards*/ ))
     .withSettings(settings)
@@ -122,7 +123,7 @@ final class ShardedChatRooms(
       akka.cluster.sharding.ShardCoordinator.ShardAllocationStrategy
         .leastShardAllocationStrategy(numberOfShards / 5, 0.2)
     )
-    .withEntityProps(akka.actor.typed.Props.empty.withDispatcherFromConfig("cassandra-dispatcher"))
+    .withEntityProps(akka.actor.typed.Props.empty.withDispatcherFromConfig(Server.dbDispatcher))
 
   implicit val askTimeout = akka.util.Timeout(totalFailoverTimeout)
 

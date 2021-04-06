@@ -1,39 +1,40 @@
 package com.safechat.actors
 
-import akka.actor.typed.ActorSystem
 import akka.http.scaladsl.model.ws.Message
 import akka.http.scaladsl.model.ws.TextMessage
 import akka.stream.StreamRefAttributes
 import akka.stream.UniqueKillSwitch
 import akka.stream.javadsl.StreamRefs
 import akka.stream.scaladsl.Source
+import com.safechat.Server.AppCfg
 
 import java.util.concurrent.atomic.AtomicReference
 import scala.collection.immutable
 import scala.concurrent.duration.FiniteDuration
 
-sealed trait Handler[C <: Command[_]] {
-
+sealed trait Processor[C <: Command[_]] {
   def apply(cmd: C, event: C#Event, state: ChatRoomState)(implicit
-    sys: ActorSystem[Nothing],
+    sys: akka.actor.ActorSystem,
     failoverTimeout: FiniteDuration,
-    kksRef: AtomicReference[immutable.Set[UniqueKillSwitch]]
+    kksRef: AtomicReference[immutable.Set[UniqueKillSwitch]],
+    appCfg: AppCfg
   ): ChatRoomState
-
 }
 
-object Handler {
+object Processor {
 
-  implicit object A extends Handler[Command.JoinUser] {
-
+  implicit object Join extends Processor[Command.JoinUser] {
     def apply(cmd: Command.JoinUser, event: ChatRoomEvent.UserJoined, state: ChatRoomState)(implicit
-      sys: ActorSystem[Nothing],
+      sys: akka.actor.ActorSystem,
       failoverTimeout: FiniteDuration,
-      kksRef: AtomicReference[immutable.Set[UniqueKillSwitch]]
+      kksRef: AtomicReference[immutable.Set[UniqueKillSwitch]],
+      appCfg: AppCfg
     ) = {
       val newState =
         if (state.usersOnline.isEmpty && state.hub.isEmpty)
-          state.copy(hub = Some(ChatRoomClassic.chatRoomHub(cmd.chatId, kksRef)))
+          state.copy(hub =
+            Some(ChatRoomClassic.chatRoomHub(cmd.chatId, appCfg.recentHistorySize, event.seqNum - 1, kksRef))
+          )
         else state
 
       newState.users.put(event.userId, event.pubKey)
@@ -55,12 +56,12 @@ object Handler {
     }
   }
 
-  implicit object B extends Handler[Command.PostText] {
-
+  implicit object Post extends Processor[Command.PostText] {
     def apply(cmd: Command.PostText, event: ChatRoomEvent.UserTextAdded, state: ChatRoomState)(implicit
-      sys: ActorSystem[Nothing],
+      sys: akka.actor.ActorSystem,
       failoverTimeout: FiniteDuration,
-      kksRef: AtomicReference[immutable.Set[UniqueKillSwitch]]
+      kksRef: AtomicReference[immutable.Set[UniqueKillSwitch]],
+      appCfg: AppCfg
     ) = {
       state.recentHistory.add(
         ChatRoomClassic.msg(cmd.chatId, event.seqNum, event.userId, event.recipient, event.content)
@@ -71,12 +72,28 @@ object Handler {
     }
   }
 
-  implicit object C extends Handler[Command.Leave] {
-
-    def apply(cmd: Command.Leave, event: ChatRoomEvent.UserDisconnected, state: ChatRoomState)(implicit
-      sys: ActorSystem[Nothing],
+  implicit object PostN extends Processor[Command.PostTexts] {
+    def apply(cmd: Command.PostTexts, event: ChatRoomEvent.UserTextsAdded, state: ChatRoomState)(implicit
+      sys: akka.actor.ActorSystem,
       failoverTimeout: FiniteDuration,
-      kksRef: AtomicReference[immutable.Set[UniqueKillSwitch]]
+      kksRef: AtomicReference[immutable.Set[UniqueKillSwitch]],
+      appCfg: AppCfg
+    ) = {
+      event.msgs.map(m ⇒ ChatRoomClassic.msg(cmd.chatId, event.seqNum, m.userId, m.recipient, m.content)).foreach { m ⇒
+        state.recentHistory.add(m)
+      }
+      val reply = Reply.TextsPostedReply(cmd.chatId, event.seqNum)
+      cmd.replyTo.tell(reply)
+      state
+    }
+  }
+
+  implicit object Leave extends Processor[Command.Leave] {
+    def apply(cmd: Command.Leave, event: ChatRoomEvent.UserDisconnected, state: ChatRoomState)(implicit
+      sys: akka.actor.ActorSystem,
+      failoverTimeout: FiniteDuration,
+      kksRef: AtomicReference[immutable.Set[UniqueKillSwitch]],
+      appCfg: AppCfg
     ) = {
       val reply = Reply.LeaveReply(cmd.chatId, event.userId)
       cmd.replyTo.tell(reply)
@@ -85,9 +102,10 @@ object Handler {
   }
 
   def apply[C <: Command[_]](c: C, e: C#Event, state: ChatRoomState)(implicit
-    h: Handler[C],
-    sys: ActorSystem[Nothing],
+    h: Processor[C],
+    sys: akka.actor.ActorSystem,
     failoverTimeout: FiniteDuration,
-    kksRef: AtomicReference[immutable.Set[UniqueKillSwitch]]
+    kksRef: AtomicReference[immutable.Set[UniqueKillSwitch]],
+    appCfg: AppCfg
   ) = h(c, e, state)
 }

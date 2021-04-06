@@ -34,9 +34,13 @@ object Server extends Ops {
   val CAS_USR_VAR   = "CAS_USR"
   val CAS_PSW_VAR   = "CAS_PWS"
 
+  val dbDispatcher   = "cassandra-dispatcher"
+  val httpDispatcher = "http-dispatcher"
+
   final case class AppCfg(
     passivationAfter: FiniteDuration,
-    snapshotEvery: Int
+    snapshotEvery: Int,
+    recentHistorySize: Int
   )
 
   def main(args: Array[String]): Unit = {
@@ -170,8 +174,9 @@ object Server extends Ops {
       //.withFallback(pureconfig.ConfigSource.default.loadOrThrow[Config]) //.at(AkkaSystemName)
     }
 
-    //check dispatcher name
-    //cfg.getObject(Dispatcher)
+    //check dispatchers
+    cfg.getObject(dbDispatcher)
+    cfg.getObject(httpDispatcher)
 
     val eventsSchemaMapping =
       SchemaRegistry.journalEvents(cfg.getConfig("akka.actor.serialization-bindings"))

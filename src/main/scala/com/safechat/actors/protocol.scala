@@ -17,6 +17,7 @@ import com.safechat.actors.Command.HandOffChatRoom
 import com.safechat.actors.Command.JoinUser
 import com.safechat.actors.Command.Leave
 import com.safechat.actors.Command.PostText
+import com.safechat.actors.Command.PostTexts
 import com.safechat.domain.RingBuffer
 
 import scala.collection.mutable
@@ -32,6 +33,7 @@ import scala.collection.mutable
 
 sealed trait Reply {
   def chatId: String
+  def seqNum: Long
 }
 
 object Reply {
@@ -39,13 +41,16 @@ object Reply {
   final case class JoinReply(
     chatId: String,
     user: String,
-    sinkSourceRef: Option[(SinkRef[Message], SourceRef[Message])]
+    sinkSourceRef: Option[(SinkRef[Message], SourceRef[Message])],
+    seqNum: Long = 0L
   ) extends Reply
 
   final case class TextPostedReply(chatId: String, seqNum: Long, userId: String, recipient: String, content: String)
       extends Reply
 
-  final case class LeaveReply(chatId: String, user: String) extends Reply
+  final case class LeaveReply(chatId: String, user: String, seqNum: Long = 0L) extends Reply
+
+  final case class TextsPostedReply(chatId: String, seqNum: Long) extends Reply
 
 }
 
@@ -55,7 +60,7 @@ sealed trait Command[+T <: Reply] {
 
   def chatId: String
   def replyTo: ActorRef[R]
-  def coerceEvent(event: Event): Event = event
+  def correspondingEvent(event: Event): Event = event
 }
 
 object Command {
@@ -79,6 +84,15 @@ object Command {
   ) extends Command[Reply.TextPostedReply] {
     override type Event = ChatRoomEvent.UserTextAdded
     override val toString = s"PostText($chatId, $sender, $receiver)"
+  }
+
+  final case class PostTexts(
+    chatId: String,
+    content: Seq[Content],
+    replyTo: ActorRef[Reply.TextsPostedReply]
+  ) extends Command[Reply.TextsPostedReply] {
+    override type Event = ChatRoomEvent.UserTextsAdded
+    override val toString = s"PostTexts($chatId, ${content.size})"
   }
 
   final case class Leave(
@@ -207,18 +221,26 @@ object Command {
  */
 
 sealed trait ChatRoomEvent {
-  def userId: String
+  //def userId: String
+  //def seqNum: Long
 }
 
 object ChatRoomEvent {
 
-  final case class UserJoined(userId: String, pubKey: String) extends ChatRoomEvent
+  final case class UserJoined(userId: String, seqNum: Long, pubKey: String) extends ChatRoomEvent
 
   final case class UserTextAdded(
-    seqNum: Long,
     userId: String,
+    seqNum: Long,
     recipient: String,
     content: String,
+    when: Long,
+    tz: String
+  ) extends ChatRoomEvent
+
+  final case class UserTextsAdded(
+    seqNum: Long,
+    msgs: Seq[Content],
     when: Long,
     tz: String
   ) extends ChatRoomEvent
@@ -228,19 +250,22 @@ object ChatRoomEvent {
 
 final case class ChatRoomHub(sinkHub: Sink[Message, NotUsed], srcHub: Source[Message, NotUsed], ks: UniqueKillSwitch)
 
+final case class Content(userId: String, recipient: String, content: String)
+
 //https://doc.akka.io/docs/akka/current/typed/style-guide.html#functional-versus-object-oriented-style
 final case class ChatRoomState(
   users: mutable.Map[String, String] = mutable.Map.empty,
   usersOnline: mutable.Set[String] = mutable.Set.empty,
-  recentHistory: RingBuffer[String] = RingBuffer[String](1 << 3),
+  recentHistory: RingBuffer[String],
   hub: Option[ChatRoomHub] = None,
   commandsWithoutCheckpoint: Int = 0
 ) {
 
   def applyCmd(cmd: Command[Reply]): ReplyEffect[ChatRoomEvent, ChatRoomState] =
     cmd match {
-      case c: JoinUser        ⇒ Effect.persist(UserJoined(c.user, c.pubKey)).thenNoReply()
+      case c: JoinUser        ⇒ Effect.persist(UserJoined(c.user, -1, c.pubKey)).thenNoReply()
       case _: PostText        ⇒ Effect.noReply
+      case _: PostTexts       ⇒ Effect.noReply
       case _: Leave           ⇒ Effect.noReply
       case _: HandOffChatRoom ⇒ Effect.noReply
     }

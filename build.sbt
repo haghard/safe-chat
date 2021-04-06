@@ -221,6 +221,9 @@ lazy val root = project
         copy(artifact, artifactTargetPath)
         copy(dockerResourcesDir, dockerResourcesTargetPath)
 
+        //-v /Volumes/dev/github/safe-chat/scylla/chat:/var/lib/scylla
+        //volume("./logs", "/opt/docker/logs")
+
         copy(avroResourcesDir, avroResourcesDirTargetPath)
 
         if (prodConfigSrc.exists)
@@ -308,10 +311,10 @@ libraryDependencies ++= Seq(
   // li haoyi ammonite repl embed
   //("com.lihaoyi" % "ammonite" % "2.3.8-36-1cce53f3"  % "test").cross(CrossVersion.full),
 
+  //https://github.com/politrons/reactiveScala/blob/master/scala_features/src/main/scala/app/impl/scala/ReflectionFeature.scala
   "org.scala-lang" % "scala-reflect" % scalaVersion.value
 
 )
-
 
 // transitive dependency of akka 2.5x that is brought in
 dependencyOverrides += "com.typesafe.akka" %% "akka-protobuf"       % akkaVersion

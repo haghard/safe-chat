@@ -54,7 +54,7 @@ final case class Bootstrap(
     .newServerAt(httpBindHostName, port)
     .connectionSource()
     .to(Sink.foreach { con ⇒
-      classicSystem.log.info("Accept connection from {}", con.remoteAddress)
+      classicSystem.log.info("Accepted con from {}", con.remoteAddress)
       con.handleWith(routes)
     })
     .run()
