@@ -31,7 +31,7 @@ sbt second
 ### How to build and publish with docker
 
 ```bash
-  sbt -Denv=development docker && docker push haghard/safe-chat:0.4.0
+  sbt -Denv=development docker && docker push haghard/safe-chat:0.5.0
       
 ```
 
@@ -611,7 +611,7 @@ https://doc.akka.io/docs/akka/current/typed/cluster-sharding.html#lease
 
 ### Git
 
-git tag -a v0.4.0 -m "v0.4.0" &&  git push --tags
+git tag -a v0.5.0 -m "v0.5.0" &&  git push --tags
 
 
 ## How to run

@@ -5,7 +5,7 @@ import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.FiniteDuration
 
 val projectName   = "safe-chat"
-val Version       = "0.4.0"
+val Version       = "0.5.0"
 
 val akkaVersion     = "2.6.13"
 val akkaHttpVersion = "10.2.4"

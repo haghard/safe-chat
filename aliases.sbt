@@ -1,6 +1,6 @@
 addCommandAlias(
   "first",
-  "runMain com.safechat.Server\n" +
+  "runMain com.safechat.Boot\n" +
   "-DENV=development " +
   "-DCONFIG=./src/main/resources/ " +
   "-DHTTP_PORT=8080\n" +
@@ -15,7 +15,7 @@ addCommandAlias(
 //sudo ifconfig lo0 127.0.0.2 add
 addCommandAlias(
   "second",
-  "runMain com.safechat.Server\n" +
+  "runMain com.safechat.Boot\n" +
   "-DENV=development " +
   "-DCONFIG=./src/main/resources/ " +
   "-DHTTP_PORT=8080 " +
@@ -35,7 +35,7 @@ addCommandAlias(
 //sudo ifconfig lo0 127.0.0.3 add
 addCommandAlias(
   "third",
-  "runMain com.safechat.Server\n" +
+  "runMain com.safechat.Boot\n" +
   "-DENV=development " +
   "-DCONFIG=./src/main/resources/ " +
   "-DHTTP_PORT=8080 " +
@@ -54,7 +54,7 @@ addCommandAlias(
 //sbt localFirst
 addCommandAlias(
   "localFirst",
-  "runMain com.safechat.Server\n" +
+  "runMain com.safechat.Boot\n" +
   "-DENV=development " +
   "-DCONFIG=./src/main/resources/ " +
   "-DHTTP_PORT=8080\n" +
@@ -70,7 +70,7 @@ addCommandAlias(
 //sbt localSecond
 addCommandAlias(
   "localSecond",
-  "runMain com.safechat.Server\n" +
+  "runMain com.safechat.Boot\n" +
   "-DENV=development " +
   "-DCONFIG=./src/main/resources/ " +
   "-DHTTP_PORT=8080\n" +
