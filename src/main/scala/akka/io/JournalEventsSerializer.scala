@@ -222,8 +222,8 @@ object JournalEventsSerializer {
           tz,
           new com.safechat.avro.persistent.domain.UserTextAdded(seqNum, userId, receiver, content)
         )
-      /*
 
+      /*
       case e: ChatRoomEvent.UserTextsAdded ⇒
         val content = new util.ArrayList[CharSequence](e.msgs.size)
         e.msgs.foreach(c ⇒
@@ -259,12 +259,6 @@ object JournalEventsSerializer {
   */
 final class JournalEventsSerializer(system: ExtendedActorSystem) extends SerializerWithStringManifest {
   val recentHistorySize = system.settings.config.getInt("safe-chat.recent-history-size")
-
-  /*StreamRefSerializer(system)*/
-  /*lazy val streamRefSerializer =
-    SerializationExtension(system)
-      .serializerByIdentity(30)
-      .asInstanceOf[akka.stream.serialization.StreamRefSerializer]*/
 
   override val identifier = 99999
 

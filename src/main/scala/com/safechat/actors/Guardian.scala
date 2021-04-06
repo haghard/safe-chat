@@ -6,8 +6,8 @@ import akka.actor.typed.scaladsl.adapter.TypedActorSystemOps
 import akka.cluster.typed.SelfUp
 import akka.cluster.typed.Unsubscribe
 import akka.stream.UniqueKillSwitch
+import com.safechat.Boot.AppCfg
 import com.safechat.Bootstrap
-import com.safechat.Server.AppCfg
 import com.safechat.rest.ChatRoomApi
 
 import java.util.concurrent.atomic.AtomicReference

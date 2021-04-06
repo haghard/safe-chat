@@ -10,8 +10,8 @@ import akka.cluster.sharding.typed.ShardingMessageExtractor
 import akka.cluster.sharding.typed.scaladsl.ClusterSharding
 import akka.cluster.sharding.typed.scaladsl.Entity
 import akka.stream.UniqueKillSwitch
-import com.safechat.Server
-import com.safechat.Server.AppCfg
+import com.safechat.Boot
+import com.safechat.Boot.AppCfg
 
 import java.util.concurrent.atomic.AtomicReference
 import scala.concurrent.Future
@@ -123,7 +123,7 @@ final class ShardedChatRooms(
       akka.cluster.sharding.ShardCoordinator.ShardAllocationStrategy
         .leastShardAllocationStrategy(numberOfShards / 5, 0.2)
     )
-    .withEntityProps(akka.actor.typed.Props.empty.withDispatcherFromConfig(Server.dbDispatcher))
+    .withEntityProps(akka.actor.typed.Props.empty.withDispatcherFromConfig(Boot.dbDispatcher))
 
   implicit val askTimeout = akka.util.Timeout(totalFailoverTimeout)
 

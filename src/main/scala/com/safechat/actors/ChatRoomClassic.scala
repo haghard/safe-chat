@@ -23,8 +23,8 @@ import akka.stream.scaladsl.BroadcastHub
 import akka.stream.scaladsl.Keep
 import akka.stream.scaladsl.MergeHub
 import akka.stream.scaladsl.Source
-import com.safechat.Server
-import com.safechat.Server.AppCfg
+import com.safechat.Boot
+import com.safechat.Boot.AppCfg
 import com.safechat.actors.ChatRoomClassic.chatRoomHub
 import com.safechat.domain.RingBuffer
 
@@ -72,7 +72,7 @@ object ChatRoomClassic {
     kksRef: AtomicReference[immutable.Set[UniqueKillSwitch]],
     appCfg: AppCfg
   ) =
-    Props(new ChatRoomClassic()(kksRef, totalFailoverTimeout, appCfg)).withDispatcher(Server.dbDispatcher)
+    Props(new ChatRoomClassic()(kksRef, totalFailoverTimeout, appCfg)).withDispatcher(Boot.dbDispatcher)
 
   def chatRoomHub(
     persistenceId: String,
@@ -139,7 +139,7 @@ object ChatRoomClassic {
         .source[Message](perProducerBufferSize = 1)
         .flatMapConcat(_.asTextMessage.getStreamedText.fold("")(_ + _))
         .via(persist(persistenceId))
-        .async(Server.httpDispatcher, 1)
+        .async(Boot.httpDispatcher, 1)
         .zip(reader)
         .map {
           case (reply: Reply, e: ChatRoomEvent.UserTextAdded) ⇒

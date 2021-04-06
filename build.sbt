@@ -10,7 +10,7 @@ val Version       = "0.4.0"
 val akkaVersion     = "2.6.13"
 val akkaHttpVersion = "10.2.4"
 val AkkaManagement  = "1.0.9"
-val AkkaPersistenceCassandraVersion = "1.0.4"
+val AkkaPersistenceCassandraVersion = "1.0.5"
 
 promptTheme := ScalapenosTheme
 
@@ -124,7 +124,7 @@ lazy val root = project
     ),*/
 
 
-    mainClass in assembly := Some("com.safechat.Server"),
+    mainClass in assembly := Some("com.safechat.Boot"),
     assemblyJarName in assembly := s"$projectName-${version.value}.jar",
 
     // Resolve duplicates for Sbt Assembly

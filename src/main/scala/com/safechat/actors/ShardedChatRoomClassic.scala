@@ -6,7 +6,7 @@ import akka.cluster.sharding.ClusterSharding
 import akka.cluster.sharding.ClusterShardingSettings
 import akka.cluster.sharding.ShardCoordinator
 import akka.stream.UniqueKillSwitch
-import com.safechat.Server.AppCfg
+import com.safechat.Boot.AppCfg
 
 import java.util.concurrent.atomic.AtomicReference
 import scala.collection.immutable

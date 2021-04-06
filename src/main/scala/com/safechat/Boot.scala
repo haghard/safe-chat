@@ -20,11 +20,10 @@ import scala.concurrent.duration._
 import scala.jdk.CollectionConverters._
 import scala.util.Try
 
-object Server extends Ops {
+object Boot extends Ops {
 
   val AkkaSystemName = "safe-chat"
 
-  //docker run -d -p 2551:2551 -p 8080:8080 -e HTTP_PORT=8080 -e CASSANDRA=84.201.150.26:9042,84.201.146.112:9042 -e CONTACT_POINTS=10.130.0.22:2551 -e CAS_USER=... -e CAS_PWS=... -m 700MB haghard/safe-chat:0.4.0
   val ENV_VAR            = "ENV"
   val HTTP_PORT_VAR      = "HTTP_PORT"
   val CONFIG_VAR         = "CONFIG"
@@ -37,11 +36,7 @@ object Server extends Ops {
   val dbDispatcher   = "cassandra-dispatcher"
   val httpDispatcher = "http-dispatcher"
 
-  final case class AppCfg(
-    passivationAfter: FiniteDuration,
-    snapshotEvery: Int,
-    recentHistorySize: Int
-  )
+  final case class AppCfg(passivationAfter: FiniteDuration, snapshotEvery: Int, recentHistorySize: Int)
 
   def main(args: Array[String]): Unit = {
     val opts: Map[String, String] = argsToOpts(args.toList)
@@ -131,7 +126,7 @@ object Server extends Ops {
     )
 
     val appCfg =
-      pureconfig.ConfigSource.file(configFile).at(AkkaSystemName).loadOrThrow[Server.AppCfg]
+      pureconfig.ConfigSource.file(configFile).at(AkkaSystemName).loadOrThrow[Boot.AppCfg]
 
     val cfg: Config = {
       //https://doc.akka.io/docs/akka-management/current/akka-management.html

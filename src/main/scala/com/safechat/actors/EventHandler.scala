@@ -6,7 +6,7 @@ import akka.stream.StreamRefAttributes
 import akka.stream.UniqueKillSwitch
 import akka.stream.javadsl.StreamRefs
 import akka.stream.scaladsl.Source
-import com.safechat.Server.AppCfg
+import com.safechat.Boot.AppCfg
 
 import java.util.concurrent.atomic.AtomicReference
 import scala.collection.immutable

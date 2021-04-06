@@ -22,7 +22,7 @@ import akka.stream.scaladsl.Keep
 import akka.stream.scaladsl.MergeHub
 import akka.stream.scaladsl.Source
 import akka.stream.scaladsl.StreamRefs
-import com.safechat.Server.AppCfg
+import com.safechat.Boot.AppCfg
 import com.safechat.domain.RingBuffer
 
 import java.time.Instant

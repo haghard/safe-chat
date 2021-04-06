@@ -9,7 +9,7 @@ import akka.actor.ExtensionIdProvider
 import akka.persistence.cassandra.query.scaladsl.CassandraReadJournal
 import akka.persistence.query.PersistenceQuery
 import akka.stream.alpakka.cassandra.scaladsl.CassandraSession
-import com.safechat.Server
+import com.safechat.Boot
 
 import scala.concurrent.duration._
 
@@ -30,7 +30,7 @@ class CassandraSessionExtension(system: ActorSystem) extends Extension {
 
   lazy val keyspace = system.settings.config.getString("akka.persistence.cassandra.journal.keyspace")
 
-  implicit val ec = system.dispatchers.lookup(Server.dbDispatcher)
+  implicit val ec = system.dispatchers.lookup(Boot.dbDispatcher)
 
   lazy val session: CassandraSession = {
 

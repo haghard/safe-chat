@@ -1,15 +1,15 @@
 package com.safechat.actors.common
 
 import akka.actor.Props
-import com.safechat.Server
-import com.safechat.Server.AppCfg
+import com.safechat.Boot
+import com.safechat.Boot.AppCfg
 import com.safechat.actors.ChatRoomEvent
 import com.safechat.actors.ChatRoomState
 import com.safechat.actors.Command
 import com.safechat.actors.Reply
-import com.safechat.actors.common.BasicPersistentActor.ValidationRejection
 import com.safechat.actors.common.BasicPersistentActor.NoEvent
 import com.safechat.actors.common.BasicPersistentActor.PersistEvent
+import com.safechat.actors.common.BasicPersistentActor.ValidationRejection
 import com.safechat.domain.RingBuffer
 
 import java.util.TimeZone
@@ -17,7 +17,7 @@ import java.util.TimeZone
 object ChatRoom0 {
 
   def props(appCfg: AppCfg) =
-    Props(new ChatRoom0(appCfg)).withDispatcher(Server.dbDispatcher)
+    Props(new ChatRoom0(appCfg)).withDispatcher(Boot.dbDispatcher)
 }
 
 final class ChatRoom0(appCfg: AppCfg)
