@@ -2,15 +2,9 @@
 
 package com.safechat
 
-import spray.json.DefaultJsonProtocol._
-
 import scala.reflect.ClassTag
 
 package object rest {
-
-  implicit val errorFormat = jsonFormat1(ServerError0)
-
-  case class ServerError0(error: String)
 
   def timeoutMsg[T: ClassTag] =
     s"A request for a ${implicitly[ClassTag[T]].runtimeClass.getName} did not produce a timely response"

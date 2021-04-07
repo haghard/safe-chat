@@ -26,42 +26,38 @@ import scala.collection.mutable
 import scala.util.Using
 import scala.util.Using.Releasable
 
-/*
-
-
-Schema evolution allows you to update the schema used to write new data, while maintaining backwards compatibility with the schema(s) of your old data.
-Then you can read it all together, as if all of the data has one schema. Of course there are precise rules governing the changes
-allowed, to maintain compatibility.
-
-Avro provides full compatibility support.
-Backward compatibility is necessary for reading the old version of events.
-Forward compatibility is required for rolling updates when at the same time old and new versions of events
-can be exchanged between processes.
-
-1.  Backward compatible change - write with V1 and read with V2
-2.  Forward compatible change -  write with V2 and read with V1
-3.  Fully compatible if your change is Backward and Forward compatible
-4.  Breaking is non of those
-
-Advice when writing Avro schema
- * Add field with defaults
- * Remove only fields which have defaults
-
-If you target full compatibility follows these rules:
- * Removing fields with defaults is fully compatible change
- * Adding fields with defaults is fully compatible change
-
-  Enum can't evolve over time.
-
-  When evolving schema, ALWAYS give defaults.
-
-  When evolving schema, NEVER
- * rename fields
- * remove required fields
-
- Schema-evolution-is-not-that-complex: https://medium.com/data-rocks/schema-evolution-is-not-that-complex-b7cf7eb567ac
-
- */
+/** Schema evolution allows you to update the schema used to write new data, while maintaining backwards compatibility with the schema(s) of your old data.
+  * Then you can read it all together, as if all of the data has one schema. Of course there are precise rules governing the changes
+  * allowed, to maintain compatibility.
+  *
+  * Avro provides full compatibility support.
+  * Backward compatibility is necessary for reading the old version of events.
+  * Forward compatibility is required for rolling updates when at the same time old and new versions of events
+  * can be exchanged between processes.
+  *
+  * 1.  Backward compatible change - write with V1 and read with V2
+  * 2.  Forward compatible change -  write with V2 and read with V1
+  * 3.  Fully compatible if your change is Backward and Forward compatible
+  * 4.  Breaking is non of those
+  *
+  * Advice when writing Avro schema
+  * Add field with defaults
+  * Remove only fields which have defaults
+  *
+  * If you target full compatibility follows these rules:
+  * Removing fields with defaults is fully compatible change
+  * Adding fields with defaults is fully compatible change
+  *
+  *  Enum can't evolve over time.
+  *
+  *  When evolving schema, ALWAYS give defaults.
+  *
+  *  When evolving schema, NEVER
+  * rename fields
+  * remove required fields
+  *
+  * Schema-evolution-is-not-that-complex: https://medium.com/data-rocks/schema-evolution-is-not-that-complex-b7cf7eb567ac
+  */
 object JournalEventsSerializer {
   val SEP         = ":"
   val subEventSEP = "/"
@@ -168,21 +164,22 @@ object JournalEventsSerializer {
             envelope.getTz.toString
           )
 
-        /*
-        case p: com.safechat.avro.persistent.domain.UserTextsAdded ⇒
-          var c = Vector.empty[Content]
-          p.getContent.forEach { line ⇒
-            val segs     = line.toString.split(ChatRoomClassic.MSG_SEP)
-            val sender   = segs(0)
-            val receiver = segs(1)
-            val content  = segs(2)
-            c = c.:+(Content(sender, receiver, content))
-          }
-          ChatRoomEvent.UserTextsAdded(p.getSeqNum, c, envelope.getWhen, envelope.getTz.toString)
-         */
-
         case p: com.safechat.avro.persistent.domain.UserDisconnected ⇒
           ChatRoomEvent.UserDisconnected(p.getLogin.toString)
+
+        /*
+          case p: com.safechat.avro.persistent.domain.UserTextsAdded ⇒
+            var c = Vector.empty[Content]
+            p.getContent.forEach { line ⇒
+              val segs     = line.toString.split(ChatRoomClassic.MSG_SEP)
+              val sender   = segs(0)
+              val receiver = segs(1)
+              val content  = segs(2)
+              c = c.:+(Content(sender, receiver, content))
+            }
+            ChatRoomEvent.UserTextsAdded(p.getSeqNum, c, envelope.getWhen, envelope.getTz.toString)
+         */
+
         case _ ⇒
           notSerializable(
             s"Deserialization for event $manifest not supported. Check fromBinary method in ${this.getClass.getName} class."
@@ -223,6 +220,14 @@ object JournalEventsSerializer {
           new com.safechat.avro.persistent.domain.UserTextAdded(seqNum, userId, receiver, content)
         )
 
+      case e: ChatRoomEvent.UserDisconnected ⇒
+        new com.safechat.avro.persistent.domain.EventEnvelope(
+          UUID.randomUUID.toString,
+          System.currentTimeMillis,
+          TimeZone.getDefault.getID,
+          com.safechat.avro.persistent.domain.UserDisconnected.newBuilder.setLogin(e.userId).build
+        )
+
       /*
       case e: ChatRoomEvent.UserTextsAdded ⇒
         val content = new util.ArrayList[CharSequence](e.msgs.size)
@@ -236,15 +241,6 @@ object JournalEventsSerializer {
           new com.safechat.avro.persistent.domain.UserTextsAdded(e.seqNum, content)
         )
        */
-
-      case e: ChatRoomEvent.UserDisconnected ⇒
-        new com.safechat.avro.persistent.domain.EventEnvelope(
-          UUID.randomUUID.toString,
-          System.currentTimeMillis,
-          TimeZone.getDefault.getID,
-          com.safechat.avro.persistent.domain.UserDisconnected.newBuilder.setLogin(e.userId).build
-        )
-
     }
 }
 

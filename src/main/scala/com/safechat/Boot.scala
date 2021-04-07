@@ -106,8 +106,8 @@ object Boot extends Ops {
     val dockerHostName = internalDockerAddr
       .map(_.getHostAddress)
       // TODO: for local debug !!!!!!!!!!!!!!!!!
-      //.getOrElse(hostName)
-      .getOrElse("0.0.0.0")
+      .getOrElse(hostName)
+    //.getOrElse("0.0.0.0")
 
     val httpManagementPort = httpPort - 1
 
@@ -202,7 +202,7 @@ object Boot extends Ops {
     }*/
 
     //TODO: for debug only
-    /*
+
     val _ = scala.io.StdIn.readLine()
     system.log.warn("Shutting down ...")
     system.terminate()
@@ -210,7 +210,6 @@ object Boot extends Ops {
       system.whenTerminated,
       cfg.getDuration("akka.coordinated-shutdown.default-phase-timeout", java.util.concurrent.TimeUnit.SECONDS).seconds
     )
-     */
   }
 
   // http 127.0.0.1:8558/cluster/members "Authorization:Basic QWxhZGRpbjpPcGVuU2VzYW1l"

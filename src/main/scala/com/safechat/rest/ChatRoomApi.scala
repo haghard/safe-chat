@@ -17,6 +17,8 @@ import com.safechat.actors._
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
+import ExtraDirectives._
+
 final case class ChatRoomApi(rooms: ShardedChatRooms, to: FiniteDuration)(implicit
   sys: ActorSystem[Nothing]
 ) extends Directives {
@@ -106,7 +108,7 @@ final case class ChatRoomApi(rooms: ShardedChatRooms, to: FiniteDuration)(implic
               )
               //
               .mergePreferred(
-                Source.tick(30.seconds, 30.seconds, TextMessage.Strict("none:none:commercial")),
+                Source.tick(30.seconds, 40.seconds, TextMessage.Strict("none:none:commercial")),
                 false,
                 true
               )
@@ -120,23 +122,24 @@ final case class ChatRoomApi(rooms: ShardedChatRooms, to: FiniteDuration)(implic
                 NotUsed
               }
           }
-        case None ⇒
-          throw new Exception(s"$chatId join failure !!!")
+
+        case None ⇒ throw new Exception(s"$chatId join failure !")
       }
     }
 
-  /** As long as at least one connection is opened to the chat room, the associated persistent entity won't be passivated.
-    *
-    * Downsides: online users count is wrong ???
+  /**  As long as at least one connection is opened to the chat room, the associated persistent entity won't be passivated.
     */
   val routes: Route =
-    (path("chat" / Segment / "user" / Segment) & parameter("pub".as[String])) { (chatId, user, pubKey) ⇒
-      val flow =
-        //When ChatRoom entities get rebalanced, a flow(src, sink) we've got once may no longed be working so we need to restart it transparently for the clients
-        RestartFlow.withBackoff(akka.stream.RestartSettings(2.seconds, 4.seconds, 0.4))(() ⇒
-          Flow.futureFlow(chatRoomWsFlow(rooms, chatId, user, pubKey))
-        )
-      handleWebSocketMessages(flow)
+    extractLog { implicit log ⇒
+      (path("chat" / Segment / "user" / Segment) & parameter("pub".as[String])) { (chatId, user, pubKey) ⇒
+        val flow =
+          //When ChatRoom entities get rebalanced, a flow(src, sink) we've got once may no longed be working so we need to restart it transparently for the clients
+          RestartFlow.withBackoff(akka.stream.RestartSettings(2.seconds, 4.seconds, 0.4))(() ⇒
+            Flow.futureFlow(chatRoomWsFlow(rooms, chatId, user, pubKey))
+          )
+        //responds with 101 "Switching Protocols"
+        aroundRequest(logLatency(log))(handleWebSocketMessages(flow))
+      }
     }
 }
 
