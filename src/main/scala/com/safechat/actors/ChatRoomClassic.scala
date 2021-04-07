@@ -53,7 +53,7 @@ object ChatRoomClassic {
     persistenceId: String,
     fromSequenceNr: Long,
     classicSystem: akka.actor.ActorSystem
-  ): Source[ChatRoomEvent, akka.NotUsed] =
+  ): Source[ChatRoomEvent.UserTextAdded, akka.NotUsed] =
     PersistenceQuery(classicSystem)
       .readJournalFor[CassandraReadJournal](CassandraReadJournal.Identifier)
       .eventsByPersistenceId(persistenceId, fromSequenceNr, Long.MaxValue)
@@ -61,7 +61,7 @@ object ChatRoomClassic {
         case EventEnvelope(
               TimeBasedUUID(_),
               `persistenceId`,
-              sequenceNr,
+              sequenceNr @ _,
               ChatRoomEvent.UserTextAdded(userId, seqNum, recipient, content, w, tz)
             ) ⇒
           ChatRoomEvent.UserTextAdded(userId, seqNum, recipient, content, w, tz)
@@ -77,7 +77,7 @@ object ChatRoomClassic {
   def chatRoomHub(
     persistenceId: String,
     recentHistorySize: Int,
-    lastSequenceNr: Long,
+    fromSequenceNr: Long,
     //shardRegion: ActorRef[Command.PostTexts],
     kksRef: AtomicReference[immutable.Set[UniqueKillSwitch]]
   )(implicit classicSystem: akka.actor.ActorSystem): ChatRoomHub = {
@@ -132,7 +132,10 @@ object ChatRoomClassic {
         .run()
      */
 
-    val reader = journal(persistenceId, lastSequenceNr, classicSystem).buffer(1, OverflowStrategy.backpressure)
+    val reader: Source[ChatRoomEvent.UserTextAdded, akka.NotUsed] =
+      journal(persistenceId, fromSequenceNr, classicSystem)
+        .buffer(1, OverflowStrategy.backpressure)
+    //.viaMat(new LastConsumed[ChatRoomEvent])(Keep.right)
 
     val ((sinkHub, ks), sourceHub) =
       MergeHub
@@ -141,11 +144,15 @@ object ChatRoomClassic {
         .via(persist(persistenceId))
         .async(Boot.httpDispatcher, 1)
         .zip(reader)
-        .map {
-          case (reply: Reply, e: ChatRoomEvent.UserTextAdded) ⇒
-            //assert(reply.seqNum == e.seqNum, s"seqNum mismatch ${reply.seqNum}:${e.seqNum}")
-            TextMessage.Strict(ChatRoomClassic.msg(persistenceId, e.seqNum, e.userId, e.recipient, e.content))
-          case e ⇒ throw new java.lang.AssertionError(s"Unexpected event: ${e.getClass.getName}")
+        .map { case (r @ _, userTextAdded) ⇒
+          val content = ChatRoomClassic.msg(
+            persistenceId,
+            userTextAdded.seqNum,
+            userTextAdded.userId,
+            userTextAdded.recipient,
+            userTextAdded.content
+          )
+          TextMessage.Strict(content)
         }
         .viaMat(KillSwitches.single)(Keep.both)
         .toMat(BroadcastHub.sink[Message](bufferSize = recentHistorySize))(Keep.both)

@@ -11,7 +11,6 @@ import akka.http.scaladsl.server._
 import akka.stream.OverflowStrategy
 import akka.stream.scaladsl.Flow
 import akka.stream.scaladsl.RestartFlow
-import akka.stream.scaladsl.Source
 import com.safechat.actors._
 
 import scala.concurrent.Future
@@ -101,17 +100,24 @@ final case class ChatRoomApi(rooms: ShardedChatRooms, to: FiniteDuration)(implic
              */
 
             val buf = attr.get[akka.stream.Attributes.InputBuffer].get
+            //FlowWithContext[Message, Long].asFlow.scan(()) { case (m, c) => (m, c) }
+
             Flow
               .fromSinkAndSourceCoupled(
                 sinkRef.sink,
                 sourceRef.source
+                  .scan[(Long, Message)]((0L, TextMessage.Strict(s"$user:$chatId:connected"))) { case (state, m) ⇒
+                    val next = state._1 + 1L
+                    classicSys.log.info("{}@ {} Msg № {}", user, chatId, next)
+                    (next, m)
+                  }
+                  .map(_._2)
               )
-              //
-              .mergePreferred(
-                Source.tick(30.seconds, 40.seconds, TextMessage.Strict("none:none:commercial")),
+              /*.mergePreferred(
+                Source.tick(30.seconds, 45.seconds, TextMessage.Strict("none:none:commercial")),
                 false,
                 true
-              )
+              )*/
               .buffer(buf.max, OverflowStrategy.backpressure)
               .backpressureTimeout(3.seconds) //automatic cleanup for very slow subscribers.
               .watchTermination() { (_, done) ⇒
@@ -137,6 +143,7 @@ final case class ChatRoomApi(rooms: ShardedChatRooms, to: FiniteDuration)(implic
           RestartFlow.withBackoff(akka.stream.RestartSettings(2.seconds, 4.seconds, 0.4))(() ⇒
             Flow.futureFlow(chatRoomWsFlow(rooms, chatId, user, pubKey))
           )
+
         //responds with 101 "Switching Protocols"
         aroundRequest(logLatency(log))(handleWebSocketMessages(flow))
       }
