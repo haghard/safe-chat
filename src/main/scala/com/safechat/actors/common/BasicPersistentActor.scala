@@ -20,16 +20,16 @@ object BasicPersistentActor {
 }
 
 //https://gitlab.com/makeorg/platform/core-api/-/blob/preproduction/api/src/main/scala/org/make/api/technical/MakePersistentActor.scala
-abstract class BasicPersistentActor[State, C, Event](var state: State, snapshotEvery: Int)(implicit
+abstract class BasicPersistentActor[State, Cmd, Event](var state: State, snapshotEvery: Int)(implicit
   stateTag: ClassTag[State],
-  cmdTag: ClassTag[C],
+  cmdTag: ClassTag[Cmd],
   eventTag: ClassTag[Event]
 ) extends PersistentActor
-    with ActorLogging { self: CommandHandler[State, C, Event] with EventHandler[State, C, Event] ⇒
+    with ActorLogging { self: CommandHandler[State, Cmd, Event] with EventHandler[State, Cmd, Event] ⇒
 
   override def receiveRecover: Receive = {
     case e: Event ⇒
-      state = applyEvent(state, e)
+      state = applyEvent(e, state)
     case SnapshotOffer(_, snapshot: State) ⇒
       state = snapshot
     case RecoveryCompleted ⇒
@@ -41,33 +41,27 @@ abstract class BasicPersistentActor[State, C, Event](var state: State, snapshotE
   def onRecoveryCompleted(state: State)
 
   override def receiveCommand: Receive = {
-    val PF = PartialFunction.fromFunction(applyCommand)
-
-    {
-      case cmd: C ⇒
-        if (PF.isDefinedAt(cmd)) {
-          applyCommand(cmd) match {
-            case NoEvent(reply) ⇒
-              sender() ! reply
-            case PersistEvent(event) ⇒
-              persist(event) { ev ⇒
-                state = applyEvent(state, ev)
-                if (lastSequenceNr % snapshotEvery == 0)
-                  maybeSnapshot(state)
-              }
+    case cmd: Cmd ⇒
+      applyCommand(cmd, state) match {
+        case NoEvent(reply) ⇒
+          sender() ! reply
+        case PersistEvent(event) ⇒
+          persist(event) { ev ⇒
+            state = applyEvent(ev, state)
+            if (lastSequenceNr % snapshotEvery == 0)
+              maybeSnapshot(state)
           }
-        } else log.error("Unable to validate cmd {}, ignoring it", cmd)
+      }
 
-      // snapshot-related messages
-      case SaveSnapshotSuccess(metadata) ⇒
-        log.info(s"Saving snapshot succeeded: $metadata")
+    // snapshot-related messages
+    case SaveSnapshotSuccess(metadata) ⇒
+      log.info(s"Saving snapshot succeeded: $metadata")
 
-      case SaveSnapshotFailure(metadata, reason) ⇒
-        log.warning(s"Saving snapshot $metadata failed because of $reason")
+    case SaveSnapshotFailure(metadata, reason) ⇒
+      log.warning(s"Saving snapshot $metadata failed because of $reason")
 
-      case other ⇒
-        log.error("Unable to validate unknown cmd {}, ignoring it", other)
-    }
+    case other ⇒
+      log.error("Unable to validate unknown cmd {}, ignoring it", other)
   }
 
   def maybeSnapshot(state: State): Unit =

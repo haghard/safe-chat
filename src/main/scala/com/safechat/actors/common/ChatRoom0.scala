@@ -32,14 +32,16 @@ final class ChatRoom0(appCfg: AppCfg)
 
   val rb = RingBuffer(appCfg.recentHistorySize)
 
-  override def applyCommand: Command[Reply] ⇒ Result = { (cmd: Command[Reply]) ⇒
+  override def applyCommand: (Command[Reply], ChatRoomState) ⇒ Result = { (cmd: Command[Reply], s: ChatRoomState) ⇒
     cmd match {
-      case _: Command.JoinUser ⇒ NoEvent(ValidationRejection(""))
+      case c: Command.JoinUser ⇒
+        if (s.users.contains(c.user)) NoEvent(ValidationRejection(""))
+        else PersistEvent(ChatRoomEvent.UserJoined(c.user, lastSequenceNr + 1, c.pubKey))
       case Command.PostText(_, sender, receiver, content, _) ⇒
         PersistEvent(
           ChatRoomEvent.UserTextAdded(
             sender,
-            lastSequenceNr,
+            lastSequenceNr + 1,
             receiver,
             content,
             System.currentTimeMillis(),
@@ -52,8 +54,8 @@ final class ChatRoom0(appCfg: AppCfg)
     }
   }
 
-  override def applyEvent: (ChatRoomState, ChatRoomEvent) ⇒ ChatRoomState = {
-    (prevState: ChatRoomState, e: ChatRoomEvent) ⇒
+  override def applyEvent: (ChatRoomEvent, ChatRoomState) ⇒ ChatRoomState = {
+    (e: ChatRoomEvent, prevState: ChatRoomState) ⇒
       e match {
         case _: ChatRoomEvent.UserJoined       ⇒ prevState
         case _: ChatRoomEvent.UserTextAdded    ⇒ prevState
@@ -63,4 +65,5 @@ final class ChatRoom0(appCfg: AppCfg)
 
   override def onRecoveryCompleted(rState: ChatRoomState): Unit =
     log.info("Recovered {}", rState)
+
 }

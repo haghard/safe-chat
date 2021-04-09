@@ -1,6 +1,11 @@
 package com.safechat.actors.common
 
-//Allows testability
-trait EventHandler[State, C, Event] {
-  def applyEvent: (State, Event) ⇒ State
+trait EventHandler[State, Cmd, Event] {
+
+  /*
+    total function (return an output for every input),
+    deterministic (return the same output for the same input),
+    free of side effects (only compute the return value, and don’t interact with the outside world)
+   */
+  def applyEvent: (Event, State) ⇒ State
 }

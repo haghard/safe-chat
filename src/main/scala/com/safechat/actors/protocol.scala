@@ -85,16 +85,6 @@ object Command {
     override val toString = s"PostText($chatId, $sender, $receiver)"
   }
 
-  /*
-  final case class PostTexts(
-    chatId: String,
-    content: Seq[Content],
-    replyTo: ActorRef[Reply.TextsPostedReply]
-  ) extends Command[Reply.TextsPostedReply] {
-    override type Event = ChatRoomEvent.UserTextsAdded
-    override val toString = s"PostTexts($chatId, ${content.size})"
-  }*/
-
   final case class Leave(
     chatId: String,
     user: String,
@@ -113,6 +103,17 @@ object Command {
     override type Event = Nothing
     override val toString = "HandOffChatRoom"
   }
+
+  /*
+  final case class PostTexts(
+    chatId: String,
+    content: Seq[Content],
+    replyTo: ActorRef[Reply.TextsPostedReply]
+  ) extends Command[Reply.TextsPostedReply] {
+    override type Event = ChatRoomEvent.UserTextsAdded
+    override val toString = s"PostTexts($chatId, ${content.size})"
+  }
+   */
 
   val handOffChatRoom = HandOffChatRoom()
 }

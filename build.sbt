@@ -7,7 +7,7 @@ import scala.concurrent.duration.FiniteDuration
 val projectName   = "safe-chat"
 val Version       = "0.5.0"
 
-val akkaVersion     = "2.6.13"
+val akkaVersion     = "2.6.14"
 val akkaHttpVersion = "10.2.4"
 val AkkaManagement  = "1.0.9"
 val AkkaPersistenceCassandraVersion = "1.0.5"
@@ -17,7 +17,7 @@ promptTheme := ScalapenosTheme
 lazy val scalacSettings = Seq(
   scalacOptions ++= Seq(
     //"-deprecation",                            // Emit warning and location for usages of deprecated APIs.
-    "-target:jvm-14",
+    "-target:jvm-11", //14
     "-explaintypes",                             // Explain type errors in more detail.
     "-feature",                                  // Emit warning and location for usages of features that should be imported explicitly.
     "-language:existentials",                    // Existential types (besides wildcard types) can be written and inferred
@@ -87,7 +87,7 @@ lazy val commonSettings = Seq(
 
   //sbt headerCreate
   licenses += ("Apache-2.0", new URL("https://www.apache.org/licenses/LICENSE-2.0.txt")),
-  scalaVersion := "2.13.5",
+  scalaVersion := "2.13.4",
   headerMappings := headerMappings.value + (HeaderFileType.scala -> HeaderCommentStyle.cppStyleLineComment),
   headerLicense  := Some(HeaderLicense.Custom("Copyright (c) 2019-2021 Vadim Bondarev. All rights reserved."))
 )
@@ -286,6 +286,8 @@ libraryDependencies ++= Seq(
 
   "org.apache.avro" %   "avro"         %   "1.10.1",
 
+  "com.softwaremill.quicklens" %% "quicklens" % "1.6.1",
+
   //"com.twitter"     %%  "bijection-avro"  %   "0.9.6",  // ++ 2.12.13!
   //"org.apache.avro" %   "avro-compiler"   %   "1.10.1",
 
@@ -309,12 +311,14 @@ libraryDependencies ++= Seq(
   //"org.typelevel" %% "algebra" % "2.1.0",
 
   // li haoyi ammonite repl embed
-  //("com.lihaoyi" % "ammonite" % "2.3.8-36-1cce53f3"  % "test").cross(CrossVersion.full),
+  ("com.lihaoyi" % "ammonite" % "2.3.8-36-1cce53f3"  % "test").cross(CrossVersion.full),
 
   //https://github.com/politrons/reactiveScala/blob/master/scala_features/src/main/scala/app/impl/scala/ReflectionFeature.scala
   "org.scala-lang" % "scala-reflect" % scalaVersion.value
 
 )
+
+addCompilerPlugin("org.typelevel" % "kind-projector" % "0.11.3" cross CrossVersion.full)
 
 // transitive dependency of akka 2.5x that is brought in
 dependencyOverrides += "com.typesafe.akka" %% "akka-protobuf"       % akkaVersion
@@ -343,10 +347,9 @@ Global / watchAntiEntropy := FiniteDuration(2000, TimeUnit.MILLISECONDS)
 
 // ammonite repl
 // test:run
-/*
+
 sourceGenerators in Test += Def.task {
   val file = (sourceManaged in Test).value / "amm.scala"
   IO.write(file, """object amm extends App { ammonite.Main().run() }""")
   Seq(file)
 }.taskValue
-*/
