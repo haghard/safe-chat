@@ -86,9 +86,5 @@ package object actors {
       case None ⇒
         ()
     }
-
-    /*if (prevMap.contains(chatId))
-      if (kssRef.compareAndSet(prevMap, prevMap - chatId)) () else unregisterKS(chatId, kssRef)
-    else ()*/
   }
 }

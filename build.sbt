@@ -1,9 +1,6 @@
 import sbt._
 import sbtdocker.ImageName
 
-import java.util.concurrent.TimeUnit
-import scala.concurrent.duration.FiniteDuration
-
 val projectName   = "safe-chat"
 val Version       = "0.5.0"
 
@@ -305,7 +302,7 @@ libraryDependencies ++= Seq(
   //"org.typelevel" %% "algebra" % "2.1.0",
 
   //https://github.com/codedx/mapk
-  "com.codedx" %% "mapk" % "1.1.0",
+  //"com.codedx" %% "mapk" % "1.1.0",
   
   "com.typesafe.akka" %% "akka-stream-testkit" % akkaVersion, //% Test,
 
@@ -337,13 +334,14 @@ AvroConfig / enableDecimalLogicalType := true
 
 // Scalafix
 
-
+/*
 ThisBuild / scalafixDependencies += "com.github.liancheng" %% "organize-imports" % "0.5.0"
 
 Global / semanticdbEnabled := true
 Global / semanticdbVersion := scalafixSemanticdb.revision
-Global / watchAntiEntropy := FiniteDuration(2000, TimeUnit.MILLISECONDS)
+Global / watchAntiEntropy := scala.concurrent.duration.FiniteDuration(2000, java.util.concurrent.TimeUnit.MILLISECONDS)
 
+*/
 
 
 // ammonite repl

@@ -80,20 +80,8 @@ object ChatRoomClassic {
     kksRef: AtomicReference[immutable.Map[String, UniqueKillSwitch]]
   )(implicit classicSystem: akka.actor.ActorSystem): ChatRoomHub = {
     implicit val t = akka.util.Timeout(2.seconds)
-
-    //sys.log.warn("Create chatroom {}", persistenceId)
-    //ResumableQuery https://github.com/dnvriend/akka-persistence-query-extensions#akkapersistencequeryextensionresumablequery
-    //val persistFlow = persist(persistenceId)(classicSystem, persistTimeout).withAttributes(Attributes.asyncBoundary)
-
     /*
-    val postPersist =
-      Flow[Reply.TextsPostedReply]
-        .withAttributes(Attributes.inputBuffer(1, 1).and(Attributes.asyncBoundary))
-        //.buffer(1, OverflowStrategy.backpressure).async
-     */
-
     //By the time the 1st element hass emited from the journal, the previous [1...recentHistorySize] had already been written
-    /*
     val ((sinkHub, ks), sourceHub) =
       MergeHub
         .source[Message](perProducerBufferSize = 1)
@@ -156,15 +144,6 @@ object ChatRoomClassic {
         .viaMat(KillSwitches.single)(Keep.both)
         .toMat(BroadcastHub.sink[Message](bufferSize = recentHistorySize))(Keep.both)
         .run()
-
-    /*val name = s"shutdown.hub.$persistenceId"
-    CoordinatedShutdown(sys)
-      .addTask(akka.actor.CoordinatedShutdown.PhaseServiceRequestsDone, name) { () ⇒
-        scala.concurrent.Future.successful {
-          ks.shutdown()
-          akka.Done
-        }
-      }*/
 
     registerKS(persistenceId, ks, kksRef)
     ChatRoomHub(sinkHub, sourceHub, ks)
@@ -263,7 +242,7 @@ class ChatRoomClassic(implicit
       }*/
 
     case cmd: Command.PostText ⇒
-      log.info("{} - {}", state.users.keySet.mkString(","), state.usersOnline.mkString(","))
+      //log.info("registered:[{}] - online:[{}]", state.users.keySet.mkString(","), state.usersOnline.mkString(","))
       persist(
         ChatRoomEvent.UserTextAdded(
           cmd.sender,
@@ -284,16 +263,9 @@ class ChatRoomClassic(implicit
         context become active(newState)
       }
 
-    //
     case cmd: Command.HandOffChatRoom ⇒
-      /*state.hub.foreach { hub ⇒
-        hub.ks.shutdown()
-        unregisterKS(persistenceId, kksRef)
-      }*/
-
-      unregisterKS(persistenceId, kksRef)
-
       log.info(s"${cmd.getClass.getSimpleName}")
+      unregisterKS(persistenceId, kksRef)
       context.stop(self)
 
     // snapshot-related messages
@@ -304,7 +276,8 @@ class ChatRoomClassic(implicit
       log.warning(s"Saving snapshot $metadata failed because of $reason")
   }
 
-  override def receiveCommand: Receive = notActive(ChatRoomState(recentHistory = RingBuffer(appCfg.recentHistorySize)))
+  override def receiveCommand: Receive =
+    notActive(ChatRoomState(recentHistory = RingBuffer(appCfg.recentHistorySize)))
 
   /*
       This method is called if persisting failed. The actor will be stopped.

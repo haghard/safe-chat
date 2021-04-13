@@ -10,10 +10,8 @@ import scala.collection.mutable
   *
   * ZIO stm based LRUCache
   * https://scalac.io/how-to-write-a-completely-lock-free-concurrent-lru-cache-with-zio-stm/
-  *
-  * Check them both out
   */
-object LRUCache {
+object LRUCaches {
 
   def apply[K, V](capacity: Int) = {
     val empty = new Node[K, V]()
@@ -181,7 +179,7 @@ object LRUCache {
 
     def size: Int = currentSize
 
-    def show: Unit = {
+    def show(): Unit = {
       def loop(n: Node[K, V]): Unit = {
         println(n)
         if (n.next ne null) loop(n.next) else ()
