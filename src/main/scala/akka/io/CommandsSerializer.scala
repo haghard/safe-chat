@@ -141,7 +141,7 @@ final class CommandsSerializer(val system: ExtendedActorSystem)
   override val identifier = 99998
 
   private val SEP                           = ":"
-  private val (activeSchemaHash, schemaMap) = com.safechat.serializer.SchemaRegistry()
+  private val (activeSchemaHash, schemaMap) = com.safechat.programs.SchemaRegistry()
 
   override def manifest(o: AnyRef): String =
     s"$activeSchemaHash$SEP${o.getClass.getName}"

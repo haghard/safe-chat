@@ -17,7 +17,7 @@ object ShardedChatRoomClassic {
   def apply(
     system: akka.actor.ActorSystem,
     totalFailoverTimeout: FiniteDuration,
-    kksRef: AtomicReference[immutable.Set[UniqueKillSwitch]],
+    kksRef: AtomicReference[immutable.Map[String, UniqueKillSwitch]],
     appCfg: AppCfg
   ): ActorRef[Command[Reply]] = {
 

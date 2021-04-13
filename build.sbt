@@ -17,6 +17,7 @@ promptTheme := ScalapenosTheme
 lazy val scalacSettings = Seq(
   scalacOptions ++= Seq(
     //"-deprecation",                            // Emit warning and location for usages of deprecated APIs.
+    "-Xsource:2.13",
     "-target:jvm-14",
     "-explaintypes",                             // Explain type errors in more detail.
     "-feature",                                  // Emit warning and location for usages of features that should be imported explicitly.
@@ -76,14 +77,7 @@ lazy val commonSettings = Seq(
   organization := "haghard",
   version := Version,
   startYear := Some(2019),
-  developers := List(
-    Developer(
-      "haghard",
-      "Vadim Bondarev",
-      "hagard84@gmail.com",
-      url("http://haghard.ru")
-    )
-  ),
+  developers := List(Developer("haghard", "Vadim Bondarev", "hagard84@gmail.com", url("http://haghard.ru"))),
 
   //sbt headerCreate
   licenses += ("Apache-2.0", new URL("https://www.apache.org/licenses/LICENSE-2.0.txt")),
@@ -310,6 +304,11 @@ libraryDependencies ++= Seq(
   //https://github.com/typelevel/algebra/blob/46722cd4aa4b01533bdd01f621c0f697a3b11040/docs/docs/main/tut/typeclasses/overview.md
   //"org.typelevel" %% "algebra" % "2.1.0",
 
+  //https://github.com/codedx/mapk
+  "com.codedx" %% "mapk" % "1.1.0",
+  
+  "com.typesafe.akka" %% "akka-stream-testkit" % akkaVersion, //% Test,
+
   // li haoyi ammonite repl embed
   //("com.lihaoyi" % "ammonite" % "2.3.8-36-1cce53f3"  % "test").cross(CrossVersion.full), //2.13.4
 
@@ -337,11 +336,14 @@ AvroConfig / enableDecimalLogicalType := true
 
 
 // Scalafix
+
+
 ThisBuild / scalafixDependencies += "com.github.liancheng" %% "organize-imports" % "0.5.0"
 
 Global / semanticdbEnabled := true
 Global / semanticdbVersion := scalafixSemanticdb.revision
 Global / watchAntiEntropy := FiniteDuration(2000, TimeUnit.MILLISECONDS)
+
 
 
 // ammonite repl

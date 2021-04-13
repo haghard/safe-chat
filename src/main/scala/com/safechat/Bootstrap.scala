@@ -41,7 +41,7 @@ final case class Bootstrap(
   httpBindHostName: String,
   port: Int,
   localShards: AtomicReference[immutable.Set[String]],
-  kksRef: AtomicReference[immutable.Set[UniqueKillSwitch]]
+  kksRef: AtomicReference[immutable.Map[String, UniqueKillSwitch]]
 )(implicit classicSystem: akka.actor.ActorSystem) {
   implicit val ec = classicSystem.dispatcher
   val shutdown    = CoordinatedShutdown(classicSystem)
@@ -90,7 +90,7 @@ final case class Bootstrap(
         Future.successful {
           val kks = kksRef.get()
           classicSystem.log.info(s"★ ★ ★ CoordinatedShutdown [kss.shutdown:${kks.size}]  ★ ★ ★")
-          kks.foreach(_.shutdown())
+          kks.values.foreach(_.shutdown())
           Done
         }
       }
@@ -110,7 +110,7 @@ final case class Bootstrap(
       //forcefully kills connections and kill switches that are still open
       shutdown.addTask(PhaseServiceStop, "close.connections") { () ⇒
         val kks = kksRef.get()
-        kks.foreach(_.abort(new Exception("abort")))
+        kks.values.foreach(_.abort(new Exception("abort")))
         Http().shutdownAllConnectionPools().map { _ ⇒
           classicSystem.log.info("★ ★ ★ CoordinatedShutdown [close.connections] ★ ★ ★")
           Done

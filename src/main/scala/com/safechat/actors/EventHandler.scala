@@ -16,7 +16,7 @@ sealed trait EventHandler[C <: Command[_]] {
   def apply(cmd: C, event: C#Event, state: ChatRoomState)(implicit
     sys: akka.actor.ActorSystem,
     failoverTimeout: FiniteDuration,
-    kksRef: AtomicReference[immutable.Set[UniqueKillSwitch]],
+    kksRef: AtomicReference[immutable.Map[String, UniqueKillSwitch]],
     appCfg: AppCfg
   ): ChatRoomState
 }
@@ -27,7 +27,7 @@ object EventHandler {
     def apply(cmd: Command.JoinUser, event: ChatRoomEvent.UserJoined, state: ChatRoomState)(implicit
       sys: akka.actor.ActorSystem,
       failoverTimeout: FiniteDuration,
-      kksRef: AtomicReference[immutable.Set[UniqueKillSwitch]],
+      kksRef: AtomicReference[immutable.Map[String, UniqueKillSwitch]],
       appCfg: AppCfg
     ) = {
       val newState =
@@ -60,7 +60,7 @@ object EventHandler {
     def apply(cmd: Command.PostText, event: ChatRoomEvent.UserTextAdded, state: ChatRoomState)(implicit
       sys: akka.actor.ActorSystem,
       failoverTimeout: FiniteDuration,
-      kksRef: AtomicReference[immutable.Set[UniqueKillSwitch]],
+      kksRef: AtomicReference[immutable.Map[String, UniqueKillSwitch]],
       appCfg: AppCfg
     ) = {
       state.recentHistory.add(
@@ -94,7 +94,7 @@ object EventHandler {
     def apply(cmd: Command.Leave, event: ChatRoomEvent.UserDisconnected, state: ChatRoomState)(implicit
       sys: akka.actor.ActorSystem,
       failoverTimeout: FiniteDuration,
-      kksRef: AtomicReference[immutable.Set[UniqueKillSwitch]],
+      kksRef: AtomicReference[immutable.Map[String, UniqueKillSwitch]],
       appCfg: AppCfg
     ) = {
       val reply = Reply.LeaveReply(cmd.chatId, event.userId)
@@ -107,7 +107,7 @@ object EventHandler {
     P: EventHandler[C],
     sys: akka.actor.ActorSystem,
     failoverTimeout: FiniteDuration,
-    kksRef: AtomicReference[immutable.Set[UniqueKillSwitch]],
+    kksRef: AtomicReference[immutable.Map[String, UniqueKillSwitch]],
     appCfg: AppCfg
   ) = P(c, e, state)
 }

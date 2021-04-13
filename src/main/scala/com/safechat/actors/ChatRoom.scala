@@ -56,7 +56,7 @@ object ChatRoom {
   def apply(
     entityCtx: EntityContext[Command[Reply]],
     localChatRooms: AtomicReference[immutable.Set[String]],
-    kks: AtomicReference[immutable.Set[UniqueKillSwitch]],
+    kksRef: AtomicReference[immutable.Map[String, UniqueKillSwitch]],
     to: FiniteDuration,
     appCfg: AppCfg
   ): Behavior[Command[Reply]] =
@@ -81,7 +81,7 @@ object ChatRoom {
             ChatRoomState(recentHistory = RingBuffer[String](appCfg.recentHistorySize)),
             onCommand(ctx, to),
             //commandHandler,
-            onEvent(ctx.self.path.name, kks, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss Z"))
+            onEvent(ctx.self.path.name, kksRef, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss Z"))
           )
           /*.withTagger {
           //tagged events are useful for querying  by tag
@@ -136,7 +136,7 @@ object ChatRoom {
     */
   def chatRoomHub(
     persistenceId: String,
-    kksRef: AtomicReference[immutable.Set[UniqueKillSwitch]]
+    kksRef: AtomicReference[immutable.Map[String, UniqueKillSwitch]]
   )(implicit
     sys: ActorSystem[Nothing]
   ): ChatRoomHub = {
@@ -183,7 +183,7 @@ object ChatRoom {
         .toMat(BroadcastHub.sink[Message](bufferSize = bs))(Keep.both)
         .run()
 
-    registerKS(kksRef, ks)
+    registerKS(persistenceId, ks, kksRef)
     ChatRoomHub(sinkHub, sourceHub, ks)
   }
 
@@ -265,7 +265,7 @@ object ChatRoom {
 
   def onEvent(
     persistenceId: String,
-    kksRef: AtomicReference[immutable.Set[UniqueKillSwitch]],
+    kksRef: AtomicReference[immutable.Map[String, UniqueKillSwitch]],
     frmtr: DateTimeFormatter
   )(state: ChatRoomState, event: ChatRoomEvent)(implicit
     sys: ActorSystem[Nothing],

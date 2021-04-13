@@ -14,6 +14,7 @@ import com.safechat.Boot
 import com.safechat.Boot.AppCfg
 
 import java.util.concurrent.atomic.AtomicReference
+import scala.collection.immutable
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
@@ -49,7 +50,7 @@ object ShardedChatRooms {
 
 final class ShardedChatRooms(
   localShards: AtomicReference[scala.collection.immutable.Set[String]],
-  kss: AtomicReference[scala.collection.immutable.Set[UniqueKillSwitch]],
+  kksRef: AtomicReference[immutable.Map[String, UniqueKillSwitch]],
   totalFailoverTimeout: FiniteDuration,
   appCfg: AppCfg
 )(implicit
@@ -107,7 +108,7 @@ final class ShardedChatRooms(
   //val chatShardRegion = ClusterSharding(system).init(Entity(ChatRoomEntity.entityKey)(behaviorFactory))
 
   //https://doc.akka.io/docs/akka/current/typed/cluster-sharding.html
-  val entity = Entity(ChatRoom.entityKey)(ChatRoom(_, localShards, kss, totalFailoverTimeout, appCfg))
+  val entity = Entity(ChatRoom.entityKey)(ChatRoom(_, localShards, kksRef, totalFailoverTimeout, appCfg))
     //ShardingMessageExtractor[UserCmd](512)
     .withMessageExtractor(ChatRoomsMsgExtractor[Command[Reply]]( /*numberOfShards*/ ))
     .withSettings(settings)
@@ -128,7 +129,7 @@ final class ShardedChatRooms(
   implicit val askTimeout = akka.util.Timeout(totalFailoverTimeout)
 
   //val chatShardRegion = sharding.init(entity)
-  val chatShardRegion = ShardedChatRoomClassic(system.toClassic, totalFailoverTimeout, kss, appCfg)
+  val chatShardRegion = ShardedChatRoomClassic(system.toClassic, totalFailoverTimeout, kksRef, appCfg)
 
   //Example how to use explicit client:  akka.kafka.cluster.sharding.KafkaClusterSharding
   //val client             = akka.cluster.sharding.external.ExternalShardAllocation(system).clientFor(ChatRoomEntity.entityKey.name)

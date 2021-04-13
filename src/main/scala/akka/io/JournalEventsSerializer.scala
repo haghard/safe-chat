@@ -7,7 +7,7 @@ import akka.actor.ExtendedActorSystem
 import akka.serialization.SerializerWithStringManifest
 import com.safechat.actors.ChatRoomEvent
 import com.safechat.domain.RingBuffer
-import com.safechat.serializer.SchemaRegistry
+import com.safechat.programs.SchemaRegistry
 import org.apache.avro.Schema
 import org.apache.avro.io.BinaryEncoder
 import org.apache.avro.io.DecoderFactory

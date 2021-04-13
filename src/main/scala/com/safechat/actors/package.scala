@@ -65,20 +65,30 @@ package object actors {
   }
 
   @tailrec final def registerKS(
-    kssRef: AtomicReference[immutable.Set[UniqueKillSwitch]],
-    ks: UniqueKillSwitch
+    chatId: String,
+    ks: UniqueKillSwitch,
+    kssRef: AtomicReference[immutable.Map[String, UniqueKillSwitch]]
   ): Unit = {
-    val kss = kssRef.get()
-    if (kssRef.compareAndSet(kss, kss + ks)) () else registerKS(kssRef, ks)
+    val map     = kssRef.get()
+    val updated = map + (chatId → ks)
+    if (kssRef.compareAndSet(map, updated)) () else registerKS(chatId, ks, kssRef)
   }
 
   @tailrec final def unregisterKS(
-    kssRef: AtomicReference[immutable.Set[UniqueKillSwitch]],
-    ks: UniqueKillSwitch
+    chatId: String,
+    kssRef: AtomicReference[immutable.Map[String, UniqueKillSwitch]]
   ): Unit = {
-    val kss = kssRef.get()
-    if (kss.contains(ks))
-      if (kssRef.compareAndSet(kss, kss - ks)) () else unregisterKS(kssRef, ks)
-    else ()
+    val prevMap = kssRef.get()
+    prevMap.get(chatId) match {
+      case Some(ks) ⇒
+        ks.shutdown()
+        if (kssRef.compareAndSet(prevMap, prevMap - chatId)) () else unregisterKS(chatId, kssRef)
+      case None ⇒
+        ()
+    }
+
+    /*if (prevMap.contains(chatId))
+      if (kssRef.compareAndSet(prevMap, prevMap - chatId)) () else unregisterKS(chatId, kssRef)
+    else ()*/
   }
 }

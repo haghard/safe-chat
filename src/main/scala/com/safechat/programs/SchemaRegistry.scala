@@ -1,6 +1,6 @@
 // Copyright (c) 2019-2021 Vadim Bondarev. All rights reserved.
 
-package com.safechat.serializer
+package com.safechat.programs
 
 import com.typesafe.config.Config
 import org.apache.avro.Schema

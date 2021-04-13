@@ -69,17 +69,15 @@ object ChatRoomClassic {
 
   def props(
     totalFailoverTimeout: FiniteDuration,
-    kksRef: AtomicReference[immutable.Set[UniqueKillSwitch]],
+    kksRef: AtomicReference[immutable.Map[String, UniqueKillSwitch]],
     appCfg: AppCfg
-  ) =
-    Props(new ChatRoomClassic()(kksRef, totalFailoverTimeout, appCfg)).withDispatcher(Boot.dbDispatcher)
+  ) = Props(new ChatRoomClassic()(kksRef, totalFailoverTimeout, appCfg)).withDispatcher(Boot.dbDispatcher)
 
   def chatRoomHub(
     persistenceId: String,
     recentHistorySize: Int,
     fromSequenceNr: Long,
-    //shardRegion: ActorRef[Command.PostTexts],
-    kksRef: AtomicReference[immutable.Set[UniqueKillSwitch]]
+    kksRef: AtomicReference[immutable.Map[String, UniqueKillSwitch]]
   )(implicit classicSystem: akka.actor.ActorSystem): ChatRoomHub = {
     implicit val t = akka.util.Timeout(2.seconds)
 
@@ -139,6 +137,7 @@ object ChatRoomClassic {
 
     val ((sinkHub, ks), sourceHub) =
       MergeHub
+        //.sourceWithDraining[Message](perProducerBufferSize = 1)
         .source[Message](perProducerBufferSize = 1)
         .flatMapConcat(_.asTextMessage.getStreamedText.fold("")(_ + _))
         .via(persist(persistenceId))
@@ -167,13 +166,13 @@ object ChatRoomClassic {
         }
       }*/
 
-    registerKS(kksRef, ks)
+    registerKS(persistenceId, ks, kksRef)
     ChatRoomHub(sinkHub, sourceHub, ks)
   }
 }
 
 class ChatRoomClassic(implicit
-  kksRef: AtomicReference[immutable.Set[UniqueKillSwitch]],
+  kksRef: AtomicReference[immutable.Map[String, UniqueKillSwitch]],
   totalFailoverTimeout: FiniteDuration,
   appCfg: AppCfg
 ) extends PersistentActor
@@ -285,11 +284,15 @@ class ChatRoomClassic(implicit
         context become active(newState)
       }
 
+    //
     case cmd: Command.HandOffChatRoom ⇒
-      state.hub.foreach { hub ⇒
+      /*state.hub.foreach { hub ⇒
         hub.ks.shutdown()
-        unregisterKS(kksRef, hub.ks)
-      }
+        unregisterKS(persistenceId, kksRef)
+      }*/
+
+      unregisterKS(persistenceId, kksRef)
+
       log.info(s"${cmd.getClass.getSimpleName}")
       context.stop(self)
 

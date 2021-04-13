@@ -251,9 +251,13 @@ object ChatRoomEvent {
   final case class UserDisconnected(userId: String) extends ChatRoomEvent
 }
 
-final case class ChatRoomHub(sinkHub: Sink[Message, NotUsed], srcHub: Source[Message, NotUsed], ks: UniqueKillSwitch)
+final case class ChatRoomHub(
+  sinkHub: Sink[Message, NotUsed],
+  srcHub: Source[Message, NotUsed],
+  ks: UniqueKillSwitch
+)
 
-final case class Content(userId: String, recipient: String, content: String)
+//final case class Content(userId: String, recipient: String, content: String)
 
 //https://doc.akka.io/docs/akka/current/typed/style-guide.html#functional-versus-object-oriented-style
 final case class ChatRoomState(
