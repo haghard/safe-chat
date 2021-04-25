@@ -28,7 +28,6 @@ object Guardian {
           cluster.subscriptions ! Unsubscribe(ctx.self)
 
           ctx.log.info(greeting)
-
           ctx.log.info(ctx.system.printTree)
 
           val localShards =

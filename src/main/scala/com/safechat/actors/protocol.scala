@@ -21,6 +21,8 @@ import com.safechat.domain.RingBuffer
 
 import scala.collection.mutable
 
+final case class ChatId(value: String) extends AnyVal
+
 /*
   Making T contravariant in ActorRef implies that
   for two types JoinReply and Reply where JoinReply is a subtype of Reply, ActorRef[Reply] is a subtype of ActorRef[JoinReply]
@@ -284,3 +286,23 @@ final case class ChatRoomState(
       //case Null                ⇒ ???
     }
 }
+
+/*
+
+final case class ChatRoomState(
+  users: List[User],
+  currentIssue: String,
+  issueLastEditBy: Option[UUID]
+) {
+  def joinUser(user: User): ChatRoomState =
+  def vote(userId: UUID, estimation: String): ChatRoomState =
+  def clear(): ChatRoomState =
+  def leave(userId: UUID): RoomData =
+  def editIssue(issue: String, userId: UUID): RoomData =
+}
+
+object RoomData {
+  val empty: RoomData = RoomData(List.empty[User], "", Option.empty[UUID])
+}
+
+ */

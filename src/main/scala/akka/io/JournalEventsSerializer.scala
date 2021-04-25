@@ -4,6 +4,7 @@ package akka
 package io
 
 import akka.actor.ExtendedActorSystem
+import akka.io.JournalEventsSerializer.withEnvelope
 import akka.serialization.SerializerWithStringManifest
 import com.safechat.actors.ChatRoomEvent
 import com.safechat.domain.RingBuffer
@@ -26,38 +27,6 @@ import scala.collection.mutable
 import scala.util.Using
 import scala.util.Using.Releasable
 
-/** Schema evolution allows you to update the schema used to write new data, while maintaining backwards compatibility with the schema(s) of your old data.
-  * Then you can read it all together, as if all of the data has one schema. Of course there are precise rules governing the changes
-  * allowed, to maintain compatibility.
-  *
-  * Avro provides full compatibility support.
-  * Backward compatibility is necessary for reading the old version of events.
-  * Forward compatibility is required for rolling updates when at the same time old and new versions of events
-  * can be exchanged between processes.
-  *
-  * 1.  Backward compatible change - write with V1 and read with V2
-  * 2.  Forward compatible change -  write with V2 and read with V1
-  * 3.  Fully compatible if your change is Backward and Forward compatible
-  * 4.  Breaking is non of those
-  *
-  * Advice when writing Avro schema
-  * Add field with defaults
-  * Remove only fields which have defaults
-  *
-  * If you target full compatibility follows these rules:
-  * Removing fields with defaults is fully compatible change
-  * Adding fields with defaults is fully compatible change
-  *
-  *  Enum can't evolve over time.
-  *
-  *  When evolving schema, ALWAYS give defaults.
-  *
-  *  When evolving schema, NEVER
-  * rename fields
-  * remove required fields
-  *
-  * Schema-evolution-is-not-that-complex: https://medium.com/data-rocks/schema-evolution-is-not-that-complex-b7cf7eb567ac
-  */
 object JournalEventsSerializer {
   val SEP         = ":"
   val subEventSEP = "/"
@@ -103,38 +72,6 @@ object JournalEventsSerializer {
         s"$STATE_PREF${classOf[com.safechat.avro.persistent.state.ChatRoomState].getName}$SEP$activeSchemaHash"
     }
 
-  def toArray(
-    o: AnyRef,
-    activeSchemaHash: String,
-    schemaMap: Map[String, Schema]
-  ): Array[Byte] = {
-    val schema = schemaMap(activeSchemaHash)
-    o match {
-      case state: com.safechat.actors.ChatRoomState ⇒
-        Using.resource(new ByteArrayOutputStream(256)) { baos ⇒
-          Using.resource(EncoderFactory.get.directBinaryEncoder(baos, null)) { enc ⇒
-            val users = new java.util.HashMap[CharSequence, CharSequence]()
-            state.users.foreach { case (login, pubKey) ⇒
-              users.put(login, pubKey)
-            }
-            val history = new util.ArrayList[CharSequence]()
-            state.recentHistory.entries.foreach(history.add(_))
-            new SpecificDatumWriter[com.safechat.avro.persistent.state.ChatRoomState](schema)
-              .write(new com.safechat.avro.persistent.state.ChatRoomState(users, history), enc)
-          }
-          baos.toByteArray
-        }
-
-      case e: ChatRoomEvent ⇒
-        Using.resource(new ByteArrayOutputStream(256)) { baos ⇒
-          Using.resource(EncoderFactory.get.directBinaryEncoder(baos, null)) { enc ⇒
-            new SpecificDatumWriter(schema).write(withEnvelope(e), enc)
-          }
-          baos.toByteArray
-        }
-    }
-  }
-
   def fromArray(
     bts: Array[Byte],
     manifest: String,
@@ -166,19 +103,6 @@ object JournalEventsSerializer {
 
         case p: com.safechat.avro.persistent.domain.UserDisconnected ⇒
           ChatRoomEvent.UserDisconnected(p.getLogin.toString)
-
-        /*
-          case p: com.safechat.avro.persistent.domain.UserTextsAdded ⇒
-            var c = Vector.empty[Content]
-            p.getContent.forEach { line ⇒
-              val segs     = line.toString.split(ChatRoomClassic.MSG_SEP)
-              val sender   = segs(0)
-              val receiver = segs(1)
-              val content  = segs(2)
-              c = c.:+(Content(sender, receiver, content))
-            }
-            ChatRoomEvent.UserTextsAdded(p.getSeqNum, c, envelope.getWhen, envelope.getTz.toString)
-         */
 
         case _ ⇒
           notSerializable(
@@ -244,24 +168,50 @@ object JournalEventsSerializer {
     }
 }
 
-/** https://doc.akka.io/docs/akka/current/remoting-artery.html#bytebuffer-based-serialization
+/** Schema evolution allows you to update the schema used to write new data, while maintaining backwards compatibility with the schema(s) of your old data.
+  * Then you can read it all together, as if all of the data has one schema. Of course there are precise rules governing the changes
+  * allowed, to maintain compatibility.
   *
-  * Artery introduced a new serialization mechanism.
-  * This implementation takes advantage of new Artery serialization mechanism
-  * which allows the ByteBufferSerializer to directly write into and read from a shared java.nio.ByteBuffer
-  * instead of being forced to allocate and return an Array[Byte] for each serialized message.
+  * Avro provides full compatibility support.
+  * Backward compatibility is necessary for reading the old version of events.
+  * Forward compatibility is required for rolling updates when at the same time old and new versions of events
+  * can be exchanged between processes.
   *
-  * https://blog.softwaremill.com/akka-references-serialization-with-protobufs-up-to-akka-2-5-87890c4b6cb0
+  * 1.  Backward compatible change - write with V1 and read with V2
+  * 2.  Forward compatible change -  write with V2 and read with V1
+  * 3.  Fully compatible if your change is Backward and Forward compatible
+  * 4.  Breaking is non of those
+  *
+  * Advices when writing Avro schema:
+  *   1. Add field with defaults
+  *   2. Remove only fields which have defaults
+  *
+  * If you target full compatibility follows these rules:
+  *   1. Removing fields with defaults is fully compatible change
+  *   2. Adding fields with defaults is fully compatible change
+  *
+  * Enum can't evolve over time.
+  *
+  * When evolving schema, ALWAYS give defaults.
+  *
+  * When evolving schema, NEVER
+  * 1. rename fields
+  * 2. remove required fields
+  *
+  * Schema-evolution-is-not-that-complex: https://medium.com/data-rocks/schema-evolution-is-not-that-complex-b7cf7eb567ac
+  * Akka-references-serialization: https://blog.softwaremill.com/akka-references-serialization-with-protobufs-up-to-akka-2-5-87890c4b6cb0
   */
 final class JournalEventsSerializer(system: ExtendedActorSystem) extends SerializerWithStringManifest {
+  import JournalEventsSerializer.BinaryEncoderIsReleasable
   val recentHistorySize = system.settings.config.getInt("safe-chat.recent-history-size")
 
   override val identifier = 99999
 
-  private val (activeSchemaHash, schemaMap) = SchemaRegistry()
+  val (activeSchemaHash, schemaMap) = SchemaRegistry()
+  val activeSchema                  = schemaMap(activeSchemaHash)
 
   //Mapping from domain events to avro classes that are being used for persistence
-  private val mapping =
+  val mapping =
     SchemaRegistry.journalEvents(system.settings.config.getConfig("akka.actor.serialization-bindings"))
 
   override def manifest(obj: AnyRef): String =
@@ -273,7 +223,30 @@ final class JournalEventsSerializer(system: ExtendedActorSystem) extends Seriali
     }
 
   override def toBinary(obj: AnyRef): Array[Byte] =
-    JournalEventsSerializer.toArray(obj, activeSchemaHash, schemaMap)
+    obj match {
+      case e: ChatRoomEvent ⇒
+        Using.resource(new ByteArrayOutputStream(256)) { baos ⇒
+          Using.resource(EncoderFactory.get.directBinaryEncoder(baos, null)) { enc ⇒
+            new SpecificDatumWriter(activeSchema).write(withEnvelope(e), enc)
+          }
+          baos.toByteArray
+        }
+
+      case state: com.safechat.actors.ChatRoomState ⇒
+        Using.resource(new ByteArrayOutputStream(256)) { baos ⇒
+          Using.resource(EncoderFactory.get.directBinaryEncoder(baos, null)) { enc ⇒
+            val users = new java.util.HashMap[CharSequence, CharSequence]()
+            state.users.foreach { case (login, pubKey) ⇒
+              users.put(login, pubKey)
+            }
+            val history = new util.ArrayList[CharSequence]()
+            state.recentHistory.entries.foreach(history.add(_))
+            new SpecificDatumWriter[com.safechat.avro.persistent.state.ChatRoomState](activeSchema)
+              .write(new com.safechat.avro.persistent.state.ChatRoomState(users, history), enc)
+          }
+          baos.toByteArray //Arrays.copyOf
+        }
+    }
 
   override def fromBinary(bytes: Array[Byte], manifest: String): AnyRef =
     JournalEventsSerializer.fromArray(bytes, manifest, activeSchemaHash, schemaMap, recentHistorySize)

@@ -43,6 +43,7 @@ object ChatRoomClassic {
 
   val idExtractor: ShardRegion.ExtractEntityId = { case cmd: Command[Reply] ⇒ (cmd.chatId, cmd) }
 
+  //How many shards should you try to have in your system? 10 per node is recommended
   val shardExtractor: ShardRegion.ExtractShardId = {
     case cmd: Command[Reply] ⇒ cmd.chatId
     //only if you use memember entities
@@ -162,7 +163,8 @@ class ChatRoomClassic(implicit
   implicit val classicSystem = context.system
   implicit val typedSystem   = classicSystem.toTyped
 
-  override val persistenceId = self.path.name
+  private val chatId         = ChatId(self.path.name)
+  override val persistenceId = chatId.value //self.path.name
 
   override def receiveRecover: Receive = {
     var regUsers: mutable.Map[String, String] = mutable.Map.empty

@@ -315,11 +315,6 @@ libraryDependencies ++= Seq(
 
 addCompilerPlugin("org.typelevel" % "kind-projector" % "0.11.3" cross CrossVersion.full)
 
-// transitive dependency of akka 2.5x that is brought in
-dependencyOverrides += "com.typesafe.akka" %% "akka-protobuf"       % akkaVersion
-dependencyOverrides += "com.typesafe.akka" %% "akka-cluster-tools"  % akkaVersion
-dependencyOverrides += "com.typesafe.akka" %% "akka-coordination"   % akkaVersion
-
 //comment out for test:run
 //Compile / run / fork := true
 
@@ -339,10 +334,31 @@ ThisBuild / scalafixDependencies += "com.github.liancheng" %% "organize-imports"
 
 Global / semanticdbEnabled := true
 Global / semanticdbVersion := scalafixSemanticdb.revision
-Global / watchAntiEntropy := scala.concurrent.duration.FiniteDuration(2000, java.util.concurrent.TimeUnit.MILLISECONDS)
+Global / watchAntiEntropy := scala.concurrent.duration.FiniteDuration(5, java.util.concurrent.TimeUnit.SECONDS)
 
 */
 
+
+// transitive dependency of akka 2.5x that is brought in
+/*
+dependencyOverrides += "com.typesafe.akka" %% "akka-protobuf"       % akkaVersion
+dependencyOverrides += "com.typesafe.akka" %% "akka-cluster-tools"  % akkaVersion
+dependencyOverrides += "com.typesafe.akka" %% "akka-coordination"   % akkaVersion
+*/ 
+
+
+// transitive dependency of akka 2.5x that is brought in
+dependencyOverrides ++= Seq(
+  "com.typesafe.akka" %% "akka-protobuf"        % akkaVersion,
+  "com.typesafe.akka" %% "akka-actor"           % akkaVersion,
+  "com.typesafe.akka" %% "akka-cluster"         % akkaVersion,
+  "com.typesafe.akka" %% "akka-cluster-sharding"% akkaVersion,
+  "com.typesafe.akka" %% "akka-coordination"    % akkaVersion,
+  "com.typesafe.akka" %% "akka-stream"          % akkaVersion,
+  "com.typesafe.akka" %% "akka-http"            % akkaHttpVersion,
+  "com.typesafe.akka" %% "akka-http-core"       % akkaHttpVersion,
+  "com.typesafe.akka" %% "akka-http-spray-json" % akkaHttpVersion,
+)
 
 // ammonite repl
 // test:run
