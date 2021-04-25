@@ -51,17 +51,17 @@ object ChatRoomClassic {
   }
 
   private def journal(
-    persistenceId: String,
+    chatId: String,
     fromSequenceNr: Long,
     classicSystem: akka.actor.ActorSystem
   ): Source[ChatRoomEvent.UserTextAdded, akka.NotUsed] =
     PersistenceQuery(classicSystem)
       .readJournalFor[CassandraReadJournal](CassandraReadJournal.Identifier)
-      .eventsByPersistenceId(persistenceId, fromSequenceNr, Long.MaxValue)
+      .eventsByPersistenceId(chatId, fromSequenceNr, Long.MaxValue)
       .collect {
         case EventEnvelope(
               TimeBasedUUID(_),
-              `persistenceId`,
+              `chatId`,
               sequenceNr @ _,
               ChatRoomEvent.UserTextAdded(userId, seqNum, recipient, content, w, tz)
             ) ⇒
@@ -75,7 +75,7 @@ object ChatRoomClassic {
   ) = Props(new ChatRoomClassic()(kksRef, totalFailoverTimeout, appCfg)).withDispatcher(Boot.dbDispatcher)
 
   def chatRoomHub(
-    persistenceId: String,
+    chatId: String,
     recentHistorySize: Int,
     fromSequenceNr: Long,
     kksRef: AtomicReference[immutable.Map[String, UniqueKillSwitch]]
@@ -120,7 +120,7 @@ object ChatRoomClassic {
      */
 
     val reader: Source[ChatRoomEvent.UserTextAdded, akka.NotUsed] =
-      journal(persistenceId, fromSequenceNr, classicSystem)
+      journal(chatId, fromSequenceNr, classicSystem)
         .buffer(1, OverflowStrategy.backpressure)
     //.viaMat(new LastConsumed[ChatRoomEvent])(Keep.right)
 
@@ -129,12 +129,12 @@ object ChatRoomClassic {
         //.sourceWithDraining[Message](perProducerBufferSize = 1)
         .source[Message](perProducerBufferSize = 1)
         .flatMapConcat(_.asTextMessage.getStreamedText.fold("")(_ + _))
-        .via(persist(persistenceId))
+        .via(persist(chatId))
         .async(Boot.httpDispatcher, 1)
         .zip(reader)
         .map { case (r @ _, userTextAdded) ⇒
           val content = ChatRoomClassic.msg(
-            persistenceId,
+            chatId,
             userTextAdded.seqNum,
             userTextAdded.userId,
             userTextAdded.recipient,
@@ -146,7 +146,7 @@ object ChatRoomClassic {
         .toMat(BroadcastHub.sink[Message](bufferSize = recentHistorySize))(Keep.both)
         .run()
 
-    registerKS(persistenceId, ks, kksRef)
+    registerKS(chatId, ks, kksRef)
     ChatRoomHub(sinkHub, sourceHub, ks)
   }
 }
@@ -163,7 +163,9 @@ class ChatRoomClassic(implicit
   implicit val classicSystem = context.system
   implicit val typedSystem   = classicSystem.toTyped
 
-  private val chatId         = ChatId(self.path.name)
+  private val chatId = ChatId(self.path.name)
+
+  //Do not use it directly. Use `chatId` instead
   override val persistenceId = chatId.value //self.path.name
 
   override def receiveRecover: Receive = {
@@ -180,7 +182,7 @@ class ChatRoomClassic(implicit
             online += userId
 
           case ChatRoomEvent.UserTextAdded(userId, seqNum, recipient, content, _, _) ⇒
-            recentHistory :+ ChatRoomClassic.msg(persistenceId, seqNum, userId, recipient, content)
+            recentHistory :+ ChatRoomClassic.msg(chatId.value, seqNum, userId, recipient, content)
 
           /*
           case ChatRoomEvent.UserTextsAdded(seqNum, msgs, _, _) ⇒
@@ -201,7 +203,7 @@ class ChatRoomClassic(implicit
 
       case RecoveryCompleted ⇒
         if (regUsers.nonEmpty)
-          hub = Some(chatRoomHub(persistenceId, appCfg.recentHistorySize, lastSequenceNr, kksRef))
+          hub = Some(chatRoomHub(chatId.value, appCfg.recentHistorySize, lastSequenceNr, kksRef))
 
         log.info(s"Recovered: [${regUsers.keySet.mkString(",")}] - [${online.mkString(",")}] ")
         context become active(ChatRoomState(regUsers, online, recentHistory, hub))

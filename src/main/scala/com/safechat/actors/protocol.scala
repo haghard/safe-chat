@@ -21,8 +21,6 @@ import com.safechat.domain.RingBuffer
 
 import scala.collection.mutable
 
-
-
 //////////////////////////// Domain  //////////////////////////////////////////////
 
 final case class ChatId(value: String) extends AnyVal
@@ -289,4 +287,4 @@ object RoomData {
   val empty: RoomData = RoomData(List.empty[User], "", Option.empty[UUID])
 }
 
-*/
+ */
