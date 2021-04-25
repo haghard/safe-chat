@@ -33,7 +33,7 @@ object EventHandler {
       val newState =
         if (state.usersOnline.isEmpty && state.hub.isEmpty)
           state.copy(hub =
-            Some(ChatRoomClassic.chatRoomHub(cmd.chatId, appCfg.recentHistorySize, event.seqNum - 1, kksRef))
+            Some(ChatRoomClassic.chatRoomHub(cmd.chatId.value, appCfg.recentHistorySize, event.seqNum - 1, kksRef))
           )
         else state
 
@@ -64,7 +64,7 @@ object EventHandler {
       appCfg: AppCfg
     ) = {
       state.recentHistory.add(
-        ChatRoomClassic.msg(cmd.chatId, event.seqNum, event.userId, event.recipient, event.content)
+        ChatRoomClassic.msg(cmd.chatId.value, event.seqNum, event.userId, event.recipient, event.content)
       )
       val reply = Reply.TextPostedReply(cmd.chatId, event.seqNum, event.userId, event.recipient, event.content)
       cmd.replyTo.tell(reply)

@@ -41,11 +41,11 @@ object ChatRoomClassic {
   def msg(persistenceId: String, seqNum: Long, userId: String, recipient: String, content: String) =
     s"[$persistenceId:$seqNum - from:$userId -> to:$recipient] - $content"
 
-  val idExtractor: ShardRegion.ExtractEntityId = { case cmd: Command[Reply] ⇒ (cmd.chatId, cmd) }
+  val idExtractor: ShardRegion.ExtractEntityId = { case cmd: Command[Reply] ⇒ (cmd.chatId.value, cmd) }
 
   //How many shards should you try to have in your system? 10 per node is recommended
   val shardExtractor: ShardRegion.ExtractShardId = {
-    case cmd: Command[Reply] ⇒ cmd.chatId
+    case cmd: Command[Reply] ⇒ cmd.chatId.value
     //only if you use memember entities
     case ShardRegion.StartEntity(chatId) ⇒ chatId
   }

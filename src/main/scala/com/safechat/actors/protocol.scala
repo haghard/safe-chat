@@ -21,6 +21,10 @@ import com.safechat.domain.RingBuffer
 
 import scala.collection.mutable
 
+
+
+//////////////////////////// Domain  //////////////////////////////////////////////
+
 final case class ChatId(value: String) extends AnyVal
 
 /*
@@ -33,25 +37,25 @@ final case class ChatId(value: String) extends AnyVal
  */
 
 sealed trait Reply {
-  def chatId: String
+  def chatId: ChatId
   def seqNum: Long
 }
 
 object Reply {
 
   final case class JoinReply(
-    chatId: String,
+    chatId: ChatId,
     user: String,
     sinkSourceRef: Option[(SinkRef[Message], SourceRef[Message])],
     seqNum: Long = 0L
   ) extends Reply
 
-  final case class TextPostedReply(chatId: String, seqNum: Long, userId: String, recipient: String, content: String)
+  final case class TextPostedReply(chatId: ChatId, seqNum: Long, userId: String, recipient: String, content: String)
       extends Reply
 
-  final case class LeaveReply(chatId: String, user: String, seqNum: Long = 0L) extends Reply
+  final case class LeaveReply(chatId: ChatId, user: String, seqNum: Long = 0L) extends Reply
 
-  final case class TextsPostedReply(chatId: String, seqNum: Long) extends Reply
+  final case class TextsPostedReply(chatId: ChatId, seqNum: Long) extends Reply
 
 }
 
@@ -59,7 +63,7 @@ sealed trait Command[+T <: Reply] {
   type R <: T
   type Event <: ChatRoomEvent
 
-  def chatId: String
+  def chatId: ChatId
   def replyTo: ActorRef[R]
   def correspondingEvent(event: Event): Event = event
 }
@@ -67,7 +71,7 @@ sealed trait Command[+T <: Reply] {
 object Command {
 
   final case class JoinUser(
-    chatId: String,
+    chatId: ChatId,
     user: String,
     pubKey: String,
     replyTo: ActorRef[Reply.JoinReply]
@@ -77,7 +81,7 @@ object Command {
   }
 
   final case class PostText(
-    chatId: String,
+    chatId: ChatId,
     sender: String,
     receiver: String,
     content: String,
@@ -88,7 +92,7 @@ object Command {
   }
 
   final case class Leave(
-    chatId: String,
+    chatId: ChatId,
     user: String,
     replyTo: ActorRef[Reply.LeaveReply]
   ) extends Command[Reply.LeaveReply] {
@@ -98,24 +102,13 @@ object Command {
 
   //The message that will be sent to entities when they are to be stopped for a rebalance or graceful shutdown of a ShardRegion, e.g. PoisonPill.
   final case class HandOffChatRoom(
-    chatId: String = null,
+    chatId: ChatId = ChatId("null"),
     user: String = null,
     replyTo: ActorRef[Nothing] = null //akka.actor.ActorRef.noSender.toTyped[Nothing]
   ) extends Command[Nothing] {
     override type Event = Nothing
     override val toString = "HandOffChatRoom"
   }
-
-  /*
-  final case class PostTexts(
-    chatId: String,
-    content: Seq[Content],
-    replyTo: ActorRef[Reply.TextsPostedReply]
-  ) extends Command[Reply.TextsPostedReply] {
-    override type Event = ChatRoomEvent.UserTextsAdded
-    override val toString = s"PostTexts($chatId, ${content.size})"
-  }
-   */
 
   val handOffChatRoom = HandOffChatRoom()
 }
@@ -240,15 +233,6 @@ object ChatRoomEvent {
     when: Long,
     tz: String
   ) extends ChatRoomEvent
-  /*
-
-  final case class UserTextsAdded(
-    seqNum: Long,
-    msgs: Seq[Content],
-    when: Long,
-    tz: String
-  ) extends ChatRoomEvent
-   */
 
   final case class UserDisconnected(userId: String) extends ChatRoomEvent
 }
@@ -305,4 +289,4 @@ object RoomData {
   val empty: RoomData = RoomData(List.empty[User], "", Option.empty[UUID])
 }
 
- */
+*/

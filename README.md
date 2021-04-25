@@ -197,6 +197,12 @@ https://blog.knoldus.com/akka-cluster-formation-fundamentals/
 
 https://blog.knoldus.com/akka-cluster-in-use-part-4-managing-a-cluster/
 
+
+### EventAdapters
+
+https://github.com/rockthejvm/akka-persistence/blob/master/src/main/scala/part4_practices/EventAdapters.scala
+
+
 ### Sharding: 
  
 https://manuel.bernhardt.io/2018/02/26/tour-akka-cluster-cluster-sharding/
@@ -343,6 +349,8 @@ https://www.youtube.com/watch?v=2jKu_E1TZPM
 
 Managing an Akka Cluster on Kubernetes - Markus Jura: https://www.youtube.com/watch?v=Sz-SE1FyhJE&list=PLLMLOC3WM2r5KDwkSRrLJ1_O6kZqlhhFt&index=22
 
+https://blog.softwaremill.com/running-akka-cluster-on-kubernetes-e4cd2913e951
+
 
 ## Gatling
 
@@ -406,10 +414,6 @@ $1 ==> 2
 
 https://www.lightbend.com/blog/cpu-considerations-for-java-applications-running-in-docker-and-kubernetes
 
-
-### On kubernetes
-
-https://blog.softwaremill.com/running-akka-cluster-on-kubernetes-e4cd2913e951
 
 ## Videos
 
@@ -640,11 +644,17 @@ otherwise we initialize the cluster sharding proxy so no shards are hosted by th
 
 6. Try replicated-event-sourcing 
 https://doc.akka.io/docs/akka/current/typed/replicated-eventsourcing.html#replicated-event-sourcing
+   
 https://github.com/akka/akka-samples.git akka-sample-persistence-dc-scala
 https://github.com/akka/akka/tree/146944f99934557eac72e6dc7fa25fc6b2f0f11c/akka-persistence-typed-tests/src/test/scala/docs/akka/persistence/typed
+
+7. Java-script front end for the chat 
                 
 
+                    
+## Notes
+
 a.c.sharding.DDataShardCoordinator 
+
 akka://fsa@192.168.0.30:2551/system/sharding/tenantsCoordinator/singleton/coordinator/RememberEntitiesStore] a.c.s.i.DDataRememberEntitiesCoordinatorStore 
-akka.cluster.sharding.PersistentShardCoordinator
-akka.cluster.sharding.DDataShardCoordinator
+akka.cluster.sharding.PersistentShardCoordinator or akka.cluster.sharding.DDataShardCoordinator
