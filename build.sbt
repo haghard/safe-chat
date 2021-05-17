@@ -1,15 +1,13 @@
 import sbt._
 import sbtdocker.ImageName
 
-import java.util.concurrent.TimeUnit
-import scala.concurrent.duration.FiniteDuration
 
 val projectName   = "safe-chat"
 val Version       = "0.5.0"
 
 val akkaVersion     = "2.6.14"
 val akkaHttpVersion = "10.2.4"
-val AkkaManagement  = "1.0.9"
+val AkkaManagement  = "1.1.0"
 val AkkaPersistenceCassandraVersion = "1.0.5"
 
 promptTheme := ScalapenosTheme
@@ -87,7 +85,7 @@ lazy val commonSettings = Seq(
 
   //sbt headerCreate
   licenses += ("Apache-2.0", new URL("https://www.apache.org/licenses/LICENSE-2.0.txt")),
-  scalaVersion := "2.13.4",
+  scalaVersion := "2.13.6",
   headerMappings := headerMappings.value + (HeaderFileType.scala -> HeaderCommentStyle.cppStyleLineComment),
   headerLicense  := Some(HeaderLicense.Custom("Copyright (c) 2019-2021 Vadim Bondarev. All rights reserved."))
 )
@@ -292,11 +290,10 @@ libraryDependencies ++= Seq(
   //"org.apache.avro" %   "avro-compiler"   %   "1.10.1",
 
   //"ru.odnoklassniki" % "one-nio" % "1.2.0",
-
-
+  
   //https://kwark.github.io/refined-in-practice/#1
-  //"eu.timepit" %% "refined"                 % "0.9.14",
-  //"eu.timepit" %% "refined-shapeless"       % "0.9.14",
+  //"eu.timepit" %% "refined"                 % "0.9.24",
+  //"eu.timepit" %% "refined-shapeless"       % "0.9.24",
 
   "commons-codec"   %   "commons-codec"   %   "1.11",
   "org.scalatest"   %%  "scalatest"       %   "3.2.2" % Test,
@@ -311,14 +308,14 @@ libraryDependencies ++= Seq(
   //"org.typelevel" %% "algebra" % "2.1.0",
 
   // li haoyi ammonite repl embed
-  ("com.lihaoyi" % "ammonite" % "2.3.8-36-1cce53f3"  % "test").cross(CrossVersion.full),
+  //("com.lihaoyi" % "ammonite" % "2.3.8-36-1cce53f3"  % "test").cross(CrossVersion.full),
 
   //https://github.com/politrons/reactiveScala/blob/master/scala_features/src/main/scala/app/impl/scala/ReflectionFeature.scala
   "org.scala-lang" % "scala-reflect" % scalaVersion.value
 
 )
 
-addCompilerPlugin("org.typelevel" % "kind-projector" % "0.11.3" cross CrossVersion.full)
+//addCompilerPlugin("org.typelevel" % "kind-projector" % "0.13.0" cross CrossVersion.full)
 
 // transitive dependency of akka 2.5x that is brought in
 dependencyOverrides += "com.typesafe.akka" %% "akka-protobuf"       % akkaVersion
@@ -340,9 +337,9 @@ AvroConfig / enableDecimalLogicalType := true
 // Scalafix
 ThisBuild / scalafixDependencies += "com.github.liancheng" %% "organize-imports" % "0.5.0"
 
-Global / semanticdbEnabled := true
-Global / semanticdbVersion := scalafixSemanticdb.revision
-Global / watchAntiEntropy := FiniteDuration(2000, TimeUnit.MILLISECONDS)
+//Global / semanticdbEnabled := true
+//Global / semanticdbVersion := scalafixSemanticdb.revision
+//Global / watchAntiEntropy := scala.concurrent.duration.FiniteDuration(5, java.util.concurrent.TimeUnit.SECONDS)
 
 
 // ammonite repl

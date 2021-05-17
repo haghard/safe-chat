@@ -48,7 +48,7 @@ object ShardedChatRooms {
 }
 
 final class ShardedChatRooms(
-  localShards: AtomicReference[scala.collection.immutable.Set[String]],
+  chatRoomNames: AtomicReference[scala.collection.immutable.Set[String]],
   kss: AtomicReference[scala.collection.immutable.Set[UniqueKillSwitch]],
   totalFailoverTimeout: FiniteDuration,
   appCfg: AppCfg
@@ -107,7 +107,7 @@ final class ShardedChatRooms(
   //val chatShardRegion = ClusterSharding(system).init(Entity(ChatRoomEntity.entityKey)(behaviorFactory))
 
   //https://doc.akka.io/docs/akka/current/typed/cluster-sharding.html
-  val entity = Entity(ChatRoom.entityKey)(ChatRoom(_, localShards, kss, totalFailoverTimeout, appCfg))
+  val entity = Entity(ChatRoom.entityKey)(ChatRoom(_, chatRoomNames, kss, totalFailoverTimeout, appCfg))
     //ShardingMessageExtractor[UserCmd](512)
     .withMessageExtractor(ChatRoomsMsgExtractor[Command[Reply]]( /*numberOfShards*/ ))
     .withSettings(settings)

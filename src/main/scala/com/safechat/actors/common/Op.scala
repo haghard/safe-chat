@@ -42,8 +42,9 @@ object Op {
       state.modify(_.siblings).using(_ - args)
   }
 
-  /*Update[({ type UserIdMap[A] = Map[UserId, A] })#UserIdMap, (UserId, String)]*/
-  implicit object AddPermition extends Op[Map[UserId, ?], (UserId, String)] {
+  /*Op[({ type UserIdMap[A] = Map[UserId, A] })#UserIdMap, (UserId, String)]*/
+  //implicit object AddPermition extends Op[Map[UserId, ?], (UserId, String)] {
+  implicit object AddPermition extends Op[({ type UserIdMap[A] = Map[UserId, A] })#UserIdMap, (UserId, String)] {
     def update(state: UserState)(args: (UserId, String)): UserState = {
       val userId = args._1
       val p      = args._2
@@ -73,7 +74,8 @@ object Mod {
   final case class AddUserPermitions(
     id: String,
     permision: String,
-    OP: Op[Map[UserId, ?], (UserId, String)] = Op.AddPermition
+    OP: Op[({ type UserIdMap[A] = Map[UserId, A] })#UserIdMap, (UserId, String)] = Op.AddPermition
+    //OP: Op[Map[UserId, ?], (UserId, String)] = Op.AddPermition
   ) extends Mod[UserState]
 }
 

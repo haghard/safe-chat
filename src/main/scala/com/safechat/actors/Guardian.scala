@@ -30,7 +30,7 @@ object Guardian {
 
           ctx.log.info(ctx.system.printTree)
 
-          val localShards =
+          val chatRoomNames =
             new AtomicReference[scala.collection.immutable.Set[String]](scala.collection.immutable.Set[String]())
 
           //stable-after * 2 = 10
@@ -48,7 +48,7 @@ object Guardian {
             )
 
           val api = ChatRoomApi(
-            new ShardedChatRooms(localShards, kksRef, totalFailoverTimeout, appCfg)(sys),
+            new ShardedChatRooms(chatRoomNames, kksRef, totalFailoverTimeout, appCfg)(sys),
             totalFailoverTimeout
           ).routes
 
@@ -56,7 +56,7 @@ object Guardian {
             api,
             httpBindHostName,
             httpPort,
-            localShards,
+            chatRoomNames,
             kksRef
           )(sys.toClassic)
 

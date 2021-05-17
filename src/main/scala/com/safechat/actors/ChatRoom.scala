@@ -55,7 +55,7 @@ object ChatRoom {
     */
   def apply(
     entityCtx: EntityContext[Command[Reply]],
-    localChatRooms: AtomicReference[immutable.Set[String]],
+    chatRoomNames: AtomicReference[immutable.Set[String]],
     kks: AtomicReference[immutable.Set[UniqueKillSwitch]],
     to: FiniteDuration,
     appCfg: AppCfg
