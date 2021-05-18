@@ -9,7 +9,7 @@ import akka.remote.WireFormats.ActorRefData
 import akka.remote.serialization.ProtobufSerializer
 import akka.serialization.ByteBufferSerializer
 import akka.serialization.SerializerWithStringManifest
-import com.safechat.actors.{ChatId, Command, Reply}
+import com.safechat.actors.{ChatId, Command, Reply, UserId}
 import com.safechat.avro.command.CmdEnvelope
 import org.apache.avro.Schema
 import org.apache.avro.io.BinaryEncoder
@@ -50,19 +50,19 @@ object CommandsSerializer {
         new com.safechat.avro.command.CmdEnvelope(
           chatId.value,
           replyTo,
-          new com.safechat.avro.command.JoinUser(user, pubKey)
+          new com.safechat.avro.command.JoinUser(user.value, pubKey)
         )
       case Command.PostText(chatId, sender, receiver, content, _) ⇒
         new com.safechat.avro.command.CmdEnvelope(
           chatId.value,
           replyTo,
-          new com.safechat.avro.command.PostText(sender, receiver, content)
+          new com.safechat.avro.command.PostText(sender.value, receiver.value, content)
         )
       case Command.Leave(chatId, user, _) ⇒
         new com.safechat.avro.command.CmdEnvelope(
           chatId.value,
           replyTo,
-          new com.safechat.avro.command.Leave(user)
+          new com.safechat.avro.command.Leave(user.value)
         )
       case _: Command.HandOffChatRoom ⇒
         new com.safechat.avro.command.CmdEnvelope(
@@ -70,7 +70,7 @@ object CommandsSerializer {
           null,
           new com.safechat.avro.command.HandOffChatRoom(
             Command.handOffChatRoom.chatId.value,
-            Command.handOffChatRoom.user
+            Command.handOffChatRoom.user.value
           )
         )
     }
@@ -87,7 +87,7 @@ object CommandsSerializer {
       case c: com.safechat.avro.command.JoinUser ⇒
         Command.JoinUser(
           ChatId(env.getChatId.toString),
-          c.getUser.toString,
+          UserId(c.getUser.toString),
           c.getPubKey.toString,
           ProtobufSerializer
             .deserializeActorRef(system, ActorRefData.parseFrom(env.getReplyTo))
@@ -96,8 +96,8 @@ object CommandsSerializer {
       case c: com.safechat.avro.command.PostText ⇒
         Command.PostText(
           ChatId(env.getChatId.toString),
-          c.getSender.toString,
-          c.getReceiver.toString,
+          UserId(c.getSender.toString),
+          UserId(c.getReceiver.toString),
           c.getContent.toString,
           ProtobufSerializer
             .deserializeActorRef(system, ActorRefData.parseFrom(env.getReplyTo))
@@ -106,7 +106,7 @@ object CommandsSerializer {
       case c: com.safechat.avro.command.Leave ⇒
         Command.Leave(
           ChatId(env.getChatId.toString),
-          c.getUser.toString,
+          UserId(c.getUser.toString),
           ProtobufSerializer
             .deserializeActorRef(system, ActorRefData.parseFrom(env.getReplyTo))
             .toTyped[Reply.LeaveReply]

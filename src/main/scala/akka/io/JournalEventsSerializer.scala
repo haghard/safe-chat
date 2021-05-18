@@ -6,7 +6,7 @@ package io
 import akka.actor.ExtendedActorSystem
 import akka.io.JournalEventsSerializer.withEnvelope
 import akka.serialization.SerializerWithStringManifest
-import com.safechat.actors.ChatRoomEvent
+import com.safechat.actors.{ChatRoomEvent, UserId}
 import com.safechat.domain.RingBuffer
 import com.safechat.programs.SchemaRegistry
 import org.apache.avro.Schema
@@ -89,20 +89,20 @@ object JournalEventsSerializer {
       val payload  = envelope.getPayload.asInstanceOf[org.apache.avro.specific.SpecificRecordBase]
       payload match {
         case p: com.safechat.avro.persistent.domain.UserJoined ⇒
-          ChatRoomEvent.UserJoined(p.getLogin.toString, p.getSeqNum, p.getPubKey.toString)
+          ChatRoomEvent.UserJoined(UserId(p.getLogin.toString), p.getSeqNum, p.getPubKey.toString)
 
         case p: com.safechat.avro.persistent.domain.UserTextAdded ⇒
           ChatRoomEvent.UserTextAdded(
-            p.getUser.toString,
+            UserId(p.getUser.toString),
             p.getSeqNum,
-            p.getReceiver.toString,
+            UserId(p.getReceiver.toString),
             p.getText.toString,
             envelope.getWhen,
             envelope.getTz.toString
           )
 
         case p: com.safechat.avro.persistent.domain.UserDisconnected ⇒
-          ChatRoomEvent.UserDisconnected(p.getLogin.toString)
+          ChatRoomEvent.UserDisconnected(UserId(p.getLogin.toString))
 
         case _ ⇒
           notSerializable(
@@ -110,10 +110,11 @@ object JournalEventsSerializer {
           )
       }
     } else if (manifest.startsWith(STATE_PREF)) {
-      val state    = readFromArray[com.safechat.avro.persistent.state.ChatRoomState](bts, writerSchema, readerSchema)
-      val userKeys = mutable.Map.empty[String, String]
-      state.getRegisteredUsers.forEach((login, pubKey) ⇒ userKeys.put(login.toString, pubKey.toString))
-      val s = com.safechat.actors.ChatRoomState(users = userKeys, recentHistory = RingBuffer(recentHistorySize))
+      val state               = readFromArray[com.safechat.avro.persistent.state.ChatRoomState](bts, writerSchema, readerSchema)
+      val registeredUser2Keys = mutable.Map.empty[UserId, String]
+      state.getRegisteredUsers.forEach((user, pubKey) ⇒ registeredUser2Keys.put(UserId(user.toString), pubKey.toString))
+      val s =
+        com.safechat.actors.ChatRoomState(users = registeredUser2Keys, recentHistory = RingBuffer(recentHistorySize))
       state.getRecentHistory.forEach(e ⇒ s.recentHistory.:+(e.toString))
       s
     } else
@@ -130,7 +131,7 @@ object JournalEventsSerializer {
           System.currentTimeMillis,
           TimeZone.getDefault.getID,
           com.safechat.avro.persistent.domain.UserJoined.newBuilder
-            .setLogin(e.userId)
+            .setLogin(e.userId.value)
             .setPubKey(e.pubKey)
             .setSeqNum(e.seqNum)
             .build()
@@ -141,7 +142,7 @@ object JournalEventsSerializer {
           UUID.randomUUID.toString,
           when,
           tz,
-          new com.safechat.avro.persistent.domain.UserTextAdded(seqNum, userId, receiver, content)
+          new com.safechat.avro.persistent.domain.UserTextAdded(seqNum, userId.value, receiver.value, content)
         )
 
       case e: ChatRoomEvent.UserDisconnected ⇒
@@ -149,7 +150,7 @@ object JournalEventsSerializer {
           UUID.randomUUID.toString,
           System.currentTimeMillis,
           TimeZone.getDefault.getID,
-          com.safechat.avro.persistent.domain.UserDisconnected.newBuilder.setLogin(e.userId).build
+          com.safechat.avro.persistent.domain.UserDisconnected.newBuilder.setLogin(e.userId.value).build
         )
 
       /*
@@ -237,7 +238,7 @@ final class JournalEventsSerializer(system: ExtendedActorSystem) extends Seriali
           Using.resource(EncoderFactory.get.directBinaryEncoder(baos, null)) { enc ⇒
             val users = new java.util.HashMap[CharSequence, CharSequence]()
             state.users.foreach { case (login, pubKey) ⇒
-              users.put(login, pubKey)
+              users.put(login.value, pubKey)
             }
             val history = new util.ArrayList[CharSequence]()
             state.recentHistory.entries.foreach(history.add(_))

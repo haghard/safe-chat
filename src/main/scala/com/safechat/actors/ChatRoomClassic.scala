@@ -26,6 +26,7 @@ import akka.stream.scaladsl.Source
 import com.safechat.Boot
 import com.safechat.Boot.AppCfg
 import com.safechat.actors.ChatRoomClassic.chatRoomHub
+//import com.safechat.actors.ChatRoomEvent.UserTextAdded
 import com.safechat.domain.RingBuffer
 
 import java.util.TimeZone
@@ -136,8 +137,8 @@ object ChatRoomClassic {
           val content = ChatRoomClassic.msg(
             chatId,
             userTextAdded.seqNum,
-            userTextAdded.userId,
-            userTextAdded.recipient,
+            userTextAdded.userId.value,
+            userTextAdded.recipient.value,
             userTextAdded.content
           )
           TextMessage.Strict(content)
@@ -169,26 +170,20 @@ class ChatRoomClassic(implicit
   override val persistenceId = chatId.value //self.path.name
 
   override def receiveRecover: Receive = {
-    var regUsers: mutable.Map[String, String] = mutable.Map.empty
-    var online: mutable.Set[String]           = mutable.Set.empty
-    var recentHistory: RingBuffer[String]     = RingBuffer[String](appCfg.recentHistorySize)
-    var hub: Option[ChatRoomHub]              = None
+    var regUsersKeys: mutable.Map[UserId, String] = mutable.Map.empty
+    var online: mutable.Set[UserId]               = mutable.Set.empty
+    var recentHistory: RingBuffer[String]         = RingBuffer[String](appCfg.recentHistorySize)
+    var hub: Option[ChatRoomHub]                  = None
 
     {
       case e: ChatRoomEvent ⇒
         e match {
           case ChatRoomEvent.UserJoined(userId, _, pubKey) ⇒
-            regUsers.put(userId, pubKey)
+            regUsersKeys.put(userId, pubKey)
             online += userId
 
           case ChatRoomEvent.UserTextAdded(userId, seqNum, recipient, content, _, _) ⇒
-            recentHistory :+ ChatRoomClassic.msg(chatId.value, seqNum, userId, recipient, content)
-
-          /*
-          case ChatRoomEvent.UserTextsAdded(seqNum, msgs, _, _) ⇒
-            msgs.foreach { ev ⇒
-              recentHistory :+ ChatRoomClassic.msg(persistenceId, seqNum, ev.userId, ev.recipient, ev.content)
-            }*/
+            recentHistory :+ ChatRoomClassic.msg(chatId.value, seqNum, userId.value, recipient.value, content)
 
           case ChatRoomEvent.UserDisconnected(userId) ⇒
             online -= userId
@@ -197,16 +192,16 @@ class ChatRoomClassic(implicit
       case SnapshotOffer(metadata, snapshot: ChatRoomState) ⇒
         log.info(s"Recovered snapshot: $metadata")
         val state = snapshot
-        regUsers = state.users
+        regUsersKeys = state.users
         online = state.usersOnline
         recentHistory = state.recentHistory
 
       case RecoveryCompleted ⇒
-        if (regUsers.nonEmpty)
+        if (regUsersKeys.nonEmpty)
           hub = Some(chatRoomHub(chatId.value, appCfg.recentHistorySize, lastSequenceNr, kksRef))
 
-        log.info(s"Recovered: [${regUsers.keySet.mkString(",")}] - [${online.mkString(",")}] ")
-        context become active(ChatRoomState(regUsers, online, recentHistory, hub))
+        log.info(s"Recovered: [${regUsersKeys.keySet.mkString(",")}] - [${online.mkString(",")}] ")
+        context become active(ChatRoomState(regUsersKeys, online, recentHistory, hub))
     }
   }
 
@@ -219,10 +214,11 @@ class ChatRoomClassic(implicit
   def notActive(state: ChatRoomState): Receive = {
     case cmd: Command.JoinUser ⇒
       persist(ChatRoomEvent.UserJoined(cmd.user, lastSequenceNr + 1, cmd.pubKey)) { ev ⇒
-        val newState = maybeSnapshot(EventHandler(cmd, cmd.correspondingEvent(ev), state))
+        val newState = maybeSnapshot(Handler(cmd, cmd.correspondingEvent(ev), state))
         unstashAll()
         context become active(newState)
       }
+
     case other ⇒
       //Shouldn't arrive here
       log.error("Unexpected cmd {} (notActive) mode", other)
@@ -232,18 +228,9 @@ class ChatRoomClassic(implicit
   def active(state: ChatRoomState): Receive = {
     case cmd: Command.JoinUser ⇒
       persist(ChatRoomEvent.UserJoined(cmd.user, lastSequenceNr + 1, cmd.pubKey)) { ev ⇒
-        val newState = maybeSnapshot(EventHandler(cmd, cmd.correspondingEvent(ev), state))
+        val newState = maybeSnapshot(Handler(cmd, cmd.correspondingEvent(ev), state))
         context become active(newState)
       }
-
-    /*case cmd: Command.PostTexts ⇒
-      log.info("{} - {}", state.users.keySet.mkString(","), state.usersOnline.mkString(","))
-      val msgs = cmd.content.map(c ⇒ Content(c.userId, c.recipient, c.content))
-      persist(ChatRoomEvent.UserTextsAdded(lastSequenceNr, msgs, System.currentTimeMillis, TimeZone.getDefault.getID)) {
-        ev ⇒
-          val newState = maybeSnapshot(EventHandler(cmd, cmd.correspondingEvent(ev), state))
-          context become active(newState)
-      }*/
 
     case cmd: Command.PostText ⇒
       //log.info("registered:[{}] - online:[{}]", state.users.keySet.mkString(","), state.usersOnline.mkString(","))
@@ -257,13 +244,13 @@ class ChatRoomClassic(implicit
           TimeZone.getDefault.getID
         )
       ) { ev ⇒
-        val newState = maybeSnapshot(EventHandler(cmd, cmd.correspondingEvent(ev), state))
+        val newState = maybeSnapshot(Handler(cmd, cmd.correspondingEvent(ev), state))
         context become active(newState)
       }
 
     case cmd: Command.Leave ⇒
       persist(ChatRoomEvent.UserDisconnected(cmd.user)) { ev ⇒
-        val newState = maybeSnapshot(EventHandler(cmd, cmd.correspondingEvent(ev), state))
+        val newState = maybeSnapshot(Handler(cmd, cmd.correspondingEvent(ev), state))
         context become active(newState)
       }
 

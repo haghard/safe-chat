@@ -21,6 +21,10 @@ import ShardedChatRooms._
 
 object ShardedChatRooms {
 
+  akka.persistence.typed.crdt.LwwTime
+  akka.persistence.typed.crdt.ORSet
+  akka.persistence.typed.crdt.Counter
+
   object ChatRoomsMsgExtractor {
     //We want to have one shard per one chat room so that we could achieve isolations for all rooms
     def apply[T <: Command[Reply]]( /*numberOfShards: Int*/ ): ShardingMessageExtractor[T, T] =
@@ -148,10 +152,10 @@ final class ShardedChatRooms(
       .ask[ChatRoomReply](DisconnectUser(chatId, user, _))
    */
 
-  def leave(chatId: ChatId, user: String): Future[Reply.LeaveReply] =
+  def leave(chatId: ChatId, user: UserId): Future[Reply.LeaveReply] =
     chatShardRegion.ask[Reply.LeaveReply](Command.Leave(chatId, user, _))
 
-  def join(chatId: ChatId, login: String, pubKey: String): Future[Reply.JoinReply] =
+  def join(chatId: ChatId, user: UserId, pubKey: String): Future[Reply.JoinReply] =
     //chatShardRegion.askWithStatus()
-    chatShardRegion.ask[Reply.JoinReply](Command.JoinUser(chatId, login, pubKey, _))
+    chatShardRegion.ask[Reply.JoinReply](Command.JoinUser(chatId, user, pubKey, _))
 }

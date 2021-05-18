@@ -24,6 +24,7 @@ import scala.collection.mutable
 //////////////////////////// Domain  //////////////////////////////////////////////
 
 final case class ChatId(value: String) extends AnyVal
+final case class UserId(value: String) extends AnyVal
 
 /*
   Making T contravariant in ActorRef implies that
@@ -43,15 +44,15 @@ object Reply {
 
   final case class JoinReply(
     chatId: ChatId,
-    user: String,
+    user: UserId,
     sinkSourceRef: Option[(SinkRef[Message], SourceRef[Message])],
     seqNum: Long = 0L
   ) extends Reply
 
-  final case class TextPostedReply(chatId: ChatId, seqNum: Long, userId: String, recipient: String, content: String)
+  final case class TextPostedReply(chatId: ChatId, seqNum: Long, sender: UserId, recipient: UserId, content: String)
       extends Reply
 
-  final case class LeaveReply(chatId: ChatId, user: String, seqNum: Long = 0L) extends Reply
+  final case class LeaveReply(chatId: ChatId, user: UserId, seqNum: Long = 0L) extends Reply
 
   final case class TextsPostedReply(chatId: ChatId, seqNum: Long) extends Reply
 
@@ -63,6 +64,8 @@ sealed trait Command[+T <: Reply] {
 
   def chatId: ChatId
   def replyTo: ActorRef[R]
+
+  //
   def correspondingEvent(event: Event): Event = event
 }
 
@@ -70,41 +73,41 @@ object Command {
 
   final case class JoinUser(
     chatId: ChatId,
-    user: String,
+    user: UserId,
     pubKey: String,
     replyTo: ActorRef[Reply.JoinReply]
   ) extends Command[Reply.JoinReply] {
-    override type Event = ChatRoomEvent.UserJoined
+    type Event = ChatRoomEvent.UserJoined
     override val toString = s"JoinUser($chatId, $user, $pubKey)"
   }
 
   final case class PostText(
     chatId: ChatId,
-    sender: String,
-    receiver: String,
+    sender: UserId,
+    receiver: UserId,
     content: String,
     replyTo: ActorRef[Reply.TextPostedReply]
   ) extends Command[Reply.TextPostedReply] {
-    override type Event = ChatRoomEvent.UserTextAdded
+    type Event = ChatRoomEvent.UserTextAdded
     override val toString = s"PostText($chatId, $sender, $receiver)"
   }
 
   final case class Leave(
     chatId: ChatId,
-    user: String,
+    user: UserId,
     replyTo: ActorRef[Reply.LeaveReply]
   ) extends Command[Reply.LeaveReply] {
-    override type Event = ChatRoomEvent.UserDisconnected
+    type Event = ChatRoomEvent.UserDisconnected
     override val toString = s"Leave($chatId, $user)"
   }
 
   //The message that will be sent to entities when they are to be stopped for a rebalance or graceful shutdown of a ShardRegion, e.g. PoisonPill.
   final case class HandOffChatRoom(
     chatId: ChatId = ChatId("null"),
-    user: String = null,
+    user: UserId = UserId("null"),
     replyTo: ActorRef[Nothing] = null //akka.actor.ActorRef.noSender.toTyped[Nothing]
   ) extends Command[Nothing] {
-    override type Event = Nothing
+    type Event = Nothing
     override val toString = "HandOffChatRoom"
   }
 
@@ -215,24 +218,24 @@ object Command {
  */
 
 sealed trait ChatRoomEvent {
-  //def userId: String
+  //def userId: UserId
   //def seqNum: Long
 }
 
 object ChatRoomEvent {
 
-  final case class UserJoined(userId: String, seqNum: Long, pubKey: String) extends ChatRoomEvent
+  final case class UserJoined(userId: UserId, seqNum: Long, pubKey: String) extends ChatRoomEvent
 
   final case class UserTextAdded(
-    userId: String,
+    userId: UserId,
     seqNum: Long,
-    recipient: String,
+    recipient: UserId,
     content: String,
     when: Long,
     tz: String
   ) extends ChatRoomEvent
 
-  final case class UserDisconnected(userId: String) extends ChatRoomEvent
+  final case class UserDisconnected(userId: UserId) extends ChatRoomEvent
 }
 
 final case class ChatRoomHub(
@@ -245,11 +248,12 @@ final case class ChatRoomHub(
 
 //https://doc.akka.io/docs/akka/current/typed/style-guide.html#functional-versus-object-oriented-style
 final case class ChatRoomState(
-  users: mutable.Map[String, String] = mutable.Map.empty,
-  usersOnline: mutable.Set[String] = mutable.Set.empty,
+  users: mutable.Map[UserId, String] = mutable.Map.empty, //user -> pubKey
+  usersOnline: mutable.Set[UserId] = mutable.Set.empty,
   recentHistory: RingBuffer[String],
   hub: Option[ChatRoomHub] = None,
-  commandsWithoutCheckpoint: Int = 0
+  commandsWithoutCheckpoint: Int = 0,
+  openConnectionsPerUser: mutable.Map[UserId, Short] = mutable.Map.empty //to limit open connections per user
 ) {
 
   def applyCmd(cmd: Command[Reply]): ReplyEffect[ChatRoomEvent, ChatRoomState] =

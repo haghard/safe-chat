@@ -53,21 +53,21 @@ final case class ChatRoomApi(rooms: ShardedChatRooms, to: FiniteDuration)(implic
   private def getChatRoomFlow(
     rooms: ShardedChatRooms,
     chatId: ChatId,
-    user: String,
+    userId: UserId,
     pubKey: String
   ): Future[Reply.JoinReply] =
     rooms
-      .join(chatId, user, pubKey)
+      .join(chatId, userId, pubKey)
       .mapTo[Reply.JoinReply]
   //.recoverWith { case scala.util.control.NonFatal(ex) ⇒ getChatRoomFlow(rooms, chatId, user, pubKey) }
 
   private def chatRoomWsFlow(
     rooms: ShardedChatRooms,
     chatId: ChatId,
-    user: String,
+    userId: UserId,
     pubKey: String
   ): Future[Flow[Message, Message, Future[NotUsed]]] =
-    getChatRoomFlow(rooms, chatId, user, pubKey).map { case Reply.JoinReply(chatId, user, sinkSourceRef, _) ⇒
+    getChatRoomFlow(rooms, chatId, userId, pubKey).map { case Reply.JoinReply(chatId, userId, sinkSourceRef, _) ⇒
       sinkSourceRef match {
         case Some((sinkRef, sourceRef)) ⇒
           Flow.fromMaterializer { (mat, attr) ⇒
@@ -106,9 +106,9 @@ final case class ChatRoomApi(rooms: ShardedChatRooms, to: FiniteDuration)(implic
               .fromSinkAndSourceCoupled(
                 sinkRef.sink,
                 sourceRef.source
-                  .scan[(Long, Message)]((0L, TextMessage.Strict(s"$user:$chatId:connected"))) { case (state, m) ⇒
+                  .scan[(Long, Message)]((0L, TextMessage.Strict(s"$userId:$chatId:connected"))) { case (state, m) ⇒
                     val next = state._1 + 1L
-                    classicSys.log.info("{}@ {} Msg № {}", user, chatId, next)
+                    classicSys.log.info("{}@ {} Msg № {}", userId, chatId, next)
                     (next, m)
                   }
                   .map(_._2)
@@ -122,8 +122,8 @@ final case class ChatRoomApi(rooms: ShardedChatRooms, to: FiniteDuration)(implic
               .backpressureTimeout(3.seconds) //automatic cleanup for very slow subscribers.
               .watchTermination() { (_, done) ⇒
                 done.flatMap { _ ⇒
-                  classicSys.log.info("{}@{} flow has been terminated", user, chatId)
-                  rooms.leave(chatId, user)
+                  classicSys.log.info("{}@{} flow has been terminated", userId, chatId)
+                  rooms.leave(chatId, userId)
                 }
                 NotUsed
               }
@@ -141,7 +141,7 @@ final case class ChatRoomApi(rooms: ShardedChatRooms, to: FiniteDuration)(implic
         val flow =
           //When ChatRoom entities get rebalanced, a flow(src, sink) we've got once may no longed be working so we need to restart it transparently for the clients
           RestartFlow.withBackoff(akka.stream.RestartSettings(2.seconds, 4.seconds, 0.4))(() ⇒
-            Flow.futureFlow(chatRoomWsFlow(rooms, ChatId(chatId), user, pubKey))
+            Flow.futureFlow(chatRoomWsFlow(rooms, ChatId(chatId), UserId(user), pubKey))
           )
 
         //responds with 101 "Switching Protocols"

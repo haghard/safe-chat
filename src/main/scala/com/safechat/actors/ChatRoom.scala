@@ -272,13 +272,13 @@ object ChatRoom {
     ctx: ActorContext[Command[Reply]]
   ): ChatRoomState =
     event match {
-      case ChatRoomEvent.UserJoined(login, _, pubKey) ⇒
+      case ChatRoomEvent.UserJoined(user, _, pubKey) ⇒
         val newState =
           if (state.usersOnline.isEmpty && state.hub.isEmpty) state.copy(hub = Some(chatRoomHub(persistenceId, kksRef)))
           else state
 
-        newState.users.put(login, pubKey)
-        newState.usersOnline.+=(login)
+        newState.users.put(user, pubKey)
+        newState.usersOnline.+=(user)
         newState
 
       case ChatRoomEvent.UserTextAdded(seqNum, originator, receiver, content, when, tz) ⇒

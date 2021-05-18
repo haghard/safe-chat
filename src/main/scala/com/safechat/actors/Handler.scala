@@ -12,7 +12,7 @@ import java.util.concurrent.atomic.AtomicReference
 import scala.collection.immutable
 import scala.concurrent.duration.FiniteDuration
 
-sealed trait EventHandler[C <: Command[_]] {
+sealed trait Handler[C <: Command[_]] {
   def apply(cmd: C, event: C#Event, state: ChatRoomState)(implicit
     sys: akka.actor.ActorSystem,
     failoverTimeout: FiniteDuration,
@@ -21,9 +21,9 @@ sealed trait EventHandler[C <: Command[_]] {
   ): ChatRoomState
 }
 
-object EventHandler {
+object Handler {
 
-  implicit object Join extends EventHandler[Command.JoinUser] {
+  implicit object Join extends Handler[Command.JoinUser] {
     def apply(cmd: Command.JoinUser, event: ChatRoomEvent.UserJoined, state: ChatRoomState)(implicit
       sys: akka.actor.ActorSystem,
       failoverTimeout: FiniteDuration,
@@ -56,7 +56,7 @@ object EventHandler {
     }
   }
 
-  implicit object Post extends EventHandler[Command.PostText] {
+  implicit object Post extends Handler[Command.PostText] {
     def apply(cmd: Command.PostText, event: ChatRoomEvent.UserTextAdded, state: ChatRoomState)(implicit
       sys: akka.actor.ActorSystem,
       failoverTimeout: FiniteDuration,
@@ -64,7 +64,7 @@ object EventHandler {
       appCfg: AppCfg
     ) = {
       state.recentHistory.add(
-        ChatRoomClassic.msg(cmd.chatId.value, event.seqNum, event.userId, event.recipient, event.content)
+        ChatRoomClassic.msg(cmd.chatId.value, event.seqNum, event.userId.value, event.recipient.value, event.content)
       )
       val reply = Reply.TextPostedReply(cmd.chatId, event.seqNum, event.userId, event.recipient, event.content)
       cmd.replyTo.tell(reply)
@@ -72,25 +72,7 @@ object EventHandler {
     }
   }
 
-  /*
-  implicit object PostN extends EventHandler[Command.PostTexts] {
-    def apply(cmd: Command.PostTexts, event: ChatRoomEvent.UserTextsAdded, state: ChatRoomState)(implicit
-      sys: akka.actor.ActorSystem,
-      failoverTimeout: FiniteDuration,
-      kksRef: AtomicReference[immutable.Set[UniqueKillSwitch]],
-      appCfg: AppCfg
-    ) = {
-      event.msgs.map(m ⇒ ChatRoomClassic.msg(cmd.chatId, event.seqNum, m.userId, m.recipient, m.content)).foreach { m ⇒
-        state.recentHistory.add(m)
-      }
-      val reply = Reply.TextsPostedReply(cmd.chatId, event.seqNum)
-      cmd.replyTo.tell(reply)
-      state
-    }
-  }
-   */
-  ShardedChatRooms
-  implicit object Leave extends EventHandler[Command.Leave] {
+  implicit object Leave extends Handler[Command.Leave] {
     def apply(cmd: Command.Leave, event: ChatRoomEvent.UserDisconnected, state: ChatRoomState)(implicit
       sys: akka.actor.ActorSystem,
       failoverTimeout: FiniteDuration,
@@ -104,10 +86,10 @@ object EventHandler {
   }
 
   def apply[C <: Command[_]](c: C, e: C#Event, state: ChatRoomState)(implicit
-    P: EventHandler[C],
+    H: Handler[C],
     sys: akka.actor.ActorSystem,
     failoverTimeout: FiniteDuration,
     kksRef: AtomicReference[immutable.Set[UniqueKillSwitch]],
     appCfg: AppCfg
-  ) = P(c, e, state)
+  ) = H(c, e, state)
 }
