@@ -41,26 +41,27 @@ object ChatRoomClassic {
   def msg(persistenceId: String, seqNum: Long, userId: String, recipient: String, content: String) =
     s"[$persistenceId:$seqNum - from:$userId -> to:$recipient] - $content"
 
-  val idExtractor: ShardRegion.ExtractEntityId = { case cmd: Command[Reply] ⇒ (cmd.chatId, cmd) }
+  val idExtractor: ShardRegion.ExtractEntityId = { case cmd: Command[Reply] ⇒ (cmd.chatId.value, cmd) }
 
+  //How many shards should you try to have in your system? 10 per node is recommended
   val shardExtractor: ShardRegion.ExtractShardId = {
-    case cmd: Command[Reply] ⇒ cmd.chatId
+    case cmd: Command[Reply] ⇒ cmd.chatId.value
     //only if you use memember entities
     case ShardRegion.StartEntity(chatId) ⇒ chatId
   }
 
   private def journal(
-    persistenceId: String,
+    chatId: String,
     fromSequenceNr: Long,
     classicSystem: akka.actor.ActorSystem
   ): Source[ChatRoomEvent.UserTextAdded, akka.NotUsed] =
     PersistenceQuery(classicSystem)
       .readJournalFor[CassandraReadJournal](CassandraReadJournal.Identifier)
-      .eventsByPersistenceId(persistenceId, fromSequenceNr, Long.MaxValue)
+      .eventsByPersistenceId(chatId, fromSequenceNr, Long.MaxValue)
       .collect {
         case EventEnvelope(
               TimeBasedUUID(_),
-              `persistenceId`,
+              `chatId`,
               sequenceNr @ _,
               ChatRoomEvent.UserTextAdded(userId, seqNum, recipient, content, w, tz)
             ) ⇒
@@ -71,31 +72,17 @@ object ChatRoomClassic {
     totalFailoverTimeout: FiniteDuration,
     kksRef: AtomicReference[immutable.Set[UniqueKillSwitch]],
     appCfg: AppCfg
-  ) =
-    Props(new ChatRoomClassic()(kksRef, totalFailoverTimeout, appCfg)).withDispatcher(Boot.dbDispatcher)
+  ) = Props(new ChatRoomClassic()(kksRef, totalFailoverTimeout, appCfg)).withDispatcher(Boot.dbDispatcher)
 
   def chatRoomHub(
-    persistenceId: String,
+    chatId: String,
     recentHistorySize: Int,
     fromSequenceNr: Long,
-    //shardRegion: ActorRef[Command.PostTexts],
     kksRef: AtomicReference[immutable.Set[UniqueKillSwitch]]
   )(implicit classicSystem: akka.actor.ActorSystem): ChatRoomHub = {
     implicit val t = akka.util.Timeout(2.seconds)
-
-    //sys.log.warn("Create chatroom {}", persistenceId)
-    //ResumableQuery https://github.com/dnvriend/akka-persistence-query-extensions#akkapersistencequeryextensionresumablequery
-    //val persistFlow = persist(persistenceId)(classicSystem, persistTimeout).withAttributes(Attributes.asyncBoundary)
-
     /*
-    val postPersist =
-      Flow[Reply.TextsPostedReply]
-        .withAttributes(Attributes.inputBuffer(1, 1).and(Attributes.asyncBoundary))
-        //.buffer(1, OverflowStrategy.backpressure).async
-     */
-
     //By the time the 1st element hass emited from the journal, the previous [1...recentHistorySize] had already been written
-    /*
     val ((sinkHub, ks), sourceHub) =
       MergeHub
         .source[Message](perProducerBufferSize = 1)
@@ -133,20 +120,21 @@ object ChatRoomClassic {
      */
 
     val reader: Source[ChatRoomEvent.UserTextAdded, akka.NotUsed] =
-      journal(persistenceId, fromSequenceNr, classicSystem)
+      journal(chatId, fromSequenceNr, classicSystem)
         .buffer(1, OverflowStrategy.backpressure)
     //.viaMat(new LastConsumed[ChatRoomEvent])(Keep.right)
 
     val ((sinkHub, ks), sourceHub) =
       MergeHub
+        //.sourceWithDraining[Message](perProducerBufferSize = 1)
         .source[Message](perProducerBufferSize = 1)
         .flatMapConcat(_.asTextMessage.getStreamedText.fold("")(_ + _))
-        .via(persist(persistenceId))
+        .via(persist(chatId))
         .async(Boot.httpDispatcher, 1)
         .zip(reader)
         .map { case (r @ _, userTextAdded) ⇒
           val content = ChatRoomClassic.msg(
-            persistenceId,
+            chatId,
             userTextAdded.seqNum,
             userTextAdded.userId,
             userTextAdded.recipient,
@@ -157,15 +145,6 @@ object ChatRoomClassic {
         .viaMat(KillSwitches.single)(Keep.both)
         .toMat(BroadcastHub.sink[Message](bufferSize = recentHistorySize))(Keep.both)
         .run()
-
-    /*val name = s"shutdown.hub.$persistenceId"
-    CoordinatedShutdown(sys)
-      .addTask(akka.actor.CoordinatedShutdown.PhaseServiceRequestsDone, name) { () ⇒
-        scala.concurrent.Future.successful {
-          ks.shutdown()
-          akka.Done
-        }
-      }*/
 
     registerKS(kksRef, ks)
     ChatRoomHub(sinkHub, sourceHub, ks)
@@ -184,7 +163,10 @@ class ChatRoomClassic(implicit
   implicit val classicSystem = context.system
   implicit val typedSystem   = classicSystem.toTyped
 
-  override val persistenceId = self.path.name
+  private val chatId = ChatId(self.path.name)
+
+  //Do not use it directly. Use `chatId` instead
+  override val persistenceId = chatId.value //self.path.name
 
   override def receiveRecover: Receive = {
     var regUsers: mutable.Map[String, String] = mutable.Map.empty
@@ -200,7 +182,7 @@ class ChatRoomClassic(implicit
             online += userId
 
           case ChatRoomEvent.UserTextAdded(userId, seqNum, recipient, content, _, _) ⇒
-            recentHistory :+ ChatRoomClassic.msg(persistenceId, seqNum, userId, recipient, content)
+            recentHistory :+ ChatRoomClassic.msg(chatId.value, seqNum, userId, recipient, content)
 
           /*
           case ChatRoomEvent.UserTextsAdded(seqNum, msgs, _, _) ⇒
@@ -221,7 +203,7 @@ class ChatRoomClassic(implicit
 
       case RecoveryCompleted ⇒
         if (regUsers.nonEmpty)
-          hub = Some(chatRoomHub(persistenceId, appCfg.recentHistorySize, lastSequenceNr, kksRef))
+          hub = Some(chatRoomHub(chatId.value, appCfg.recentHistorySize, lastSequenceNr, kksRef))
 
         log.info(s"Recovered: [${regUsers.keySet.mkString(",")}] - [${online.mkString(",")}] ")
         context become active(ChatRoomState(regUsers, online, recentHistory, hub))
@@ -264,7 +246,7 @@ class ChatRoomClassic(implicit
       }*/
 
     case cmd: Command.PostText ⇒
-      log.info("{} - {}", state.users.keySet.mkString(","), state.usersOnline.mkString(","))
+      //log.info("registered:[{}] - online:[{}]", state.users.keySet.mkString(","), state.usersOnline.mkString(","))
       persist(
         ChatRoomEvent.UserTextAdded(
           cmd.sender,
@@ -301,7 +283,8 @@ class ChatRoomClassic(implicit
       log.warning(s"Saving snapshot $metadata failed because of $reason")
   }
 
-  override def receiveCommand: Receive = notActive(ChatRoomState(recentHistory = RingBuffer(appCfg.recentHistorySize)))
+  override def receiveCommand: Receive =
+    notActive(ChatRoomState(recentHistory = RingBuffer(appCfg.recentHistorySize)))
 
   /*
       This method is called if persisting failed. The actor will be stopped.

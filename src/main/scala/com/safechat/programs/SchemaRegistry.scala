@@ -1,6 +1,6 @@
 // Copyright (c) 2019-2021 Vadim Bondarev. All rights reserved.
 
-package com.safechat.serializer
+package com.safechat.programs
 
 import com.typesafe.config.Config
 import org.apache.avro.Schema
@@ -10,7 +10,6 @@ import java.io.File
 import java.io.FileInputStream
 import scala.jdk.CollectionConverters._
 
-//https://medium.com/data-rocks/schema-evolution-is-not-that-complex-b7cf7eb567ac
 object SchemaRegistry {
 
   //private val activeSchema: File = new File("./src/main/avro/ChatRoomV1.avsc")

@@ -33,7 +33,7 @@ object ShardedChatRooms {
         }*/
 
         override def entityId(cmd: T): String =
-          cmd.chatId
+          cmd.chatId.value
         //hash3_128(cmd.chatId).toHexString
 
         //taking the abs value before doing the Modulo can produce a bug if the hashCode happens to be Int.MinValue
@@ -148,10 +148,10 @@ final class ShardedChatRooms(
       .ask[ChatRoomReply](DisconnectUser(chatId, user, _))
    */
 
-  def leave(chatId: String, user: String): Future[Reply.LeaveReply] =
+  def leave(chatId: ChatId, user: String): Future[Reply.LeaveReply] =
     chatShardRegion.ask[Reply.LeaveReply](Command.Leave(chatId, user, _))
 
-  def join(chatId: String, login: String, pubKey: String): Future[Reply.JoinReply] =
+  def join(chatId: ChatId, login: String, pubKey: String): Future[Reply.JoinReply] =
     //chatShardRegion.askWithStatus()
     chatShardRegion.ask[Reply.JoinReply](Command.JoinUser(chatId, login, pubKey, _))
 }

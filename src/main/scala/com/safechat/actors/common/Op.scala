@@ -57,7 +57,7 @@ object Op {
 //Describes targeted changes
 sealed trait Mod[State] { self ⇒
   def +(that: Mod[State]): Mod[State] =
-    Mod.Both(self, that)
+    Mod.Both(self, that) //Mod.Both(that, self)
 }
 
 object Mod {
@@ -99,7 +99,7 @@ object Example extends App {
       case m: AddUserPermitions ⇒ done(m.OP.update(state)((UserId(m.id), m.permision)))
     }
 
-  val maxStackSize = 5 //20000
+  val maxStackSize = 8 //20000
 
   //apples in the reverse order
   def evalOptimized(
@@ -180,7 +180,7 @@ object Example extends App {
     }
 
   //java.lang.StackOverflowError
-  val ops = List.range(1, 9).foldLeft(setUserId("0"))((acc, c) ⇒ acc + addSibling(c.toString))
+  val ops = List.range(1, 15).foldLeft(setUserId("0"))((acc, c) ⇒ acc + addSibling(c.toString))
 
   //val ops: Mod[UserState] = setUserId("9") + addSibling("1") + addSibling("2") + addPerm("2", "all") + rmSibling("1")
 
@@ -190,8 +190,8 @@ object Example extends App {
   //evalOptimized(UserState(), ops)
   //evalRec(UserState(), ops)
 
-  //println(evalOptimized(UserState(), ops))
-  evalOptimized2(UserState(), ops)
+  evalOptimized(UserState(), ops)
+  //evalOptimized2(UserState(), ops)
 
   /*
   compile(ops)(UserState())

@@ -1,9 +1,8 @@
 import sbt._
 import sbtdocker.ImageName
 
-
 val projectName   = "safe-chat"
-val Version       = "0.5.0"
+val Version       = "0.5.1"
 
 val akkaVersion     = "2.6.14"
 val akkaHttpVersion = "10.2.4"
@@ -15,7 +14,8 @@ promptTheme := ScalapenosTheme
 lazy val scalacSettings = Seq(
   scalacOptions ++= Seq(
     //"-deprecation",                            // Emit warning and location for usages of deprecated APIs.
-    "-target:jvm-11", //14
+    "-Xsource:2.13",
+    "-target:jvm-14",
     "-explaintypes",                             // Explain type errors in more detail.
     "-feature",                                  // Emit warning and location for usages of features that should be imported explicitly.
     "-language:existentials",                    // Existential types (besides wildcard types) can be written and inferred
@@ -74,14 +74,7 @@ lazy val commonSettings = Seq(
   organization := "haghard",
   version := Version,
   startYear := Some(2019),
-  developers := List(
-    Developer(
-      "haghard",
-      "Vadim Bondarev",
-      "hagard84@gmail.com",
-      url("http://haghard.ru")
-    )
-  ),
+  developers := List(Developer("haghard", "Vadim Bondarev", "hagard84@gmail.com", url("http://haghard.ru"))),
 
   //sbt headerCreate
   licenses += ("Apache-2.0", new URL("https://www.apache.org/licenses/LICENSE-2.0.txt")),
@@ -290,7 +283,8 @@ libraryDependencies ++= Seq(
   //"org.apache.avro" %   "avro-compiler"   %   "1.10.1",
 
   //"ru.odnoklassniki" % "one-nio" % "1.2.0",
-  
+
+
   //https://kwark.github.io/refined-in-practice/#1
   //"eu.timepit" %% "refined"                 % "0.9.24",
   //"eu.timepit" %% "refined-shapeless"       % "0.9.24",
@@ -300,6 +294,7 @@ libraryDependencies ++= Seq(
 
   "com.typesafe.akka" %% "akka-http-testkit" % akkaHttpVersion % Test,
   "com.typesafe.akka" %% "akka-testkit"      % akkaVersion     % Test,
+  "com.typesafe.akka" %% "akka-stream-testkit"  % akkaVersion,
 
   //https://github.com/chatwork/akka-guard
   //"com.chatwork" %% "akka-guard-http-typed" % "1.5.3-SNAPSHOT",
@@ -316,11 +311,6 @@ libraryDependencies ++= Seq(
 )
 
 //addCompilerPlugin("org.typelevel" % "kind-projector" % "0.13.0" cross CrossVersion.full)
-
-// transitive dependency of akka 2.5x that is brought in
-dependencyOverrides += "com.typesafe.akka" %% "akka-protobuf"       % akkaVersion
-dependencyOverrides += "com.typesafe.akka" %% "akka-cluster-tools"  % akkaVersion
-dependencyOverrides += "com.typesafe.akka" %% "akka-coordination"   % akkaVersion
 
 //comment out for test:run
 //Compile / run / fork := true
@@ -341,6 +331,19 @@ ThisBuild / scalafixDependencies += "com.github.liancheng" %% "organize-imports"
 //Global / semanticdbVersion := scalafixSemanticdb.revision
 //Global / watchAntiEntropy := scala.concurrent.duration.FiniteDuration(5, java.util.concurrent.TimeUnit.SECONDS)
 
+
+// transitive dependency of akka 2.5x that is brought in
+dependencyOverrides ++= Seq(
+  "com.typesafe.akka" %% "akka-protobuf"        % akkaVersion,
+  "com.typesafe.akka" %% "akka-actor"           % akkaVersion,
+  "com.typesafe.akka" %% "akka-cluster"         % akkaVersion,
+  "com.typesafe.akka" %% "akka-cluster-sharding"% akkaVersion,
+  "com.typesafe.akka" %% "akka-coordination"    % akkaVersion,
+  "com.typesafe.akka" %% "akka-stream"          % akkaVersion,
+  "com.typesafe.akka" %% "akka-http"            % akkaHttpVersion,
+  "com.typesafe.akka" %% "akka-http-core"       % akkaHttpVersion,
+  "com.typesafe.akka" %% "akka-http-spray-json" % akkaHttpVersion,
+)
 
 // ammonite repl
 // test:run

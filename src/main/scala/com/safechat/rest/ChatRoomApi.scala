@@ -52,7 +52,7 @@ final case class ChatRoomApi(rooms: ShardedChatRooms, to: FiniteDuration)(implic
 
   private def getChatRoomFlow(
     rooms: ShardedChatRooms,
-    chatId: String,
+    chatId: ChatId,
     user: String,
     pubKey: String
   ): Future[Reply.JoinReply] =
@@ -63,7 +63,7 @@ final case class ChatRoomApi(rooms: ShardedChatRooms, to: FiniteDuration)(implic
 
   private def chatRoomWsFlow(
     rooms: ShardedChatRooms,
-    chatId: String,
+    chatId: ChatId,
     user: String,
     pubKey: String
   ): Future[Flow[Message, Message, Future[NotUsed]]] =
@@ -141,7 +141,7 @@ final case class ChatRoomApi(rooms: ShardedChatRooms, to: FiniteDuration)(implic
         val flow =
           //When ChatRoom entities get rebalanced, a flow(src, sink) we've got once may no longed be working so we need to restart it transparently for the clients
           RestartFlow.withBackoff(akka.stream.RestartSettings(2.seconds, 4.seconds, 0.4))(() ⇒
-            Flow.futureFlow(chatRoomWsFlow(rooms, chatId, user, pubKey))
+            Flow.futureFlow(chatRoomWsFlow(rooms, ChatId(chatId), user, pubKey))
           )
 
         //responds with 101 "Switching Protocols"

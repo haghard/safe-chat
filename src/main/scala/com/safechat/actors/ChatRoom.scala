@@ -56,7 +56,7 @@ object ChatRoom {
   def apply(
     entityCtx: EntityContext[Command[Reply]],
     chatRoomNames: AtomicReference[immutable.Set[String]],
-    kks: AtomicReference[immutable.Set[UniqueKillSwitch]],
+    kksRef: AtomicReference[immutable.Set[UniqueKillSwitch]],
     to: FiniteDuration,
     appCfg: AppCfg
   ): Behavior[Command[Reply]] =
@@ -81,7 +81,7 @@ object ChatRoom {
             ChatRoomState(recentHistory = RingBuffer[String](appCfg.recentHistorySize)),
             onCommand(ctx, to),
             //commandHandler,
-            onEvent(ctx.self.path.name, kks, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss Z"))
+            onEvent(ctx.self.path.name, kksRef, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss Z"))
           )
           /*.withTagger {
           //tagged events are useful for querying  by tag

@@ -5,3 +5,7 @@ target
 *.log
 /cassandra-db/
 /scylla/
+.bloop/
+project
+.vscode
+.metals

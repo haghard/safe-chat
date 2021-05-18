@@ -11,6 +11,7 @@ import com.safechat.Bootstrap
 import com.safechat.rest.ChatRoomApi
 
 import java.util.concurrent.atomic.AtomicReference
+import scala.collection.immutable
 import scala.concurrent.duration.Duration
 
 object Guardian {
@@ -27,7 +28,6 @@ object Guardian {
           cluster.subscriptions ! Unsubscribe(ctx.self)
 
           ctx.log.info(greeting)
-
           ctx.log.info(ctx.system.printTree)
 
           val chatRoomNames =
@@ -43,9 +43,7 @@ object Guardian {
           )
 
           val kksRef =
-            new AtomicReference[scala.collection.immutable.Set[UniqueKillSwitch]](
-              scala.collection.immutable.Set[UniqueKillSwitch]()
-            )
+            new AtomicReference[immutable.Set[UniqueKillSwitch]](immutable.Set[UniqueKillSwitch]())
 
           val api = ChatRoomApi(
             new ShardedChatRooms(chatRoomNames, kksRef, totalFailoverTimeout, appCfg)(sys),

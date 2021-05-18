@@ -43,8 +43,8 @@ package object actors {
       ActorFlow
         .ask[String, PostText, Reply](1)(shardRegion) { (msg: String, reply: ActorRef[Reply]) ⇒
           val segs = msg.split(MSG_SEP)
-          if (segs.size == 3) PostText(chatId, segs(0).trim, segs(1).trim, segs(2).trim, reply)
-          else PostText(chatId, "", "", s"Message error.Wrong format: $msg", reply)
+          if (segs.size == 3) PostText(ChatId(chatId), segs(0).trim, segs(1).trim, segs(2).trim, reply)
+          else PostText(ChatId(chatId), "", "", s"Message error.Wrong format: $msg", reply)
         }
         .withAttributes(Attributes.inputBuffer(0, 0)) //ActorAttributes.maxFixedBufferSize(1))
     }

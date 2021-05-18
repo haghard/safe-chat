@@ -40,7 +40,7 @@ final case class Bootstrap(
   routes: Route,
   httpBindHostName: String,
   port: Int,
-  localShards: AtomicReference[immutable.Set[String]],
+  chatRoomNames: AtomicReference[immutable.Set[String]],
   kksRef: AtomicReference[immutable.Set[UniqueKillSwitch]]
 )(implicit classicSystem: akka.actor.ActorSystem) {
   implicit val ec = classicSystem.dispatcher
@@ -89,7 +89,7 @@ final case class Bootstrap(
       shutdown.addTask(PhaseServiceRequestsDone, "kss.shutdown") { () ⇒
         Future.successful {
           val kks = kksRef.get()
-          classicSystem.log.info(s"★ ★ ★ CoordinatedShutdown [kss.shutdown:${kks.size}]  ★ ★ ★")
+          classicSystem.log.info(s"★ ★ ★ CoordinatedShutdown [kss.shutdown.${kks.size} ]  ★ ★ ★")
           kks.foreach(_.shutdown())
           Done
         }

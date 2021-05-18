@@ -5,7 +5,7 @@ package com.safechat
 import akka.actor.typed.ActorSystem
 import akka.http.scaladsl.server.directives.Credentials
 import com.safechat.actors.Guardian
-import com.safechat.serializer.SchemaRegistry
+import com.safechat.programs.SchemaRegistry
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import pureconfig.generic.auto.exportReader

@@ -6,26 +6,30 @@ import akka.persistence.RecoveryCompleted
 import akka.persistence.SaveSnapshotFailure
 import akka.persistence.SaveSnapshotSuccess
 import akka.persistence.SnapshotOffer
-import com.safechat.actors.common.BasicPersistentActor._
+import com.safechat.actors.common.Aggregate._
 
 import scala.reflect.ClassTag
 
-object BasicPersistentActor {
+object Aggregate {
   case object Snapshot
 
-  final case class ValidationRejection(msg: String)
+  final case class ValidationRejection(msg: String) extends AnyVal
 
-  val NoEvent: Left.type       = Left
-  val PersistEvent: Right.type = Right
+  sealed trait AggReply[+Event]
+  final case class RejectCmd(r: ValidationRejection) extends AggReply[Nothing]
+  final case class PersistEvent[E](event: E)         extends AggReply[E]
+
 }
 
-//https://gitlab.com/makeorg/platform/core-api/-/blob/preproduction/api/src/main/scala/org/make/api/technical/MakePersistentActor.scala
-abstract class BasicPersistentActor[State, Cmd, Event](var state: State, snapshotEvery: Int)(implicit
-  stateTag: ClassTag[State],
-  cmdTag: ClassTag[Cmd],
-  eventTag: ClassTag[Event]
-) extends PersistentActor
-    with ActorLogging { self: CommandHandler[State, Cmd, Event] with EventHandler[State, Cmd, Event] ⇒
+/** https://github.com/RBMHTechnology/eventuate/blob/2d6c93ea400822047e702c46ddce22f261898342/eventuate-core/src/main/scala/com/rbmhtechnology/eventuate/VersionedAggregate.scala
+  * https://gitlab.com/makeorg/platform/core-api/-/blob/preproduction/api/src/main/scala/org/make/api/technical/MakePersistentActor.scala
+  */
+abstract class Aggregate[State, Cmd, Event](
+  var state: State,
+  snapshotEvery: Int
+)(implicit stateTag: ClassTag[State], cmdTag: ClassTag[Cmd], eventTag: ClassTag[Event])
+    extends PersistentActor
+    with ActorLogging { self: CommandHandler[State, Cmd, Event] with EventHandler[State, Event] ⇒
 
   override def receiveRecover: Receive = {
     case e: Event ⇒
@@ -43,7 +47,7 @@ abstract class BasicPersistentActor[State, Cmd, Event](var state: State, snapsho
   override def receiveCommand: Receive = {
     case cmd: Cmd ⇒
       applyCommand(cmd, state) match {
-        case NoEvent(reply) ⇒
+        case RejectCmd(reply) ⇒
           sender() ! reply
         case PersistEvent(event) ⇒
           persist(event) { ev ⇒
