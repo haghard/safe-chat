@@ -245,9 +245,7 @@ https://www.scala-exercises.org/shapeless/coproducts
 
 https://github.com/Keenworks/akka-avro-evolution.git
 
-https://github.com/calvinlfer/Akka-Persistence-Schema-Evolution-Example (Event Adapters) 
-
-https://softwaremill.com/schema-registry-and-topic-with-multiple-message-types/
+https://github.com/calvinlfer/Akka-Persistence-Schema-Evolution-Example (Event Adapters)
 
 https://blog.softwaremill.com/the-best-serialization-strategy-for-event-sourcing-9321c299632b
 

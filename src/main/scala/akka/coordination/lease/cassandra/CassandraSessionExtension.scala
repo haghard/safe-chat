@@ -46,8 +46,21 @@ class CassandraSessionExtension(system: ActorSystem) extends Extension {
     cassandraSession
   }
 
+  /** This implementation gives the following guaranties:
+    *   If I grabed the lock, no one should be able to grab it during next `totalFailoverTime` sec
+    *   (https://doc.akka.io/docs/akka-enhancements/current/split-brain-resolver.html#expected-failover-time)
+    *
+    *   If I grabed the lock, others should get back with false as soon as possible.
+    *
+    *  Total Failover Time = failure detection (~ 5 seconds) + stable-after + down-removal-margin (by default ~ stable-after)
+    *  Result = 40 sec in average.
+    *
+    *  We have TTL = 50 for safety
+    */
   private def createLeaseTable(cassandraSession: CassandraSession) = {
-    val stmt = s"CREATE TABLE IF NOT EXISTS $keyspace.leases (name text PRIMARY KEY, owner text)"
+    val ttl = 50
+    val stmt =
+      s"CREATE TABLE IF NOT EXISTS $keyspace.leases (name text PRIMARY KEY, owner text) with default_time_to_live = $ttl"
     cassandraSession executeDDL stmt
   }
 }

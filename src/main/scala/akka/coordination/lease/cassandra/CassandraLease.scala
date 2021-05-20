@@ -48,10 +48,10 @@ final class CassandraLease(system: ExtendedActorSystem, leaseTaken: AtomicBoolea
   private val ksName =
     system.settings.config.getString("akka.persistence.cassandra.journal.keyspace")
 
-  private val forceAcquireTimeout = system.settings.config
+  /*private val forceAcquireTimeout = system.settings.config
     .getDuration("akka.cluster.split-brain-resolver.stable-after")
     .plus(java.time.Duration.ofSeconds(2)) //the more X the safer it becomes
-    .asScala
+    .asScala*/
 
   private val select = SimpleStatement
     .builder(s"SELECT owner FROM $ksName.leases WHERE name = ?")
@@ -70,6 +70,7 @@ final class CassandraLease(system: ExtendedActorSystem, leaseTaken: AtomicBoolea
     .setSerialConsistencyLevel(ConsistencyLevel.LOCAL_SERIAL)
     .build()
 
+  /*
   private val forcedInsert = SimpleStatement
     .builder(s"UPDATE $ksName.leases SET owner = ? WHERE name = ? IF owner != null")
     .addPositionalValues(settings.ownerName, settings.leaseName)
@@ -83,31 +84,47 @@ final class CassandraLease(system: ExtendedActorSystem, leaseTaken: AtomicBoolea
     .setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM)
     .setSerialConsistencyLevel(ConsistencyLevel.SERIAL)
     .build()
+   */
 
   override def checkLease(): Boolean = false
 
-  override def release(): Future[Boolean] =
-    cqlSession
+  // We have TTL and it looks like a more reliable option.
+  override def release(): Future[Boolean] = Future.successful(true)
+  /*cqlSession
       .flatMap { cqlSession ⇒
         cqlSession.executeAsync(delete).toScala.map { r ⇒
           val bool = r.wasApplied()
-
-          if (settings.leaseName.contains(SbrPref))
-            system.log.warning("CassandraLeaseSbr {} by {} released: {}", settings.leaseName, settings.ownerName, bool)
-          else
-            system.log.info("CassandraLease {} by {} released: {}", settings.leaseName, settings.ownerName, bool)
-
+          system.log.info("CassandraLease {} by {} released: {}", settings.leaseName, settings.ownerName, bool)
           bool
         }
-      }
+      }*/
 
   override def acquire(): Future[Boolean] =
     acquire(ConstantFun.scalaAnyToUnit)
 
+  /** This implementation gives the following guaranties:
+    *   If I grabed the lock, no one should be able to grab it during next `totalFailoverTime` sec
+    *   (https://doc.akka.io/docs/akka-enhancements/current/split-brain-resolver.html#expected-failover-time)
+    *
+    *   If I grabed the lock, others should get back with false as soon as possible.
+    *
+    *  Total Failover Time = failure detection (~ 5 seconds) + stable-after + down-removal-margin (by default ~ stable-after)
+    *  Result = 40 sec in average.
+    *
+    *  We have TTL = 50 on `leases` table
+    */
   override def acquire(leaseLostCallback: Option[Throwable] ⇒ Unit): Future[Boolean] =
     cqlSession
       .flatMap { cqlSession ⇒
-        cqlSession.executeAsync(insert).toScala.flatMap { r ⇒
+        cqlSession
+          .executeAsync(insert)
+          .toScala
+          .map { r ⇒
+            val bool = r.wasApplied()
+            system.log.warning(s"CassandraLeaseSBR ${settings.leaseName} by ${settings.ownerName} acquired: $bool")
+            bool
+          }
+      /*.flatMap { r ⇒
           val bool = r.wasApplied()
           if (settings.leaseName.contains("sbr"))
             system.log.warning(s"CassandraLeaseSBR ${settings.leaseName} by ${settings.ownerName} acquired: $bool")
@@ -129,7 +146,7 @@ final class CassandraLease(system: ExtendedActorSystem, leaseTaken: AtomicBoolea
                 bool
               }
             )
-        }
+        }*/
       }
       .recoverWith {
         case e: WriteTimeoutException ⇒
@@ -145,3 +162,9 @@ final class CassandraLease(system: ExtendedActorSystem, leaseTaken: AtomicBoolea
           Future.successful(false)
       }
 }
+
+//[2021-05-20 14:31:18,535] [WARN] [akka.actor.ActorSystemImpl] [safe-chat-akka.actor.default-dispatcher-5] [akka.actor.ActorSystemImpl(safe-chat)] - CassandraLeaseSBR safe-chat-akka-sbr by safe-chat@127.0.0.2:2550 acquired: true
+//[2021-05-20 14:31:59,037] [INFO] [akka.actor.ActorSystemImpl] [safe-chat-akka.actor.default-dispatcher-3] [akka.actor.ActorSystemImpl(safe-chat)] - CassandraLease safe-chat-akka-sbr by safe-chat@127.0.0.2:2550 released: false
+
+//[2021-05-20 14:36:21,999] [WARN] [akka.actor.ActorSystemImpl] [safe-chat-akka.actor.default-dispatcher-35] [akka.actor.ActorSystemImpl(safe-chat)] - CassandraLeaseSBR safe-chat-akka-sbr by safe-chat@127.0.0.1:2550 acquired: true
+//[2021-05-20 14:37:02,786] [INFO] [akka.actor.ActorSystemImpl] [safe-chat-akka.actor.default-dispatcher-24] [akka.actor.ActorSystemImpl(safe-chat)] - CassandraLease safe-chat-akka-sbr by safe-chat@127.0.0.1:2550 released: false
