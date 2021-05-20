@@ -55,10 +55,10 @@ class CassandraSessionExtension(system: ActorSystem) extends Extension {
     *  Total Failover Time = failure detection (~ 5 seconds) + stable-after + down-removal-margin (by default ~ stable-after)
     *  Result = 40 sec in average.
     *
-    *  We have TTL = 50 for safety
+    *  We have TTL = 60 for safety
     */
   private def createLeaseTable(cassandraSession: CassandraSession) = {
-    val ttl = 50
+    val ttl = 60
     val stmt =
       s"CREATE TABLE IF NOT EXISTS $keyspace.leases (name text PRIMARY KEY, owner text) with default_time_to_live = $ttl"
     cassandraSession executeDDL stmt
