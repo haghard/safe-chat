@@ -45,10 +45,12 @@ final class CassandraLease(system: ExtendedActorSystem, leaseTaken: AtomicBoolea
   private val ksName =
     system.settings.config.getString("akka.persistence.cassandra.journal.keyspace")
 
-  /*private val forceAcquireTimeout = system.settings.config
+  /*
+  private val forceAcquireTimeout = system.settings.config
     .getDuration("akka.cluster.split-brain-resolver.stable-after")
     .plus(java.time.Duration.ofSeconds(2)) //the more X the safer it becomes
-    .asScala*/
+    .asScala
+   */
 
   private val select = SimpleStatement
     .builder(s"SELECT owner FROM $ksName.leases WHERE name = ?")
@@ -67,7 +69,6 @@ final class CassandraLease(system: ExtendedActorSystem, leaseTaken: AtomicBoolea
     .setSerialConsistencyLevel(ConsistencyLevel.LOCAL_SERIAL)
     .build()
 
-  /*
   private val forcedInsert = SimpleStatement
     .builder(s"UPDATE $ksName.leases SET owner = ? WHERE name = ? IF owner != null")
     .addPositionalValues(settings.ownerName, settings.leaseName)
@@ -75,6 +76,7 @@ final class CassandraLease(system: ExtendedActorSystem, leaseTaken: AtomicBoolea
     .setSerialConsistencyLevel(ConsistencyLevel.LOCAL_SERIAL)
     .build()
 
+  /*
   private val delete = SimpleStatement
     .builder(s"DELETE FROM $ksName.leases WHERE name = ? IF owner = ?")
     .addPositionalValues(settings.leaseName, settings.ownerName)
@@ -84,9 +86,14 @@ final class CassandraLease(system: ExtendedActorSystem, leaseTaken: AtomicBoolea
    */
 
   override def checkLease(): Boolean = false
+  //leaseTaken.get()
 
   // We have TTL and it looks like a more reliable option.
-  override def release(): Future[Boolean] = Future.successful(true)
+  override def release(): Future[Boolean] =
+    Future {
+      system.log.warning("***** CassandraLease {} by {} released", settings.leaseName, settings.ownerName)
+      true
+    }
   /*cqlSession
       .flatMap { cqlSession ⇒
         cqlSession.executeAsync(delete).toScala.map { r ⇒
@@ -108,7 +115,9 @@ final class CassandraLease(system: ExtendedActorSystem, leaseTaken: AtomicBoolea
     *  Total Failover Time = failure detection (~ 5 seconds) + stable-after + down-removal-margin (by default ~ stable-after)
     *  Result = 40 sec in average.
     *
-    *  We have TTL = 60 on `leases` table
+    *  We have TTL = 60 on `leases` table.
+    *
+    *  If it die right after acquiring (in between acquiring and release), well this is nothing we can do.
     */
   override def acquire(leaseLostCallback: Option[Throwable] ⇒ Unit): Future[Boolean] =
     cqlSession
@@ -116,34 +125,20 @@ final class CassandraLease(system: ExtendedActorSystem, leaseTaken: AtomicBoolea
         cqlSession
           .executeAsync(insert)
           .toScala
-          .map { r ⇒
+          .flatMap { r ⇒
             val bool = r.wasApplied()
             system.log.warning(s"CassandraLease ${settings.leaseName} by ${settings.ownerName} acquired: $bool")
-            bool
-          }
-      /*.flatMap { r ⇒
-          val bool = r.wasApplied()
-          if (settings.leaseName.contains("sbr"))
-            system.log.warning(s"CassandraLeaseSBR ${settings.leaseName} by ${settings.ownerName} acquired: $bool")
-          else
-            system.log.info(s"CassandraLease ${settings.leaseName} by ${settings.ownerName} acquired: $bool")
-          if (bool) Future.successful(bool)
-          else
-            akka.pattern.after(forceAcquireTimeout, system.scheduler)(
+            if (bool) Future.successful(bool)
+            else
               cqlSession.executeAsync(forcedInsert).toScala.map { r ⇒
                 val bool = r.wasApplied()
-
-                if (settings.leaseName.contains(SbrPref))
-                  system.log
-                    .warning(s"CassandraLeaseSbr.Forced ${settings.leaseName} by ${settings.ownerName} acquired: $bool")
-                else
-                  system.log
-                    .info(s"CassandraLease.Forced ${settings.leaseName} by ${settings.ownerName} acquired: $bool")
-
+                system.log
+                  .warning(
+                    s"CassandraLeaseSbr.Forced ${settings.leaseName} by ${settings.ownerName} acquired: $bool"
+                  )
                 bool
               }
-            )
-        }*/
+          }
       }
       .recoverWith {
         case e: WriteTimeoutException ⇒
@@ -151,11 +146,17 @@ final class CassandraLease(system: ExtendedActorSystem, leaseTaken: AtomicBoolea
           if (e.getWriteType eq WriteType.CAS) {
             //The timeout has happened while doing the compare-and-swap for an conditional update.
             //In this case, the update may or may not have been applied so we try to re-read it.
-            cqlSession.flatMap(_.executeAsync(select).toScala.map(_.one().getString("owner") == settings.ownerName))
-            //akka.pattern.after(1.second, system.scheduler)(cqlSession.flatMap(_.executeAsync(select).toScala.map(_.one().getString("owner") == settings.ownerName)))
+            cqlSession.flatMap(
+              _.executeAsync(select).toScala
+                .map { r ⇒
+                  val row = r.one()
+                  if (row ne null) row.getString("owner") == settings.ownerName else false
+                }
+            )
           } else Future.successful(false)
         case NonFatal(ex) ⇒
           system.log.error(ex, "CassandraLease {}. Acquire error", settings.leaseName)
           Future.successful(false)
       }
+
 }

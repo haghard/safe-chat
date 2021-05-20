@@ -5,13 +5,7 @@ package com.safechat
 import akka.Done
 import akka.actor.Address
 import akka.actor.CoordinatedShutdown
-import akka.actor.CoordinatedShutdown.PhaseActorSystemTerminate
-import akka.actor.CoordinatedShutdown.PhaseBeforeServiceUnbind
-import akka.actor.CoordinatedShutdown.PhaseServiceRequestsDone
-import akka.actor.CoordinatedShutdown.PhaseServiceStop
-import akka.actor.CoordinatedShutdown.PhaseServiceUnbind
-import akka.actor.CoordinatedShutdown.Reason
-import akka.coordination.lease.scaladsl.Lease
+import akka.actor.CoordinatedShutdown.{PhaseActorSystemTerminate, PhaseBeforeServiceUnbind, PhaseServiceRequestsDone, PhaseServiceStop, PhaseServiceUnbind, Reason}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Route
 import akka.management.scaladsl.AkkaManagement
@@ -131,8 +125,9 @@ final case class Bootstrap(
         }
       }
 
+      /*
       //if akka.sharding.use-lease
-      /*shutdown.addTask(PhaseClusterExitingDone, "lease.release") { () ⇒
+      shutdown.addTask(PhaseClusterExitingDone, "lease.release") { () ⇒
         val leaseOwner = Bootstrap.makeLeaseOwner(classicSystem, ua.address)
         val rooms      = liveRooms.get()
         if (rooms.nonEmpty) {
@@ -158,6 +153,7 @@ final case class Bootstrap(
       }
   }
 
+  /*
   def release(lease: Lease, leaseName: String, leaseOwner: String) =
     lease
       .release()
@@ -165,5 +161,5 @@ final case class Bootstrap(
         classicSystem.log.warning(s"CoordinatedShutdown [lease.release $leaseName by $leaseOwner: $r]")
         if (r) Future.successful(Done) else Future.failed(new Exception("Failed to release"))
       }
-
+   */
 }
