@@ -5,7 +5,6 @@ import akka.actor.ExtendedActorSystem
 import akka.coordination.lease.LeaseSettings
 import akka.coordination.lease.scaladsl.Lease
 import akka.util.ConstantFun
-import akka.util.JavaDurationConverters.JavaDurationOps
 import com.datastax.oss.driver.api.core.ConsistencyLevel
 import com.datastax.oss.driver.api.core.cql.SimpleStatement
 import com.datastax.oss.driver.api.core.servererrors.WriteTimeoutException
@@ -15,8 +14,6 @@ import java.util.concurrent.atomic.AtomicBoolean
 import scala.compat.java8.FutureConverters.CompletionStageOps
 import scala.concurrent.Future
 import scala.util.control.NonFatal
-
-import CassandraLease._
 
 /** This implementation can be used for either `akka.sharding.use-lease` or `split-brain-resolver.active-strategy = lease-majority`.
   *
