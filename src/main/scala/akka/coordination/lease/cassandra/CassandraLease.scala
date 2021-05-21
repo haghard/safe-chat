@@ -125,7 +125,12 @@ final class CassandraLease(system: ExtendedActorSystem, leaseTaken: AtomicBoolea
         cqlSession
           .executeAsync(insert)
           .toScala
-          .flatMap { r ⇒
+          .map { rs ⇒
+            val bool = rs.wasApplied()
+            system.log.warning(s"CassandraLease ${settings.leaseName} by ${settings.ownerName} acquired: $bool")
+            bool
+          }
+      /*.flatMap { r ⇒
             val bool = r.wasApplied()
             system.log.warning(s"CassandraLease ${settings.leaseName} by ${settings.ownerName} acquired: $bool")
             if (bool) Future.successful(bool)
@@ -138,7 +143,7 @@ final class CassandraLease(system: ExtendedActorSystem, leaseTaken: AtomicBoolea
                   )
                 bool
               }
-          }
+          }*/
       }
       .recoverWith {
         case e: WriteTimeoutException ⇒
