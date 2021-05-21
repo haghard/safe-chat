@@ -5,7 +5,6 @@ import akka.actor.ExtendedActorSystem
 import akka.coordination.lease.LeaseSettings
 import akka.coordination.lease.scaladsl.Lease
 import akka.util.ConstantFun
-import akka.util.JavaDurationConverters.JavaDurationOps
 import com.datastax.oss.driver.api.core.ConsistencyLevel
 import com.datastax.oss.driver.api.core.cql.SimpleStatement
 import com.datastax.oss.driver.api.core.servererrors.WriteTimeoutException
@@ -15,8 +14,6 @@ import java.util.concurrent.atomic.AtomicBoolean
 import scala.compat.java8.FutureConverters.CompletionStageOps
 import scala.concurrent.Future
 import scala.util.control.NonFatal
-
-import CassandraLease._
 
 /** This implementation can be used for either `akka.sharding.use-lease` or `split-brain-resolver.active-strategy = lease-majority`.
   *
@@ -48,10 +45,12 @@ final class CassandraLease(system: ExtendedActorSystem, leaseTaken: AtomicBoolea
   private val ksName =
     system.settings.config.getString("akka.persistence.cassandra.journal.keyspace")
 
+  /*
   private val forceAcquireTimeout = system.settings.config
     .getDuration("akka.cluster.split-brain-resolver.stable-after")
     .plus(java.time.Duration.ofSeconds(2)) //the more X the safer it becomes
     .asScala
+   */
 
   private val select = SimpleStatement
     .builder(s"SELECT owner FROM $ksName.leases WHERE name = ?")
@@ -77,59 +76,69 @@ final class CassandraLease(system: ExtendedActorSystem, leaseTaken: AtomicBoolea
     .setSerialConsistencyLevel(ConsistencyLevel.LOCAL_SERIAL)
     .build()
 
+  /*
   private val delete = SimpleStatement
     .builder(s"DELETE FROM $ksName.leases WHERE name = ? IF owner = ?")
     .addPositionalValues(settings.leaseName, settings.ownerName)
     .setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM)
     .setSerialConsistencyLevel(ConsistencyLevel.SERIAL)
     .build()
+   */
 
   override def checkLease(): Boolean = false
+  //leaseTaken.get()
 
+  // We have TTL and it looks like a more reliable option.
   override def release(): Future[Boolean] =
-    cqlSession
+    Future {
+      system.log.warning("***** CassandraLease {} by {} released", settings.leaseName, settings.ownerName)
+      true
+    }
+  /*cqlSession
       .flatMap { cqlSession ⇒
         cqlSession.executeAsync(delete).toScala.map { r ⇒
           val bool = r.wasApplied()
-
-          if (settings.leaseName.contains(SbrPref))
-            system.log.warning("CassandraLeaseSbr {} by {} released: {}", settings.leaseName, settings.ownerName, bool)
-          else
-            system.log.info("CassandraLease {} by {} released: {}", settings.leaseName, settings.ownerName, bool)
-
+          system.log.info("CassandraLease {} by {} released: {}", settings.leaseName, settings.ownerName, bool)
           bool
         }
-      }
+      }*/
 
   override def acquire(): Future[Boolean] =
     acquire(ConstantFun.scalaAnyToUnit)
 
+  /** This implementation gives the following guaranties:
+    *   If I grabed the lock, no one should be able to grab it during next `totalFailoverTime` sec
+    *   (https://doc.akka.io/docs/akka-enhancements/current/split-brain-resolver.html#expected-failover-time)
+    *
+    *   If I grabed the lock, others should get back with false as soon as possible.
+    *
+    *  Total Failover Time = failure detection (~ 5 seconds) + stable-after + down-removal-margin (by default ~ stable-after)
+    *  Result = 40 sec in average.
+    *
+    *  We have TTL = 60 on `leases` table.
+    *
+    *  If it die right after acquiring (in between acquiring and release), well this is nothing we can do.
+    */
   override def acquire(leaseLostCallback: Option[Throwable] ⇒ Unit): Future[Boolean] =
     cqlSession
       .flatMap { cqlSession ⇒
-        cqlSession.executeAsync(insert).toScala.flatMap { r ⇒
-          val bool = r.wasApplied()
-          if (settings.leaseName.contains("sbr"))
-            system.log.warning(s"CassandraLeaseSBR ${settings.leaseName} by ${settings.ownerName} acquired: $bool")
-          else
-            system.log.info(s"CassandraLease ${settings.leaseName} by ${settings.ownerName} acquired: $bool")
-          if (bool) Future.successful(bool)
-          else
-            akka.pattern.after(forceAcquireTimeout, system.scheduler)(
+        cqlSession
+          .executeAsync(insert)
+          .toScala
+          .flatMap { r ⇒
+            val bool = r.wasApplied()
+            system.log.warning(s"CassandraLease ${settings.leaseName} by ${settings.ownerName} acquired: $bool")
+            if (bool) Future.successful(bool)
+            else
               cqlSession.executeAsync(forcedInsert).toScala.map { r ⇒
                 val bool = r.wasApplied()
-
-                if (settings.leaseName.contains(SbrPref))
-                  system.log
-                    .warning(s"CassandraLeaseSbr.Forced ${settings.leaseName} by ${settings.ownerName} acquired: $bool")
-                else
-                  system.log
-                    .info(s"CassandraLease.Forced ${settings.leaseName} by ${settings.ownerName} acquired: $bool")
-
+                system.log
+                  .warning(
+                    s"CassandraLeaseSbr.Forced ${settings.leaseName} by ${settings.ownerName} acquired: $bool"
+                  )
                 bool
               }
-            )
-        }
+          }
       }
       .recoverWith {
         case e: WriteTimeoutException ⇒
@@ -137,11 +146,17 @@ final class CassandraLease(system: ExtendedActorSystem, leaseTaken: AtomicBoolea
           if (e.getWriteType eq WriteType.CAS) {
             //The timeout has happened while doing the compare-and-swap for an conditional update.
             //In this case, the update may or may not have been applied so we try to re-read it.
-            cqlSession.flatMap(_.executeAsync(select).toScala.map(_.one().getString("owner") == settings.ownerName))
-            //akka.pattern.after(1.second, system.scheduler)(cqlSession.flatMap(_.executeAsync(select).toScala.map(_.one().getString("owner") == settings.ownerName)))
+            cqlSession.flatMap(
+              _.executeAsync(select).toScala
+                .map { r ⇒
+                  val row = r.one()
+                  if (row ne null) row.getString("owner") == settings.ownerName else false
+                }
+            )
           } else Future.successful(false)
         case NonFatal(ex) ⇒
           system.log.error(ex, "CassandraLease {}. Acquire error", settings.leaseName)
           Future.successful(false)
       }
+
 }

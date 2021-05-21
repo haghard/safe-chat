@@ -266,7 +266,10 @@ libraryDependencies ++= Seq(
   // as well as health checks to ensure requests don’t get routed to your pods until the pods have joined the cluster.
 
   "com.typesafe.akka"             %% "akka-discovery"                    % akkaVersion,
+
   //"com.lightbend.akka.discovery"  %% "akka-discovery-kubernetes-api"     % AkkaManagement,
+  //"com.lightbend.akka.management" %% "akka-lease-kubernetes"             % AkkaManagement,
+
   "com.lightbend.akka.management" %% "akka-management-cluster-bootstrap" % AkkaManagement,
   "com.lightbend.akka.management" %% "akka-management-cluster-http"      % AkkaManagement,
 

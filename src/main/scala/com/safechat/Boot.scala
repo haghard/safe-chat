@@ -74,8 +74,8 @@ object Boot extends Ops {
         .get(CONTACT_POINTS_VAR)
         .map { points ⇒
           val array = points.split(",")
-          if (array.size == 2) array
-          else throw new Exception(s"$CONTACT_POINTS_VAR expected size should be 2")
+          if (array.size > 0) array
+          else throw new Exception(s"$CONTACT_POINTS_VAR expected not to be nonEmtpy")
         }
         .getOrElse(throw new Exception(s"$CONTACT_POINTS_VAR not found"))
 
