@@ -5,12 +5,14 @@ package com.safechat
 import akka.Done
 import akka.actor.Address
 import akka.actor.CoordinatedShutdown
-import akka.actor.CoordinatedShutdown.{PhaseActorSystemTerminate, PhaseBeforeServiceUnbind, PhaseServiceRequestsDone, PhaseServiceStop, PhaseServiceUnbind, Reason}
+import akka.actor.CoordinatedShutdown.{PhaseActorSystemTerminate, PhaseBeforeServiceUnbind, PhaseClusterExitingDone, PhaseServiceRequestsDone, PhaseServiceStop, PhaseServiceUnbind, Reason}
+import akka.coordination.lease.cassandra.CassandraLease
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Route
 import akka.management.scaladsl.AkkaManagement
 import akka.stream.UniqueKillSwitch
 import akka.stream.scaladsl.Sink
+import com.safechat.Bootstrap.leaseOwnerFromAkkaMember
 
 import java.util.concurrent.atomic.AtomicReference
 import scala.collection.immutable
@@ -22,7 +24,7 @@ import scala.util.Success
 object Bootstrap {
   final private case object BindFailure extends Reason
 
-  def makeLeaseOwner(classicSystem: akka.actor.ActorSystem, addr: Address) = {
+  private[Bootstrap] def leaseOwnerFromAkkaMember(classicSystem: akka.actor.ActorSystem, addr: Address) = {
     val sb = new java.lang.StringBuilder().append(classicSystem.name)
     if (addr.host.isDefined) sb.append('@').append(addr.host.get)
     if (addr.port.isDefined) sb.append(':').append(addr.port.get)
@@ -38,6 +40,7 @@ final case class Bootstrap(
   kksRef: AtomicReference[immutable.Set[UniqueKillSwitch]]
 )(implicit classicSystem: akka.actor.ActorSystem) {
   implicit val ec = classicSystem.dispatcher
+  val ua          = akka.cluster.Cluster(classicSystem).selfUniqueAddress
   val shutdown    = CoordinatedShutdown(classicSystem)
   val terminationDeadline = classicSystem.settings.config
     .getDuration("akka.coordinated-shutdown.default-phase-timeout")
@@ -77,6 +80,16 @@ final case class Bootstrap(
         }
       }
 
+      //forcefully kills connections and kill switches that are still open
+      shutdown.addTask(PhaseServiceStop, "close.connections") { () ⇒
+        val kks = kksRef.get()
+        kks.foreach(_.abort(new Exception("abort")))
+        Http().shutdownAllConnectionPools().map { _ ⇒
+          classicSystem.log.info("★ ★ ★ CoordinatedShutdown [close.connections] ★ ★ ★")
+          Done
+        }
+      }
+
       //PhaseServiceRequestsDone - process in-flight requests
 
       //graceful termination of chatroom hubs
@@ -101,16 +114,6 @@ final case class Bootstrap(
         }
       }
 
-      //forcefully kills connections and kill switches that are still open
-      shutdown.addTask(PhaseServiceStop, "close.connections") { () ⇒
-        val kks = kksRef.get()
-        kks.foreach(_.abort(new Exception("abort")))
-        Http().shutdownAllConnectionPools().map { _ ⇒
-          classicSystem.log.info("★ ★ ★ CoordinatedShutdown [close.connections] ★ ★ ★")
-          Done
-        }
-      }
-
       /*cShutdown.addTask(PhaseServiceStop, "stop.smth") { () =>
         smth.stop().map { _ =>
           classicSystem.log.info("CoordinatedShutdown [stop.smth]")
@@ -122,6 +125,21 @@ final case class Bootstrap(
         AkkaManagement(classicSystem).stop().map { done ⇒
           classicSystem.log.info("★ ★ ★ CoordinatedShutdown [akka-management.stop]  ★ ★ ★")
           done
+        }
+      }
+
+      //Best-effors attempt to cleanup leases without waiting for TTL
+      shutdown.addTask(PhaseClusterExitingDone, "release.lease") { () ⇒
+        val leaseOwner = leaseOwnerFromAkkaMember(classicSystem, ua.address)
+        val lease = akka.coordination.lease.scaladsl
+          .LeaseProvider(classicSystem)
+          .getLease(s"${Boot.AkkaSystemName}-akka-${CassandraLease.SbrPref}", CassandraLease.configPath, leaseOwner)
+
+        lease match {
+          case lease: CassandraLease ⇒
+            val msg = s"★ ★ ★ CoordinatedShutdown [release.lease] by $leaseOwner released on exit: {} ★ ★ ★"
+            lease.releaseOnExit(msg).map(_ ⇒ Done)
+          case _ ⇒ Future.successful(Done)
         }
       }
 
