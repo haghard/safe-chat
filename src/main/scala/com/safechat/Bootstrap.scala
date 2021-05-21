@@ -128,7 +128,7 @@ final case class Bootstrap(
         }
       }
 
-      //Best-effors attempt to cleanup leases without waiting for TTL
+      //Best-effort attempt to cleanup leases without waiting for TTL
       shutdown.addTask(PhaseClusterExitingDone, "release.lease") { () ⇒
         val leaseOwner = leaseOwnerFromAkkaMember(classicSystem, ua.address)
         val lease = akka.coordination.lease.scaladsl

@@ -97,7 +97,8 @@ final class CassandraLease(system: ExtendedActorSystem, leaseTaken: AtomicBoolea
         }
       }
 
-  // We have TTL and it looks like a more reliable option.
+  /** We have TTL + lease cleanup attempt on gracefull exit.
+    */
   override def release(): Future[Boolean] =
     Future {
       system.log.warning("CassandraLease {} by {} released", settings.leaseName, settings.ownerName)
@@ -110,8 +111,9 @@ final class CassandraLease(system: ExtendedActorSystem, leaseTaken: AtomicBoolea
   /** This implementation gives the following guaranties:
     *   If I grabed the lock, no one should be able to grab it during next `totalFailoverTime` sec
     *   (https://doc.akka.io/docs/akka-enhancements/current/split-brain-resolver.html#expected-failover-time)
+    *   unless I exit gracefully within that time interval (on exit we attempt to cleanup the lease)
     *
-    *   If I grabed the lock, others should get back with false as soon as possible.
+    *   If I grabbed the lock, others should get back with false as soon as possible so that we could shutdown self.
     *
     *  Total Failover Time = failure detection (~ 7 seconds) + stable-after + down-removal-margin (by default ~ stable-after)
     *  results in ~ 50 sec.
