@@ -640,14 +640,15 @@ otherwise we initialize the cluster sharding proxy so no shards are hosted by th
 
 5. Replace cassandra with scylla https://github.com/FrodeRanders/scylladb-demo
 
-6. Try replicated-event-sourcing 
+6. Try replicated-event-sourcing
 https://doc.akka.io/docs/akka/current/typed/replicated-eventsourcing.html#replicated-event-sourcing
    
 https://github.com/akka/akka-samples.git akka-sample-persistence-dc-scala
 https://github.com/akka/akka/tree/146944f99934557eac72e6dc7fa25fc6b2f0f11c/akka-persistence-typed-tests/src/test/scala/docs/akka/persistence/typed
 
-7. Java-script front end for the chat 
-                
+7. Java-script front end for the chat
+
+8. Distributed schema registry using DData
 
                     
 ## Notes
