@@ -295,9 +295,10 @@ libraryDependencies ++= Seq(
   "commons-codec"   %   "commons-codec"   %   "1.11",
   "org.scalatest"   %%  "scalatest"       %   "3.2.2" % Test,
 
-  "com.typesafe.akka" %% "akka-http-testkit" % akkaHttpVersion % Test,
-  "com.typesafe.akka" %% "akka-testkit"      % akkaVersion     % Test,
-  "com.typesafe.akka" %% "akka-stream-testkit"  % akkaVersion,
+  "com.typesafe.akka" %% "akka-stream-testkit" % akkaVersion,
+
+  "com.typesafe.akka" %% "akka-http-testkit" %  akkaHttpVersion % Test,
+  "com.typesafe.akka" %% "akka-testkit"      %  akkaVersion     % Test
 
   //https://github.com/chatwork/akka-guard
   //"com.chatwork" %% "akka-guard-http-typed" % "1.5.3-SNAPSHOT",
@@ -309,7 +310,7 @@ libraryDependencies ++= Seq(
   //("com.lihaoyi" % "ammonite" % "2.3.8-36-1cce53f3"  % "test").cross(CrossVersion.full),
 
   //https://github.com/politrons/reactiveScala/blob/master/scala_features/src/main/scala/app/impl/scala/ReflectionFeature.scala
-  "org.scala-lang" % "scala-reflect" % scalaVersion.value
+  //"org.scala-lang" % "scala-reflect" % scalaVersion.value
 
 )
 

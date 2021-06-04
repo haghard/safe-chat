@@ -69,39 +69,41 @@ final class CassandraLease(system: ExtendedActorSystem, leaseTaken: AtomicBoolea
     .setSerialConsistencyLevel(ConsistencyLevel.LOCAL_SERIAL)
     .build()
 
+  /*
   private val forcedInsert = SimpleStatement
     .builder(s"UPDATE $ksName.leases SET owner = ? WHERE name = ? IF owner != null")
     .addPositionalValues(settings.ownerName, settings.leaseName)
     .setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM)
     .setSerialConsistencyLevel(ConsistencyLevel.LOCAL_SERIAL)
-    .build()
+    .build()*/
 
-  /*
   private val delete = SimpleStatement
     .builder(s"DELETE FROM $ksName.leases WHERE name = ? IF owner = ?")
     .addPositionalValues(settings.leaseName, settings.ownerName)
     .setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM)
     .setSerialConsistencyLevel(ConsistencyLevel.SERIAL)
     .build()
-   */
 
   override def checkLease(): Boolean = false
   //leaseTaken.get()
 
-  // We have TTL and it looks like a more reliable option.
-  override def release(): Future[Boolean] =
-    Future {
-      system.log.warning("***** CassandraLease {} by {} released", settings.leaseName, settings.ownerName)
-      true
-    }
-  /*cqlSession
+  def releaseOnExit(msg: String): Future[Boolean] =
+    cqlSession
       .flatMap { cqlSession ⇒
         cqlSession.executeAsync(delete).toScala.map { r ⇒
           val bool = r.wasApplied()
-          system.log.info("CassandraLease {} by {} released: {}", settings.leaseName, settings.ownerName, bool)
+          system.log.info(msg, bool)
           bool
         }
-      }*/
+      }
+
+  /** We have TTL + lease cleanup attempt on gracefull exit.
+    */
+  override def release(): Future[Boolean] =
+    Future {
+      system.log.warning("CassandraLease {} by {} released", settings.leaseName, settings.ownerName)
+      true
+    }
 
   override def acquire(): Future[Boolean] =
     acquire(ConstantFun.scalaAnyToUnit)
@@ -109,11 +111,12 @@ final class CassandraLease(system: ExtendedActorSystem, leaseTaken: AtomicBoolea
   /** This implementation gives the following guaranties:
     *   If I grabed the lock, no one should be able to grab it during next `totalFailoverTime` sec
     *   (https://doc.akka.io/docs/akka-enhancements/current/split-brain-resolver.html#expected-failover-time)
+    *   unless I exit gracefully within that time interval (on exit we attempt to cleanup the lease)
     *
-    *   If I grabed the lock, others should get back with false as soon as possible.
+    *   If I grabbed the lock, others should get back with false as soon as possible so that we could shutdown self.
     *
-    *  Total Failover Time = failure detection (~ 5 seconds) + stable-after + down-removal-margin (by default ~ stable-after)
-    *  Result = 40 sec in average.
+    *  Total Failover Time = failure detection (~ 7 seconds) + stable-after + down-removal-margin (by default ~ stable-after)
+    *  results in ~ 50 sec.
     *
     *  We have TTL = 60 on `leases` table.
     *
@@ -130,20 +133,6 @@ final class CassandraLease(system: ExtendedActorSystem, leaseTaken: AtomicBoolea
             system.log.warning(s"CassandraLease ${settings.leaseName} by ${settings.ownerName} acquired: $bool")
             bool
           }
-      /*.flatMap { r ⇒
-            val bool = r.wasApplied()
-            system.log.warning(s"CassandraLease ${settings.leaseName} by ${settings.ownerName} acquired: $bool")
-            if (bool) Future.successful(bool)
-            else
-              cqlSession.executeAsync(forcedInsert).toScala.map { r ⇒
-                val bool = r.wasApplied()
-                system.log
-                  .warning(
-                    s"CassandraLeaseSbr.Forced ${settings.leaseName} by ${settings.ownerName} acquired: $bool"
-                  )
-                bool
-              }
-          }*/
       }
       .recoverWith {
         case e: WriteTimeoutException ⇒
@@ -163,5 +152,4 @@ final class CassandraLease(system: ExtendedActorSystem, leaseTaken: AtomicBoolea
           system.log.error(ex, "CassandraLease {}. Acquire error", settings.leaseName)
           Future.successful(false)
       }
-
 }
