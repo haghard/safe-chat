@@ -112,11 +112,8 @@ final class CassandraLease(system: ExtendedActorSystem, leaseTaken: AtomicBoolea
     acquire(ConstantFun.scalaAnyToUnit)
 
   /** This implementation gives the following guaranties:
-    *   If I grabbed the lock, no one should be able to grab it during next `totalFailoverTime` sec
-    *   (https://doc.akka.io/docs/akka-enhancements/current/split-brain-resolver.html#expected-failover-time)
-    *   unless I exit gracefully within that time interval (on exit we attempt to cleanup the lease)
+    *   If the winner grabs the lock, others should get back with false as soon as possible so that they could shutdown themselves.
     *
-    *  If the winner grabs the lock, others should get back with false as soon as possible so that they could shutdown themselves.
     *
     *  Total Failover Time:
     *    failure detection (5 seconds)
