@@ -4,8 +4,8 @@ import sbtdocker.ImageName
 val projectName   = "safe-chat"
 val Version       = "0.5.1"
 
-val akkaVersion     = "2.6.14"
-val akkaHttpVersion = "10.2.4"
+val akkaVersion     = "2.6.15"
+val akkaHttpVersion = "10.2.5"
 val AkkaManagement  = "1.1.0"
 val AkkaPersistenceCassandraVersion = "1.0.5"
 
@@ -15,7 +15,8 @@ lazy val scalacSettings = Seq(
   scalacOptions ++= Seq(
     //"-deprecation",                            // Emit warning and location for usages of deprecated APIs.
     "-Xsource:2.13",
-    "-target:jvm-14",
+    "-target:jvm-11",
+    //"-target:jvm-14",
     "-explaintypes",                             // Explain type errors in more detail.
     "-feature",                                  // Emit warning and location for usages of features that should be imported explicitly.
     "-language:existentials",                    // Existential types (besides wildcard types) can be written and inferred
@@ -98,7 +99,7 @@ lazy val root = project
       //Resolver.mavenLocal
     ),
 
-    parallelExecution in Test := false,
+    Test / parallelExecution := false,
 
     //These setting is used when
     // Compile / run / fork := true and you run one of the aliases,
@@ -115,8 +116,8 @@ lazy val root = project
     ),*/
 
 
-    mainClass in assembly := Some("com.safechat.Boot"),
-    assemblyJarName in assembly := s"$projectName-${version.value}.jar",
+    assembly / mainClass := Some("com.safechat.Boot"),
+    assembly / assemblyJarName := s"$projectName-${version.value}.jar",
 
     // Resolve duplicates for Sbt Assembly
     /*
@@ -128,43 +129,17 @@ lazy val root = project
     },*/
 
     // Resolve duplicates for Sbt Assembly
-    assemblyMergeStrategy in assembly := {
+    assembly / assemblyMergeStrategy := {
       case PathList("META-INF", xs @ _*) => MergeStrategy.discard
       case PathList(xs@_*) if xs.last == "module-info.class" => MergeStrategy.discard
       case PathList(xs@_*) if xs.last == "io.netty.versions.properties" => MergeStrategy.rename
-      case other =>
-        //MergeStrategy.first
-        (assemblyMergeStrategy in assembly).value(other)
+      case other => (assembly / assemblyMergeStrategy).value(other)
+      //MergeStrategy.first
     },
 
-    /*assemblyExcludedJars in assembly := {
-      val cp = (fullClasspath in assembly).value
-        //netty-all:4.1.39.Final:jar
-      cp filter { n => n.data.getName == "netty-all-4.1.39.Final.jar" /*|| n.data.getName == "jersey-core-1.9.jar"*/ }
-    },*/
+    docker / imageNames := Seq(ImageName(namespace = Some("haghard"), repository = "safe-chat", tag = Some(version.value))),
 
-    /*assemblyMergeStrategy in assembly := {
-     case PathList("META-INF", xs @ _*) =>
-       MergeStrategy.discard
-     case PathList("io.netty", xs @ _*) =>
-       //pick oldest netty version
-       ///io/netty/netty-all/4.1.39.Final/netty-all-4.1.39.Final.jar:io/netty/util/internal/shaded/org/jctools/util/UnsafeAccess.class
-       //io/netty/netty-common/4.1.45.Final/netty-common-4.1.45.Final.jar:io/netty/util/internal/shaded/org/jctools/util/UnsafeAccess.class
-       MergeStrategy.last
-     case other =>
-       //MergeStrategy.last
-       (assemblyMergeStrategy in assembly).value(other)
-    },*/
-
-    imageNames in docker := Seq(
-      ImageName(
-        namespace = Some("haghard"),
-        repository = "safe-chat",
-        tag = Some(version.value)
-      )
-    ),
-
-    dockerfile in docker := {
+    docker / dockerfile := {
       // development | production
       val APP_ENV = sys.props.getOrElse("env", "production")
 
@@ -247,7 +222,7 @@ libraryDependencies ++= Seq(
 
   //"com.github.TanUkkii007" %% "akka-cluster-custom-downing" % "0.0.13-SNAPSHOT", //local build that uses CoordinatedShutdown to down self
   //"org.sisioh"        %% "akka-cluster-custom-downing" % "0.1.0",
-  //"com.swissborg"    %% "lithium" % "0.11.1", brings cats
+  //"com.swissborg"    %% "lithium" % "0.11.1", brings cats !!!
 
   "com.typesafe.akka" %% "akka-coordination"   % akkaVersion,
 
@@ -285,20 +260,13 @@ libraryDependencies ++= Seq(
   //"com.twitter"     %%  "bijection-avro"  %   "0.9.6",  // ++ 2.12.13!
   //"org.apache.avro" %   "avro-compiler"   %   "1.10.1",
 
-  //"ru.odnoklassniki" % "one-nio" % "1.2.0",
-
-
-  //https://kwark.github.io/refined-in-practice/#1
-  //"eu.timepit" %% "refined"                 % "0.9.24",
-  //"eu.timepit" %% "refined-shapeless"       % "0.9.24",
-
   "commons-codec"   %   "commons-codec"   %   "1.11",
   "org.scalatest"   %%  "scalatest"       %   "3.2.2" % Test,
 
   "com.typesafe.akka" %% "akka-stream-testkit" % akkaVersion,
 
   "com.typesafe.akka" %% "akka-http-testkit" %  akkaHttpVersion % Test,
-  "com.typesafe.akka" %% "akka-testkit"      %  akkaVersion     % Test
+  "com.typesafe.akka" %% "akka-testkit"      %  akkaVersion     % Test,
 
   //https://github.com/chatwork/akka-guard
   //"com.chatwork" %% "akka-guard-http-typed" % "1.5.3-SNAPSHOT",
@@ -306,15 +274,11 @@ libraryDependencies ++= Seq(
   //https://github.com/typelevel/algebra/blob/46722cd4aa4b01533bdd01f621c0f697a3b11040/docs/docs/main/tut/typeclasses/overview.md
   //"org.typelevel" %% "algebra" % "2.1.0",
 
-  // li haoyi ammonite repl embed
-  //("com.lihaoyi" % "ammonite" % "2.3.8-36-1cce53f3"  % "test").cross(CrossVersion.full),
-
   //https://github.com/politrons/reactiveScala/blob/master/scala_features/src/main/scala/app/impl/scala/ReflectionFeature.scala
   //"org.scala-lang" % "scala-reflect" % scalaVersion.value
 
+  "com.lihaoyi" % "ammonite" % "2.4.0" % "test" cross CrossVersion.full
 )
-
-//addCompilerPlugin("org.typelevel" % "kind-projector" % "0.13.0" cross CrossVersion.full)
 
 //comment out for test:run
 //Compile / run / fork := true
@@ -327,13 +291,19 @@ AvroConfig / fieldVisibility := "private"
 AvroConfig / enableDecimalLogicalType := true
 //AvroConfig / sourceDirectory := baseDirectory.value / "src" / "main" / "resources" / "avro"
 
+//sbtPlugin := true // this makes a difference
 
 // Scalafix
+
 ThisBuild / scalafixDependencies += "com.github.liancheng" %% "organize-imports" % "0.5.0"
 
-//Global / semanticdbEnabled := true
-//Global / semanticdbVersion := scalafixSemanticdb.revision
-//Global / watchAntiEntropy := scala.concurrent.duration.FiniteDuration(5, java.util.concurrent.TimeUnit.SECONDS)
+Global / semanticdbEnabled := true
+Global / semanticdbVersion := scalafixSemanticdb.revision
+Global / watchAntiEntropy := scala.concurrent.duration.FiniteDuration(5, java.util.concurrent.TimeUnit.SECONDS)
+
+addCommandAlias("sfix", "scalafix OrganizeImports; test:scalafix OrganizeImports")
+addCommandAlias("sFixCheck", "scalafix --check OrganizeImports; test:scalafix --check OrganizeImports")
+addCommandAlias("c", "compile")
 
 
 // transitive dependency of akka 2.5x that is brought in
@@ -352,8 +322,8 @@ dependencyOverrides ++= Seq(
 // ammonite repl
 // test:run
 
-sourceGenerators in Test += Def.task {
-  val file = (sourceManaged in Test).value / "amm.scala"
+Test / sourceGenerators += Def.task {
+  val file = (Test / sourceManaged).value / "amm.scala"
   IO.write(file, """object amm extends App { ammonite.Main().run() }""")
   Seq(file)
 }.taskValue

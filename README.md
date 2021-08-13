@@ -649,6 +649,12 @@ https://github.com/akka/akka/tree/146944f99934557eac72e6dc7fa25fc6b2f0f11c/akka-
 7. Java-script front end for the chat
 
 8. Distributed schema registry using DData
+      
+9.
+
+https://github.com/lightbend/cloudflow/search?q=sbt-avrohugger
+https://github.com/julianpeeters/sbt-avrohugger
+
 
                     
 ## Notes
@@ -657,3 +663,8 @@ a.c.sharding.DDataShardCoordinator
 
 akka://fsa@192.168.0.30:2551/system/sharding/tenantsCoordinator/singleton/coordinator/RememberEntitiesStore] a.c.s.i.DDataRememberEntitiesCoordinatorStore 
 akka.cluster.sharding.PersistentShardCoordinator or akka.cluster.sharding.DDataShardCoordinator
+
+
+### Similar  examples of WebSocket chat system using only akka streams with the help of MergeHub and BroadcastHub
+https://github.com/pbernet/akka_streams_tutorial/blob/master/src/main/scala/akkahttp/WebsocketChatEcho.scala
+https://github.com/calvinlfer/akka-http-streaming-response-examples/blob/master/src/main/scala/com/experiments/calvin/WebsocketStreamsMain.scala

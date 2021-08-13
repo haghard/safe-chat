@@ -26,7 +26,6 @@ import akka.stream.scaladsl.Source
 import com.safechat.Boot
 import com.safechat.Boot.AppCfg
 import com.safechat.actors.ChatRoomClassic.chatRoomHub
-//import com.safechat.actors.ChatRoomEvent.UserTextAdded
 import com.safechat.domain.RingBuffer
 
 import java.util.TimeZone

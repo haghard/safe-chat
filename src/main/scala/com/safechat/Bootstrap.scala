@@ -5,7 +5,13 @@ package com.safechat
 import akka.Done
 import akka.actor.Address
 import akka.actor.CoordinatedShutdown
-import akka.actor.CoordinatedShutdown.{PhaseActorSystemTerminate, PhaseBeforeServiceUnbind, PhaseClusterExitingDone, PhaseServiceRequestsDone, PhaseServiceStop, PhaseServiceUnbind, Reason}
+import akka.actor.CoordinatedShutdown.PhaseActorSystemTerminate
+import akka.actor.CoordinatedShutdown.PhaseBeforeServiceUnbind
+import akka.actor.CoordinatedShutdown.PhaseClusterExitingDone
+import akka.actor.CoordinatedShutdown.PhaseServiceRequestsDone
+import akka.actor.CoordinatedShutdown.PhaseServiceStop
+import akka.actor.CoordinatedShutdown.PhaseServiceUnbind
+import akka.actor.CoordinatedShutdown.Reason
 import akka.coordination.lease.cassandra.CassandraLease
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Route

@@ -16,35 +16,35 @@ final case class UserState(
   counters: Map[UserId, Long] = Map.empty
 )
 
-sealed trait Op[F[_], In] {
+sealed trait Mut[F[_], In] {
   def update(state: UserState)(args: In): UserState
 }
 
 //https://github.com/softwaremill/quicklens
 
 //Mutators specialized for UserState
-object Op {
+object Mut {
 
   type Id[T] = T
 
-  implicit object SetUser extends Op[Id, UserId] {
+  implicit object SetUser extends Mut[Id, UserId] {
     def update(state: UserState)(args: UserId): UserState =
       state.modify(_.id).setTo(args)
   }
 
-  implicit object AddSibling extends Op[Set, UserId] {
+  implicit object AddSibling extends Mut[Set, UserId] {
     def update(state: UserState)(args: UserId): UserState =
       state.modify(_.siblings).using(_ + args)
   }
 
-  implicit object RmSibling extends Op[Set, UserId] {
+  implicit object RmSibling extends Mut[Set, UserId] {
     def update(state: UserState)(args: UserId): UserState =
       state.modify(_.siblings).using(_ - args)
   }
 
   /*Op[({ type UserIdMap[A] = Map[UserId, A] })#UserIdMap, (UserId, String)]*/
   //implicit object AddPermition extends Op[Map[UserId, ?], (UserId, String)] {
-  implicit object AddPermition extends Op[({ type UserIdMap[A] = Map[UserId, A] })#UserIdMap, (UserId, String)] {
+  implicit object AddPermition extends Mut[({ type UserIdMap[A] = Map[UserId, A] })#UserIdMap, (UserId, String)] {
     def update(state: UserState)(args: (UserId, String)): UserState = {
       val userId = args._1
       val p      = args._2
@@ -55,48 +55,46 @@ object Op {
 }
 
 //Describes targeted changes
-sealed trait Mod[State] { self ⇒
-  def +(that: Mod[State]): Mod[State] =
-    Mod.Both(self, that) //Mod.Both(that, self)
+sealed trait Patch[State] { self ⇒
+  def +(that: Patch[State]): Patch[State] =
+    Patch.Both(self, that) //Mod.Both(that, self)
 }
 
-object Mod {
+object Patch {
   type Id[T] = T
 
-  final case class Both[State](a: Mod[State], b: Mod[State]) extends Mod[State]
+  final case class Both[State](a: Patch[State], b: Patch[State]) extends Patch[State]
 
-  //these go to the journal instead of events
-  //final case class Initial[State](s: State) extends Patch[State]
-
-  final case class SetUserId(id: String, OP: Op[Id, UserId] = Op.SetUser)          extends Mod[UserState]
-  final case class AddSiblingId(id: String, OP: Op[Set, UserId] = Op.AddSibling)   extends Mod[UserState]
-  final case class RemoveSiblingId(id: String, OP: Op[Set, UserId] = Op.RmSibling) extends Mod[UserState]
+  //These patches go to the journal instead of events
+  final case class SetUserId(id: String, M: Mut[Id, UserId] = Mut.SetUser)          extends Patch[UserState]
+  final case class AddSiblingId(id: String, M: Mut[Set, UserId] = Mut.AddSibling)   extends Patch[UserState]
+  final case class RemoveSiblingId(id: String, M: Mut[Set, UserId] = Mut.RmSibling) extends Patch[UserState]
   final case class AddUserPermitions(
     id: String,
     permision: String,
-    OP: Op[({ type UserIdMap[A] = Map[UserId, A] })#UserIdMap, (UserId, String)] = Op.AddPermition
+    M: Mut[({ type UserIdMap[A] = Map[UserId, A] })#UserIdMap, (UserId, String)] = Mut.AddPermition
     //OP: Op[Map[UserId, ?], (UserId, String)] = Op.AddPermition
-  ) extends Mod[UserState]
+  ) extends Patch[UserState]
 }
 
 object Example extends App {
-  import Mod._
+  import Patch._
 
-  def compile(patch: Mod[UserState]): UserState ⇒ UserState = { state ⇒ eval(state, patch) }
-  def compileRec(patch: Mod[UserState]): UserState ⇒ UserState = { state ⇒ evalRec(state, patch).result }
+  def compile(patch: Patch[UserState]): UserState ⇒ UserState = { state ⇒ eval(state, patch) }
+  def compileRec(patch: Patch[UserState]): UserState ⇒ UserState = { state ⇒ evalRec(state, patch).result }
 
-  def setUserId(id: String): Mod[UserState]          = SetUserId(id)
-  def addSibling(id: String): Mod[UserState]         = AddSiblingId(id)
-  def rmSibling(id: String): Mod[UserState]          = RemoveSiblingId(id)
-  def addPerm(id: String, p: String): Mod[UserState] = AddUserPermitions(id, p)
+  def setUserId(id: String): Patch[UserState]          = SetUserId(id)
+  def addSibling(id: String): Patch[UserState]         = AddSiblingId(id)
+  def rmSibling(id: String): Patch[UserState]          = RemoveSiblingId(id)
+  def addPerm(id: String, p: String): Patch[UserState] = AddUserPermitions(id, p)
 
-  def evalRec(state: UserState, U: Mod[UserState]): TailRec[UserState] =
+  def evalRec(state: UserState, U: Patch[UserState]): TailRec[UserState] =
     U match {
       case Both(a, b)           ⇒ tailcall(evalRec(state, a)).flatMap(s ⇒ evalRec(s, b))
-      case m: SetUserId         ⇒ done(m.OP.update(state)(UserId(m.id)))
-      case m: AddSiblingId      ⇒ done(m.OP.update(state)(UserId(m.id)))
-      case m: RemoveSiblingId   ⇒ done(m.OP.update(state)(UserId(m.id)))
-      case m: AddUserPermitions ⇒ done(m.OP.update(state)((UserId(m.id), m.permision)))
+      case m: SetUserId         ⇒ done(m.M.update(state)(UserId(m.id)))
+      case m: AddSiblingId      ⇒ done(m.M.update(state)(UserId(m.id)))
+      case m: RemoveSiblingId   ⇒ done(m.M.update(state)(UserId(m.id)))
+      case m: AddUserPermitions ⇒ done(m.M.update(state)((UserId(m.id), m.permision)))
     }
 
   val maxStackSize = 8 //20000
@@ -104,11 +102,11 @@ object Example extends App {
   //apples in the reverse order
   def evalOptimized(
     state: UserState,
-    mod: Mod[UserState],
-    acc: ArrayBuffer[Mod[UserState]] = new ArrayBuffer[Mod[UserState]]
+    mod: Patch[UserState],
+    acc: ArrayBuffer[Patch[UserState]] = new ArrayBuffer[Patch[UserState]]
   ): UserState = {
 
-    def evalState(state: UserState, acc: ArrayBuffer[Mod[UserState]]): UserState = {
+    def evalState(state: UserState, acc: ArrayBuffer[Patch[UserState]]): UserState = {
       var cur = state
       acc.foreach { m ⇒
         cur = eval(cur, m)
@@ -130,11 +128,11 @@ object Example extends App {
   //apples in direct order inside batches
   def evalOptimized2(
     state: UserState,
-    mod: Mod[UserState],
-    acc: List[Mod[UserState]] = Nil
+    mod: Patch[UserState],
+    acc: List[Patch[UserState]] = Nil
   ): UserState = {
 
-    def evalState(state: UserState, acc: List[Mod[UserState]]): UserState = {
+    def evalState(state: UserState, acc: List[Patch[UserState]]): UserState = {
       var cur = state
       //println(acc.mkString(" ,"))
       acc.foreach { m ⇒
@@ -162,7 +160,7 @@ object Example extends App {
     }
   }
 
-  def eval(state: UserState, m: Mod[UserState]): UserState =
+  def eval(state: UserState, m: Patch[UserState]): UserState =
     m match {
       //if (next.isEmpty) eval(state, a, Some(b)) else eval(state, next.get, None)
       case Both(both, single) ⇒
@@ -171,18 +169,18 @@ object Example extends App {
         //direct order
         eval(eval(state, both), single)
       //stackoverflow
-      case m: SetUserId ⇒ m.OP.update(state)(UserId(m.id))
+      case m: SetUserId ⇒ m.M.update(state)(UserId(m.id))
       case m: AddSiblingId ⇒
         println("add" + m.id)
-        m.OP.update(state)(UserId(m.id))
-      case m: RemoveSiblingId   ⇒ m.OP.update(state)(UserId(m.id))
-      case m: AddUserPermitions ⇒ m.OP.update(state)((UserId(m.id), m.permision))
+        m.M.update(state)(UserId(m.id))
+      case m: RemoveSiblingId   ⇒ m.M.update(state)(UserId(m.id))
+      case m: AddUserPermitions ⇒ m.M.update(state)((UserId(m.id), m.permision))
     }
 
   //java.lang.StackOverflowError
   val ops = List.range(1, 15).foldLeft(setUserId("0"))((acc, c) ⇒ acc + addSibling(c.toString))
 
-  //val ops: Mod[UserState] = setUserId("9") + addSibling("1") + addSibling("2") + addPerm("2", "all") + rmSibling("1")
+  //val ops: Patch[UserState] = setUserId("9") + addSibling("1") + addSibling("2") + addPerm("2", "all") + rmSibling("1")
 
   //val ops = List.range(2, 15).foldLeft(setUserId("1"))((acc, c) ⇒ acc + addSibling(c.toString))
 

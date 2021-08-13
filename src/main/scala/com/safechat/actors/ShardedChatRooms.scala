@@ -21,9 +21,7 @@ import ShardedChatRooms._
 
 object ShardedChatRooms {
 
-  akka.persistence.typed.crdt.LwwTime
-  akka.persistence.typed.crdt.ORSet
-  akka.persistence.typed.crdt.Counter
+  val numberOfShards = 1 << 8
 
   object ChatRoomsMsgExtractor {
     //We want to have one shard per one chat room so that we could achieve isolations for all rooms
@@ -60,9 +58,8 @@ final class ShardedChatRooms(
   system: ActorSystem[Nothing]
 ) {
 
-  val numberOfShards = 1 << 8
-  val sharding       = ClusterSharding(system)
-  val settings       = ClusterShardingSettings(system)
+  val sharding = ClusterSharding(system)
+  val settings = ClusterShardingSettings(system)
   /*
         rememberEntities == false ensures that a shard entity won't be recreates/restarted automatically on
         a different `ShardRegion` due to rebalance, crash or leave (graceful exit). That is exactly what we want,
@@ -117,7 +114,7 @@ final class ShardedChatRooms(
     .withSettings(settings)
     .withStopMessage(Command.handOffChatRoom)
 
-    //For any shardId that has not been allocated it will be allocated to the requesting node (like a sticky session)
+    //For any shardId that has not been allocated it will be allocated on the requesting node (like a sticky session)
     //.withAllocationStrategy(new akka.cluster.sharding.external.ExternalShardAllocationStrategy(system, ChatRoomEntity.entityKey.name))
 
     //default AllocationStrategy
@@ -127,6 +124,8 @@ final class ShardedChatRooms(
       akka.cluster.sharding.ShardCoordinator.ShardAllocationStrategy
         .leastShardAllocationStrategy(numberOfShards / 5, 0.2)
     )
+    //or
+    //.withAllocationStrategy(new DynamicLeastShardAllocationStrategy(1, 10, 2, 0.0))
     .withEntityProps(akka.actor.typed.Props.empty.withDispatcherFromConfig(Boot.dbDispatcher))
 
   implicit val askTimeout = akka.util.Timeout(totalFailoverTimeout)
@@ -134,7 +133,7 @@ final class ShardedChatRooms(
   //val chatShardRegion = sharding.init(entity)
   val chatShardRegion = ShardedChatRoomClassic(system.toClassic, totalFailoverTimeout, kss, appCfg)
 
-  //Example how to use explicit client:  akka.kafka.cluster.sharding.KafkaClusterSharding
+  //Example how to use explicit client:  akka.kafka.cluster.sharding.KafkaClusterSharding from "com.typesafe.akka" %% "akka-stream-kafka-cluster-sharding" % AlpakkaKafka,
   //val client             = akka.cluster.sharding.external.ExternalShardAllocation(system).clientFor(ChatRoomEntity.entityKey.name)
   //val done: Future[akka.Done] = client.updateShardLocation("chat0", akka.actor.Address("akka", Server.AkkaSystemName, "127.0.0.1", 2552))
 

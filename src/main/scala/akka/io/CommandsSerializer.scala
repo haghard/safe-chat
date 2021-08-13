@@ -9,7 +9,10 @@ import akka.remote.WireFormats.ActorRefData
 import akka.remote.serialization.ProtobufSerializer
 import akka.serialization.ByteBufferSerializer
 import akka.serialization.SerializerWithStringManifest
-import com.safechat.actors.{ChatId, Command, Reply, UserId}
+import com.safechat.actors.ChatId
+import com.safechat.actors.Command
+import com.safechat.actors.Reply
+import com.safechat.actors.UserId
 import com.safechat.avro.command.CmdEnvelope
 import org.apache.avro.Schema
 import org.apache.avro.io.BinaryEncoder
@@ -77,7 +80,8 @@ object CommandsSerializer {
   }
 
   def read[T](buf: ByteBuffer, writerSchema: Schema, readerSchema: Schema): T = {
-    val reader  = new SpecificDatumReader[T](writerSchema, readerSchema)
+    val reader = new SpecificDatumReader[T](writerSchema, readerSchema)
+    //val reader  = new SpecificDatumReader[T](writerSchema)
     val decoder = DecoderFactory.get.directBinaryDecoder(new ByteBufferInputStream(buf), null)
     reader.read(null.asInstanceOf[T], decoder)
   }
