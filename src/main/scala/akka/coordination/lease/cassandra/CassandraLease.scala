@@ -21,6 +21,9 @@ import scala.util.control.NonFatal
   * https://github.com/dekses/cassandra-lock/blob/master/src/main/java/com/dekses/cassandra/lock/LockFactory.java
   * https://www.datastax.com/blog/consensus-cassandra
   *
+  *
+  * CREATE TABLE IF NOT EXISTS $keyspace.leases (name text PRIMARY KEY, owner text) with default_time_to_live = $ttl
+  *
   * select * from leases where name = 'safe-chat-akka-sbr';
   */
 object CassandraLease {
@@ -113,14 +116,17 @@ final class CassandraLease(system: ExtendedActorSystem, leaseTaken: AtomicBoolea
     *   (https://doc.akka.io/docs/akka-enhancements/current/split-brain-resolver.html#expected-failover-time)
     *   unless I exit gracefully within that time interval (on exit we attempt to cleanup the lease)
     *
-    *   If I grabbed the lock, others should get back with false as soon as possible so that we could shutdown self.
+    *  If the winner grabs the lock, others should get back with false as soon as possible so that they could shutdown themselves.
     *
-    *  Total Failover Time = failure detection (~ 7 seconds) + stable-after + down-removal-margin (by default ~ stable-after)
-    *  results in ~ 50 sec.
+    *  Total Failover Time:
+    *    failure detection (5 seconds)
+    *    stable-after +
+    *    down-removal-margin (by default ~ stable-after)
     *
-    *  We have TTL = 60 on `leases` table.
+    *  (5 s) + (7 s) + (7 s * 3/4) ~ 20 secs
     *
-    *  If it die right after acquiring (in between acquiring and release), well this is nothing we can do.
+    *  We have TTL = 60 s on `leases` table.
+    *
     */
   override def acquire(leaseLostCallback: Option[Throwable] ⇒ Unit): Future[Boolean] =
     cqlSession
