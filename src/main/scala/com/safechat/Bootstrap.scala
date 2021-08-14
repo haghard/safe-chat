@@ -5,13 +5,18 @@ package com.safechat
 import akka.Done
 import akka.actor.Address
 import akka.actor.CoordinatedShutdown
-import akka.actor.CoordinatedShutdown.{PhaseActorSystemTerminate, PhaseBeforeServiceUnbind, PhaseClusterExitingDone, PhaseServiceRequestsDone, PhaseServiceStop, PhaseServiceUnbind, Reason}
+import akka.actor.CoordinatedShutdown.PhaseActorSystemTerminate
+import akka.actor.CoordinatedShutdown.PhaseBeforeServiceUnbind
+import akka.actor.CoordinatedShutdown.PhaseClusterExitingDone
+import akka.actor.CoordinatedShutdown.PhaseServiceRequestsDone
+import akka.actor.CoordinatedShutdown.PhaseServiceStop
+import akka.actor.CoordinatedShutdown.PhaseServiceUnbind
+import akka.actor.CoordinatedShutdown.Reason
 import akka.coordination.lease.cassandra.CassandraLease
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Route
 import akka.management.scaladsl.AkkaManagement
 import akka.stream.UniqueKillSwitch
-import akka.stream.scaladsl.Sink
 import com.safechat.Bootstrap.leaseOwnerFromAkkaMember
 
 import java.util.concurrent.atomic.AtomicReference
@@ -47,16 +52,18 @@ final case class Bootstrap(
     .getSeconds
     .second
 
-  val f = Http()
+  /*val f = Http()
     .newServerAt(httpBindHostName, port)
     .connectionSource()
     .to(Sink.foreach { con ⇒
       classicSystem.log.info("Accepted con from {}", con.remoteAddress)
       con.handleWith(routes)
     })
-    .run()
+    .run()*/
 
-  //val f = Http().newServerAt(host, port).bindFlow(routes)
+  val f = Http()
+    .newServerAt(httpBindHostName, port)
+    .bindFlow(routes)
 
   f.onComplete {
     case Failure(ex) ⇒

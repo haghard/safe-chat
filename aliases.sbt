@@ -51,6 +51,7 @@ addCommandAlias(
 
 // Local
 
+//192.168.77.114
 //sbt localFirst
 addCommandAlias(
   "localFirst",
@@ -60,7 +61,7 @@ addCommandAlias(
   "-DHTTP_PORT=8080\n" +
   "-Dakka.remote.artery.canonical.hostname=127.0.0.1\n" +
   "-Dakka.remote.artery.canonical.port=2550\n" +
-  "-DCONTACT_POINTS=127.0.0.1,127.0.0.2,127.0.0.3\n" +
+  "-DCONTACT_POINTS=127.0.0.1,127.0.0.2\n" +
   "-DCASSANDRA=127.0.0.1:9042\n" +
   "-DCAS_PWS=...\n" +
   "-DCAS_USR=chat"
@@ -76,7 +77,7 @@ addCommandAlias(
   "-DHTTP_PORT=8080\n" +
   "-Dakka.remote.artery.canonical.hostname=127.0.0.2\n" +
   "-Dakka.remote.artery.canonical.port=2550\n" +
-  "-DCONTACT_POINTS=127.0.0.1,127.0.0.2,127.0.0.3\n" +
+  "-DCONTACT_POINTS=127.0.0.1,127.0.0.2\n" +
   "-DCASSANDRA=127.0.0.1:9042\n" +
   "-DCAS_PWS=...\n" +
   "-DCAS_USR=chat"
@@ -92,7 +93,7 @@ addCommandAlias(
   "-DHTTP_PORT=8080\n" +
   "-Dakka.remote.artery.canonical.hostname=127.0.0.3\n" +
   "-Dakka.remote.artery.canonical.port=2550\n" +
-  "-DCONTACT_POINTS=127.0.0.1,127.0.0.2,127.0.0.3\n" +
+  "-DCONTACT_POINTS=127.0.0.1,127.0.0.2\n" +
   "-DCASSANDRA=127.0.0.1:9042\n" +
   "-DCAS_PWS=...\n" +
   "-DCAS_USR=chat"

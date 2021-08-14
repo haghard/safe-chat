@@ -7,7 +7,10 @@ import com.safechat.actors.ChatRoomEvent
 import com.safechat.actors.ChatRoomState
 import com.safechat.actors.Command
 import com.safechat.actors.Reply
-import com.safechat.actors.common.Aggregate.{AggReply, PersistEvent, RejectCmd, ValidationRejection}
+import com.safechat.actors.common.Aggregate.AggReply
+import com.safechat.actors.common.Aggregate.PersistEvent
+import com.safechat.actors.common.Aggregate.RejectCmd
+import com.safechat.actors.common.Aggregate.ValidationRejection
 import com.safechat.domain.RingBuffer
 
 import java.util.TimeZone

@@ -279,7 +279,8 @@ object Boot extends Ops {
 
     val memorySize = ManagementFactory.getOperatingSystemMXBean
       .asInstanceOf[com.sun.management.OperatingSystemMXBean]
-      .getTotalMemorySize()
+      .getTotalPhysicalMemorySize
+    //.getTotalMemorySize()
     val runtimeInfo = new StringBuilder()
       .append('\n')
       .append(s"Cores:${Runtime.getRuntime.availableProcessors}")

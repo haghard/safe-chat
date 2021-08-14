@@ -27,8 +27,9 @@ object ShardedChatRoomClassic {
       settings = ClusterShardingSettings(system).withPassivateIdleAfter(appCfg.passivationAfter), //20.seconds 5.minutes
       extractShardId = ChatRoomClassic.shardExtractor,
       extractEntityId = ChatRoomClassic.idExtractor,
-      allocationStrategy = ShardCoordinator.ShardAllocationStrategy.leastShardAllocationStrategy(20, 0.5),
-      //allocationStrategy = new external.ExternalShardAllocationStrategy(system, users.serviceName),
+      allocationStrategy =
+        ShardCoordinator.ShardAllocationStrategy.leastShardAllocationStrategy(ShardedChatRooms.numberOfShards / 5, 0.2),
+      //allocationStrategy = new akka.cluster.sharding.external.ExternalShardAllocationStrategy(system, ChatRoom.entityKey.name),
       handOffStopMessage = Command.handOffChatRoom //akka.actor.PoisonPill
     )
 

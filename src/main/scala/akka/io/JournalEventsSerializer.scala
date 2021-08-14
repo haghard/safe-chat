@@ -6,7 +6,8 @@ package io
 import akka.actor.ExtendedActorSystem
 import akka.io.JournalEventsSerializer.withEnvelope
 import akka.serialization.SerializerWithStringManifest
-import com.safechat.actors.{ChatRoomEvent, UserId}
+import com.safechat.actors.ChatRoomEvent
+import com.safechat.actors.UserId
 import com.safechat.domain.RingBuffer
 import com.safechat.programs.SchemaRegistry
 import org.apache.avro.Schema
