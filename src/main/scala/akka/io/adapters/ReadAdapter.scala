@@ -10,7 +10,7 @@ import akka.persistence.journal.ReadEventAdapter
   */
 final class ReadAdapter extends ReadEventAdapter {
 
-  override def fromJournal(event: Any, manifest: String): EventSeq = {
+  override def fromJournal(event: Any, manifest: String): EventSeq =
     /*
     Psevdo code
     case ev: EventV1 =>
@@ -24,7 +24,6 @@ final class ReadAdapter extends ReadEventAdapter {
     case ev: EventV3 =>
       println("V3 event, no promotion needed")
       EventSeq.single(ev)
-    */
+     */
     EventSeq.single(event)
-  }
 }

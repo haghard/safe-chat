@@ -21,7 +21,6 @@ import scala.util.control.NonFatal
   * https://github.com/dekses/cassandra-lock/blob/master/src/main/java/com/dekses/cassandra/lock/LockFactory.java
   * https://www.datastax.com/blog/consensus-cassandra
   *
-  *
   * CREATE TABLE IF NOT EXISTS $keyspace.leases (name text PRIMARY KEY, owner text) with default_time_to_live = $ttl
   *
   * select * from leases where name = 'safe-chat-akka-sbr';
@@ -114,7 +113,6 @@ final class CassandraLease(system: ExtendedActorSystem, leaseTaken: AtomicBoolea
   /** This implementation gives the following guaranties:
     *   If the winner grabs the lock, others should get back with false as soon as possible so that they could shutdown themselves.
     *
-    *
     *  Total Failover Time:
     *    failure detection (5 seconds)
     *    stable-after +
@@ -123,7 +121,6 @@ final class CassandraLease(system: ExtendedActorSystem, leaseTaken: AtomicBoolea
     *  (5 s) + (7 s) + (7 s * 3/4) ~ 20 secs
     *
     *  We have TTL = 60 s on `leases` table.
-    *
     */
   override def acquire(leaseLostCallback: Option[Throwable] ⇒ Unit): Future[Boolean] =
     cqlSession
