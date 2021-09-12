@@ -4,7 +4,7 @@ import sbtdocker.ImageName
 val projectName   = "safe-chat"
 val Version       = "0.5.1"
 
-val akkaVersion     = "2.6.15"
+val akkaVersion     = "2.6.16"
 val akkaHttpVersion = "10.2.6"
 val AkkaManagement  = "1.1.0"
 val AkkaPersistenceCassandraVersion = "1.0.5"
