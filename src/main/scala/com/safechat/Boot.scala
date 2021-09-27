@@ -193,6 +193,7 @@ object Boot extends Ops {
 
     // Starting the bootstrap process needs to be done explicitly
     akka.management.cluster.bootstrap.ClusterBootstrap(system).start()
+    akka.discovery.Discovery(system).loadServiceDiscovery("config")
 
     /*akka.cluster.Cluster(system).registerOnMemberUp {
       val ts = system.toTyped
