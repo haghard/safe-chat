@@ -175,14 +175,13 @@ object JournalEventsSerializer {
   * allowed, to maintain compatibility.
   *
   * Avro provides full compatibility support.
-  * Backward compatibility is necessary for reading the old version of events.
-  * Forward compatibility is required for rolling updates when at the same time old and new versions of events
-  * can be exchanged between processes.
   *
   * 1.  Backward compatible change - write with V1 and read with V2
   * 2.  Forward compatible change -  write with V2 and read with V1
   * 3.  Fully compatible if your change is Backward and Forward compatible
   * 4.  Breaking is non of those
+  *
+  * Full compatibility is required for rolling updates. Old and new versions of events can be exchanged between processes at the same time.
   *
   * Advices when writing Avro schema:
   *   1. Add field with defaults

@@ -4,10 +4,12 @@ import sbtdocker.ImageName
 val projectName   = "safe-chat"
 val Version       = "0.5.1"
 
-val akkaVersion     = "2.6.16"
+val akkaVersion     = "2.6.17"
 val akkaHttpVersion = "10.2.6"
-val AkkaManagement  = "1.1.0"
+val AkkaManagement  = "1.1.1"
 val AkkaPersistenceCassandraVersion = "1.0.5"
+
+//val AkkaProjectionVersion = "1.2.2"
 
 promptTheme := ScalapenosTheme
 
@@ -228,8 +230,17 @@ libraryDependencies ++= Seq(
 
   "com.typesafe.akka" %% "akka-cluster-sharding-typed"  % akkaVersion,
 
-  "com.typesafe.akka" %% "akka-persistence-typed"       % akkaVersion,
-  "com.typesafe.akka" %% "akka-persistence-query"       % akkaVersion,
+  "com.typesafe.akka"  %% "akka-persistence-typed"       % akkaVersion,
+  "com.typesafe.akka"  %% "akka-persistence-query"       % akkaVersion,
+
+  //https://doc.akka.io/docs/akka-projection/current/eventsourced.html
+  //"com.lightbend.akka" %% "akka-projection-eventsourced" % AkkaProjectionVersion,
+
+  //Offset in Cassandra  https://doc.akka.io/docs/akka-projection/current/cassandra.html
+  //"com.lightbend.akka" %% "akka-projection-cassandra"    % AkkaProjectionVersion,
+  //"com.lightbend.akka" %% "akka-projection-jdbc"         % AkkaProjectionVersion,
+
+
   ("com.typesafe.akka" %% "akka-persistence-cassandra"  % AkkaPersistenceCassandraVersion) //-RC1
     .excludeAll(ExclusionRule(organization = "io.netty", name="netty-all")), //to exclude netty-all-4.1.39.Final.jar
 
@@ -251,17 +262,17 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-http"            % akkaHttpVersion,
   "com.typesafe.akka" %% "akka-http-spray-json" % akkaHttpVersion,
 
-  "ch.qos.logback" % "logback-classic" % "1.2.3",
+  "ch.qos.logback" % "logback-classic" % "1.2.6",
 
   "org.apache.avro" %   "avro"         %   "1.10.1",
 
-  "com.softwaremill.quicklens" %% "quicklens" % "1.6.1",
+  "com.softwaremill.quicklens" %% "quicklens" % "1.7.4",
 
   //"com.twitter"     %%  "bijection-avro"  %   "0.9.6",  // ++ 2.12.13!
   //"org.apache.avro" %   "avro-compiler"   %   "1.10.1",
 
   "commons-codec"   %   "commons-codec"   %   "1.11",
-  "org.scalatest"   %%  "scalatest"       %   "3.2.2" % Test,
+  "org.scalatest"   %%  "scalatest"       %   "3.2.9" % Test,
 
   "com.typesafe.akka" %% "akka-stream-testkit" % akkaVersion,
 

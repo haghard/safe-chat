@@ -90,18 +90,15 @@ http GET 188.68.210.125:8080/cluster/shards/chat-rooms
 ### Schema evolution
 
 Schema evolution allows you to update the schema used to write new data, while maintaining backwards compatibility with the schema(s) of your old data.
-Then you can read it all together, as if all of the data has one schema. Of course there are precise rules governing the changes
+Then you can read it all together, as if all the data has one schema. Of course there are precise rules governing the changes
 allowed, to maintain compatibility.
 
 Avro provides full compatibility support.
-Backward compatibility is necessary for reading the old version of events.
-Forward compatibility is required for rolling updates when at the same time old and new versions of events
-can be exchanged between processes.
 
 1.  Backward compatible change - write with V1 and read with V2
 2.  Forward compatible change -  write with V2 and read with V1
 3.  Fully compatible if your change is Backward and Forward compatible
-4.  Breaking is non of those
+4.  Breaking - none of those
 
 Advice when writing Avro schema
  * Add field with defaults
