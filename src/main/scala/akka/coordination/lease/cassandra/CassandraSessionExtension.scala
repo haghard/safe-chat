@@ -58,7 +58,7 @@ class CassandraSessionExtension(system: ActorSystem) extends Extension {
     *  We have TTL = 60 for safety
     */
   private def createLeaseTable(cassandraSession: CassandraSession) = {
-    val ttl = 60
+    val ttl = 25  //total failover + 7
     val stmt =
       s"CREATE TABLE IF NOT EXISTS $keyspace.leases (name text PRIMARY KEY, owner text) with default_time_to_live = $ttl"
     cassandraSession executeDDL stmt
