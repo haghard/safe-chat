@@ -308,13 +308,13 @@ AvroConfig / enableDecimalLogicalType := true
 
 // Scalafix
 
-/*
-ThisBuild / scalafixDependencies += "com.github.liancheng" %% "organize-imports" % "0.5.0"
+
+ThisBuild / scalafixDependencies += "com.github.liancheng" %% "organize-imports" % "0.6.0"
 
 Global / semanticdbEnabled := true
 Global / semanticdbVersion := scalafixSemanticdb.revision
 Global / watchAntiEntropy := scala.concurrent.duration.FiniteDuration(5, java.util.concurrent.TimeUnit.SECONDS)
-*/
+
 
 addCommandAlias("sfix", "scalafix OrganizeImports; test:scalafix OrganizeImports")
 addCommandAlias("sFixCheck", "scalafix --check OrganizeImports; test:scalafix --check OrganizeImports")
