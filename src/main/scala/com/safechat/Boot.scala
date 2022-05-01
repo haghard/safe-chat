@@ -18,7 +18,6 @@ import scala.collection.Map
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.jdk.CollectionConverters._
-import scala.util.Try
 
 object Boot extends Ops {
 

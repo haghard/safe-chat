@@ -279,7 +279,7 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-stream-testkit" % akkaVersion,
 
   "com.typesafe.akka" %% "akka-http-testkit" %  akkaHttpVersion % Test,
-  "com.typesafe.akka" %% "akka-testkit"      %  akkaVersion     % Test
+  "com.typesafe.akka" %% "akka-testkit"      %  akkaVersion     % Test,
 
   //https://github.com/chatwork/akka-guard
   //"com.chatwork" %% "akka-guard-http-typed" % "1.5.3-SNAPSHOT",
@@ -290,7 +290,7 @@ libraryDependencies ++= Seq(
   //https://github.com/politrons/reactiveScala/blob/master/scala_features/src/main/scala/app/impl/scala/ReflectionFeature.scala
   //"org.scala-lang" % "scala-reflect" % scalaVersion.value
 
-  //"com.lihaoyi" % "ammonite" % "2.4.0" % "test" cross CrossVersion.full
+  "com.lihaoyi" % "ammonite" % "2.5.2" % "test" cross CrossVersion.full,
 )
 
 //comment out for test:run
@@ -319,6 +319,7 @@ Global / watchAntiEntropy := scala.concurrent.duration.FiniteDuration(5, java.ut
 addCommandAlias("sfix", "scalafix OrganizeImports; test:scalafix OrganizeImports")
 addCommandAlias("sFixCheck", "scalafix --check OrganizeImports; test:scalafix --check OrganizeImports")
 addCommandAlias("c", "compile")
+addCommandAlias("r", "reload")
 
 
 // transitive dependency of akka 2.5x that is brought in
