@@ -623,6 +623,55 @@ sbt localSecond
 
 ```
 
+### Cluster split brain failures
+                                
+## The Algorithm
+
+https://blog.softwaremill.com/akka-cluster-split-brain-failures-are-you-ready-for-it-d9406b97e099
+https://doc.akka.io/docs/akka-enhancements/current/split-brain-resolver.html#expected-failover-time
+
+akka.cluster.sbr.SplitBrainResolverBase
+
+1. It takes around 5 sec (with default settings) by FD to mark unreachable nodes. When it starts detecting unreachable members, there can't be any convergence anymore.
+2. Each member starts its own timer (stable-after). Messages:
+
+```
+"SBR found unreachable members, waiting for stable-after = {} ms before taking downing decision. " +
+"Now {} unreachable members found. Downing decision will not be made before {}.",
+```
+
+3. If no changes in reachability observations for `stable-after` period, SBR picks and executes its decision.
+4. if reachability observations by the failure detector are changed the SBR decisions are deferred until there are no changes within the 'stable-after' duration. Log messages:
+
+```
+"SBR found unreachable members changed during stable-after period. Resetting timer. " +
+"Now {} unreachable members found. Downing decision will not be made before {}.",
+```
+
+5. The measurement is reset if all unreachable have been healed, downed or removed, or if there are no changes within `stable-after * 2` . Log messages 
+```
+"SBR found all unreachable members healed during stable-after period, no downing decision necessary for now.")
+```
+
+6. As a precaution for that scenario all nodes are downed if no decision is made within `stable-after` + `down-all-when-unstable` from the first unreachability event. 
+down-all-when-unstable  By default it is 'on' and then it is derived to be 3/4 of stable-after, but not less than 4 seconds.
+
+Expected total failover time:
+ There are several configured timeouts that add to the total failover latency. With default configuration those are:
+ 1) failure detection 5 seconds
+ 2) stable-after 7 seconds
+ 3) akka.cluster.down-removal-margin (by default the same as split-brain-resolver.stable-after) 7 seconds
+
+In total, you can expect the failover time of a singleton or sharded instance to be around (5 + 7 + (7*3 / 4) = 18) seconds with this configuration.
+As a result, 18 sec is a time margin after which shards or singletons that belonged to a downed/removed  partition are created in surviving partition. 
+
+A problem arises when one part takes some sbr decision (e.g. cluster.down(minority)) and start sharding or singletons whereas the second part thinks otherwise.
+
+Every SBR process in the cluster can take incompatible decisions, because different nodes of the cluster update their view of cluster membership at different times. Built-in protection against the race cases exists in the form of the stable timeout, which means that if any changes are being observed in discovery, the decision making is delayed until the observation is stable again.
+
+The essential thing in many situations (especially in cases where cluster singleton or cluster sharding are in use) is that every node in the cluster make the same (or at least compatible) SBR decisions (if nodes make incompatible decisions it can lead to multiple independent clusters forming). Because different nodes of the cluster update their view of cluster membership at different times, the longer a node has gone without a change in its view of the membership, the more likely it is that other nodes have the same view of membership and will make compatible decisions.
+
+
 ### TO DO 
 
 1. Add two roles: endpoint and domain. If the role of the cluster node is “domain” we simply start cluster sharding, 
@@ -662,6 +711,6 @@ akka://fsa@192.168.0.30:2551/system/sharding/tenantsCoordinator/singleton/coordi
 akka.cluster.sharding.PersistentShardCoordinator or akka.cluster.sharding.DDataShardCoordinator
 
 
-### Similar  examples of WebSocket chat system using only akka streams with the help of MergeHub and BroadcastHub
+### Similar examples of WebSocket chat system using only akka streams with the help of MergeHub and BroadcastHub
 https://github.com/pbernet/akka_streams_tutorial/blob/master/src/main/scala/akkahttp/WebsocketChatEcho.scala
 https://github.com/calvinlfer/akka-http-streaming-response-examples/blob/master/src/main/scala/com/experiments/calvin/WebsocketStreamsMain.scala

@@ -26,6 +26,42 @@ import scala.collection.mutable
 final case class ChatId(value: String) extends AnyVal
 final case class UserId(value: String) extends AnyVal
 
+//newtypes (Tagged types)
+object ChatId1 {
+  trait Tag
+
+  type T      = String
+  type Opaque = Base with Tag
+  type Base   = Any { type Bla }
+
+  object Opaque {
+    // This casting's happening in compile time, in runtime only Long exists
+    def apply(v: T): Opaque                = v.asInstanceOf[Opaque]
+    def unapply(userId: Opaque): Option[T] = Option(userId).map(_.value)
+  }
+
+  final implicit class Ops(private val chatId: Opaque) extends AnyVal {
+    def value: T = chatId.asInstanceOf[T]
+  }
+}
+
+object UserId1 {
+  trait Tag
+
+  type T      = String
+  type Opaque = Base with Tag
+  type Base   = Any { type Bla }
+
+  object Opaque {
+    def apply(v: T): Opaque                = v.asInstanceOf[Opaque]
+    def unapply(userId: Opaque): Option[T] = Option(userId).map(_.value)
+  }
+
+  final implicit class Ops(private val userId: Opaque) extends AnyVal {
+    def value: T = userId.asInstanceOf[T]
+  }
+}
+
 /*
   Making T contravariant in ActorRef implies that
   for two types JoinReply and Reply where JoinReply is a subtype of Reply, ActorRef[Reply] is a subtype of ActorRef[JoinReply]
@@ -66,7 +102,7 @@ sealed trait Command[+T <: Reply] {
   def replyTo: ActorRef[R]
 
   //
-  def correspondingEvent(event: Event): Event = event
+  def coerce(event: Event): Event = event
 }
 
 object Command {
@@ -101,7 +137,7 @@ object Command {
     override val toString = s"Leave($chatId, $user)"
   }
 
-  //The message that will be sent to entities when they are to be stopped for a rebalance or graceful shutdown of a ShardRegion, e.g. PoisonPill.
+  //The message that will be sent to entities when they are to be stopped for a re-balance or graceful shutdown of a ShardRegion, e.g. PoisonPill.
   final case class HandOffChatRoom(
     chatId: ChatId = ChatId("null"),
     user: UserId = UserId("null"),

@@ -213,7 +213,7 @@ class ChatRoomClassic(implicit
   def notActive(state: ChatRoomState): Receive = {
     case cmd: Command.JoinUser ⇒
       persist(ChatRoomEvent.UserJoined(cmd.user, lastSequenceNr + 1, cmd.pubKey)) { ev ⇒
-        val newState = maybeSnapshot(Handler(cmd, cmd.correspondingEvent(ev), state))
+        val newState = maybeSnapshot(Handler(cmd, cmd.coerce(ev), state))
         unstashAll()
         context become active(newState)
       }
@@ -227,7 +227,7 @@ class ChatRoomClassic(implicit
   def active(state: ChatRoomState): Receive = {
     case cmd: Command.JoinUser ⇒
       persist(ChatRoomEvent.UserJoined(cmd.user, lastSequenceNr + 1, cmd.pubKey)) { ev ⇒
-        val newState = maybeSnapshot(Handler(cmd, cmd.correspondingEvent(ev), state))
+        val newState = maybeSnapshot(Handler(cmd, cmd.coerce(ev), state))
         context become active(newState)
       }
 
@@ -243,13 +243,13 @@ class ChatRoomClassic(implicit
           TimeZone.getDefault.getID
         )
       ) { ev ⇒
-        val newState = maybeSnapshot(Handler(cmd, cmd.correspondingEvent(ev), state))
+        val newState = maybeSnapshot(Handler(cmd, cmd.coerce(ev), state))
         context become active(newState)
       }
 
     case cmd: Command.Leave ⇒
       persist(ChatRoomEvent.UserDisconnected(cmd.user)) { ev ⇒
-        val newState = maybeSnapshot(Handler(cmd, cmd.correspondingEvent(ev), state))
+        val newState = maybeSnapshot(Handler(cmd, cmd.coerce(ev), state))
         context become active(newState)
       }
 

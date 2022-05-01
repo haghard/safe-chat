@@ -4,12 +4,12 @@ import sbtdocker.ImageName
 val projectName   = "safe-chat"
 val Version       = "0.5.1"
 
-val akkaVersion     = "2.6.17"
-val akkaHttpVersion = "10.2.6"
-val AkkaManagement  = "1.1.1"
+val akkaVersion     = "2.6.19"
+val akkaHttpVersion = "10.2.9"
+val AkkaManagement  = "1.1.3"
 val AkkaPersistenceCassandraVersion = "1.0.5"
 
-//val AkkaProjectionVersion = "1.2.2"
+val AkkaProjectionVersion = "1.2.3"
 
 promptTheme := ScalapenosTheme
 
@@ -77,13 +77,13 @@ lazy val commonSettings = Seq(
   organization := "haghard",
   version := Version,
   startYear := Some(2019),
-  developers := List(Developer("haghard", "Vadim Bondarev", "hagard84@gmail.com", url("http://haghard.ru"))),
+  developers := List(Developer("haghard", "Vadim Bondarev", "hagard84@gmail.com", url("https://github.com/haghard"))),
 
   //sbt headerCreate
   licenses += ("Apache-2.0", new URL("https://www.apache.org/licenses/LICENSE-2.0.txt")),
-  scalaVersion := "2.13.6",
+  scalaVersion := "2.13.8",
   headerMappings := headerMappings.value + (HeaderFileType.scala -> HeaderCommentStyle.cppStyleLineComment),
-  headerLicense  := Some(HeaderLicense.Custom("Copyright (c) 2019-2021 Vadim Bondarev. All rights reserved."))
+  headerLicense  := Some(HeaderLicense.Custom("Copyright (c) 2019-2022 Vadim Bondarev. All rights reserved."))
 )
 
 lazy val root = project
@@ -216,7 +216,7 @@ lazy val root = project
 
 libraryDependencies ++= Seq(
   "com.typesafe.akka"       %% "akka-slf4j"             % akkaVersion,
-  "com.github.pureconfig"   %% "pureconfig"             % "0.12.3",
+  "com.github.pureconfig"   %% "pureconfig"             % "0.17.1",
 
   "com.typesafe.akka"       %% "akka-stream-typed"      % akkaVersion,
   "com.typesafe.akka"       %% "akka-cluster-typed"     % akkaVersion,
@@ -234,10 +234,11 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka"  %% "akka-persistence-query"       % akkaVersion,
 
   //https://doc.akka.io/docs/akka-projection/current/eventsourced.html
-  //"com.lightbend.akka" %% "akka-projection-eventsourced" % AkkaProjectionVersion,
+  "com.lightbend.akka" %% "akka-projection-eventsourced" % AkkaProjectionVersion,
 
   //Offset in Cassandra  https://doc.akka.io/docs/akka-projection/current/cassandra.html
-  //"com.lightbend.akka" %% "akka-projection-cassandra"    % AkkaProjectionVersion,
+  "com.lightbend.akka" %% "akka-projection-cassandra"    % AkkaProjectionVersion,
+
   //"com.lightbend.akka" %% "akka-projection-jdbc"         % AkkaProjectionVersion,
 
 
@@ -258,26 +259,27 @@ libraryDependencies ++= Seq(
 
   "com.lightbend.akka.management" %% "akka-management-cluster-bootstrap" % AkkaManagement,
   "com.lightbend.akka.management" %% "akka-management-cluster-http"      % AkkaManagement,
+  "com.lightbend.akka.discovery"  %% "akka-discovery-kubernetes-api"     % AkkaManagement,
 
   "com.typesafe.akka" %% "akka-http"            % akkaHttpVersion,
   "com.typesafe.akka" %% "akka-http-spray-json" % akkaHttpVersion,
 
-  "ch.qos.logback" % "logback-classic" % "1.2.6",
+  "ch.qos.logback" % "logback-classic" % "1.2.11",
 
-  "org.apache.avro" %   "avro"         %   "1.10.1",
+  "org.apache.avro" %   "avro"         %   "1.11.0",
 
-  "com.softwaremill.quicklens" %% "quicklens" % "1.7.4",
+  "com.softwaremill.quicklens" %% "quicklens" % "1.8.5",
 
   //"com.twitter"     %%  "bijection-avro"  %   "0.9.6",  // ++ 2.12.13!
   //"org.apache.avro" %   "avro-compiler"   %   "1.10.1",
 
   "commons-codec"   %   "commons-codec"   %   "1.11",
-  "org.scalatest"   %%  "scalatest"       %   "3.2.9" % Test,
+  "org.scalatest"   %%  "scalatest"       %   "3.2.11" % Test,
 
   "com.typesafe.akka" %% "akka-stream-testkit" % akkaVersion,
 
   "com.typesafe.akka" %% "akka-http-testkit" %  akkaHttpVersion % Test,
-  "com.typesafe.akka" %% "akka-testkit"      %  akkaVersion     % Test,
+  "com.typesafe.akka" %% "akka-testkit"      %  akkaVersion     % Test
 
   //https://github.com/chatwork/akka-guard
   //"com.chatwork" %% "akka-guard-http-typed" % "1.5.3-SNAPSHOT",
@@ -288,7 +290,7 @@ libraryDependencies ++= Seq(
   //https://github.com/politrons/reactiveScala/blob/master/scala_features/src/main/scala/app/impl/scala/ReflectionFeature.scala
   //"org.scala-lang" % "scala-reflect" % scalaVersion.value
 
-  "com.lihaoyi" % "ammonite" % "2.4.0" % "test" cross CrossVersion.full
+  //"com.lihaoyi" % "ammonite" % "2.4.0" % "test" cross CrossVersion.full
 )
 
 //comment out for test:run
@@ -306,11 +308,13 @@ AvroConfig / enableDecimalLogicalType := true
 
 // Scalafix
 
+/*
 ThisBuild / scalafixDependencies += "com.github.liancheng" %% "organize-imports" % "0.5.0"
 
 Global / semanticdbEnabled := true
 Global / semanticdbVersion := scalafixSemanticdb.revision
 Global / watchAntiEntropy := scala.concurrent.duration.FiniteDuration(5, java.util.concurrent.TimeUnit.SECONDS)
+*/
 
 addCommandAlias("sfix", "scalafix OrganizeImports; test:scalafix OrganizeImports")
 addCommandAlias("sFixCheck", "scalafix --check OrganizeImports; test:scalafix --check OrganizeImports")
@@ -324,6 +328,7 @@ dependencyOverrides ++= Seq(
   "com.typesafe.akka" %% "akka-cluster"         % akkaVersion,
   "com.typesafe.akka" %% "akka-cluster-sharding"% akkaVersion,
   "com.typesafe.akka" %% "akka-coordination"    % akkaVersion,
+  "com.typesafe.akka" %% "akka-discovery"       % akkaVersion,
   "com.typesafe.akka" %% "akka-stream"          % akkaVersion,
   "com.typesafe.akka" %% "akka-http"            % akkaHttpVersion,
   "com.typesafe.akka" %% "akka-http-core"       % akkaHttpVersion,

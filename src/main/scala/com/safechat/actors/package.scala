@@ -32,7 +32,7 @@ package object actors {
           case scala.util.Success(r) ⇒ r
           case scala.util.Failure(ex) ⇒
             if (n > 0) {
-              Thread.sleep(1000) //
+              Thread.sleep(100) //
               lookup(f, n - 1)
             } else throw ex
         }

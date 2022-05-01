@@ -110,11 +110,9 @@ final class CassandraLease(system: ExtendedActorSystem, leaseTaken: AtomicBoolea
   override def acquire(): Future[Boolean] =
     acquire(ConstantFun.scalaAnyToUnit)
 
-  /**
-    * For info
+  /** For info
     *  https://doc.akka.io/docs/akka-enhancements/current/split-brain-resolver.html#expected-failover-time
     *  https://www.youtube.com/watch?v=WqzAuRX_CZ8
-    *
     *
     * This implementation provides the following guaranties:
     *   If the winner grabs the lock, others should get back with false as soon as possible so that they could shutdown themselves.
@@ -128,13 +126,11 @@ final class CassandraLease(system: ExtendedActorSystem, leaseTaken: AtomicBoolea
     *
     *  (5 s) + (7 s) + (7 s * 3/4) ~ 18 secs
     *
-    *
     *  What happens if the node that holds the lease crashes?
     *
     *  Each lease has a TTL that is set which defaults to 25 s. When TTL passes another node is allowed to take the lease.
     *
     *  https://doc.akka.io/docs/akka-management/current/kubernetes-lease.html
-    *
     */
   override def acquire(leaseLostCallback: Option[Throwable] ⇒ Unit): Future[Boolean] =
     cqlSession

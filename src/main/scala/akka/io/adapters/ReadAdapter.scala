@@ -19,7 +19,7 @@ final class ReadAdapter extends ReadEventAdapter {
 
     case ev: EventV2 =>
       println("Reading V2 from journal and doing promotion to V3")
-      EventV3(each.id, each.name))
+      EventSeq.single(EventV3(each.id, each.name)))
 
     case ev: EventV3 =>
       println("V3 event, no promotion needed")

@@ -50,12 +50,12 @@ object Boot extends Ops {
 
     val akkaPort = sys.props
       .get("akka.remote.artery.canonical.port") //AKKA_PORT
-      .flatMap(r ⇒ Try(r.toInt).toOption)
+      .flatMap(_.toIntOption)
       .getOrElse(throw new Exception("akka.remote.artery.canonical.port not found"))
 
     val httpPort = sys.props
       .get(HTTP_PORT_VAR)
-      .flatMap(r ⇒ Try(r.toInt).toOption)
+      .flatMap(_.toIntOption)
       .getOrElse(throw new Exception(s"$HTTP_PORT_VAR not found"))
 
     /*val akkaSeeds = sys.props.get("SEEDS").map { seeds ⇒
