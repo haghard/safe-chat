@@ -12,7 +12,7 @@ import akka.persistence.journal.WriteEventAdapter
 final class WriteAdapter extends WriteEventAdapter {
   override def manifest(event: Any): String = ""
 
-  //Convert domain event to journal event type. Always writes the latest event
+  // Convert domain event to journal event type. Always writes the latest event
   override def toJournal(event: Any): Any =
     /*
     Psevdo code

@@ -39,17 +39,18 @@ import scala.concurrent.duration._
   */
 object ChatRoom {
 
-  val snapshotEveryN = 300 //TODO should be configurable
+  val snapshotEveryN = 300 // TODO should be configurable
   val MSG_SEP        = ":"
 
-  val persistTimeout = akka.util.Timeout(2.second) //write to journal timeout
+  val persistTimeout = akka.util.Timeout(2.second) // write to journal timeout
 
   val entityKey: EntityTypeKey[Command[Reply]] = EntityTypeKey[Command[Reply]]("chat-rooms")
 
-  /** Each `ChatRoomEntity` actor is a single source of true, acting as a consistency boundary for the data that it manages.
+  /** Each `ChatRoomEntity` actor is a single source of true, acting as a consistency boundary for the data that it
+    * manages.
     *
-    * Messages in a single chat room define a single total order.
-    * Messages in a single chat causally dependent on each other by design.
+    * Messages in a single chat room define a single total order. Messages in a single chat causally dependent on each
+    * other by design.
     *
     * Total order for persistence is maintained as we always write to the journal with parallelism == 1
     */
@@ -60,13 +61,13 @@ object ChatRoom {
     to: FiniteDuration,
     appCfg: AppCfg
   ): Behavior[Command[Reply]] =
-    Behaviors.setup { ctx ⇒
+    Behaviors.setup { ctx =>
       implicit val sys      = ctx.system
       implicit val actorCtx = ctx
       val pId               = PersistenceId(entityCtx.entityTypeKey.name, entityCtx.entityId)
 
-      //fp style
-      //fp style
+      // fp style
+      // fp style
       /*
       EventSourcedBehavior.withEnforcedReplies[UserCmd, ChatRoomEvent, ChatRoomState](
         pId,
@@ -81,7 +82,7 @@ object ChatRoom {
             pId,
             ChatRoomState(recentHistory = RingBuffer[String](appCfg.recentHistorySize)),
             onCommand(ctx, to),
-            //commandHandler,
+            // commandHandler,
             onEvent(ctx.self.path.name, kksRef, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss Z"))
           )
           /*.withTagger {
@@ -89,22 +90,22 @@ object ChatRoom {
           case m: MsgEnvelope if m.getPayload.isInstanceOf[Joined] ⇒ Set("user")
           }*/
           .receiveSignal {
-            case (state, RecoveryCompleted) ⇒
-              //val leaseName = s"${sys.name}-shard-${ChatRoomEntity.entityKey.name}-${entityCtx.entityId}"
-              //captureChatRoom(localChatRooms, leaseName)
+            case (state, RecoveryCompleted) =>
+              // val leaseName = s"${sys.name}-shard-${ChatRoomEntity.entityKey.name}-${entityCtx.entityId}"
+              // captureChatRoom(localChatRooms, leaseName)
               ctx.log.info(s"★ Recovered: [${state.users.keySet.mkString(",")}] ★")
-            case (state, PreRestart) ⇒
+            case (state, PreRestart) =>
               ctx.log.info(s"★ Pre-restart ${state.users.keySet.mkString(",")} ★")
-            case (state, PostStop) ⇒
+            case (state, PostStop) =>
               state.hub.foreach(_.ks.shutdown())
               ctx.log.info("★ PostStop. Clean up resources ★")
-            case (state, SnapshotCompleted(_)) ⇒
+            case (state, SnapshotCompleted(_)) =>
               ctx.log.info(s"★ SnapshotCompleted [${state.users.keySet.mkString(",")}]")
-            case (state, SnapshotFailed(_, ex)) ⇒
+            case (state, SnapshotFailed(_, ex)) =>
               ctx.log.error(s"★ SnapshotFailed ${state.users.keySet.mkString(",")}", ex)
-            case (_, RecoveryFailed(cause)) ⇒
+            case (_, RecoveryFailed(cause)) =>
               ctx.log.error(s"★ RecoveryFailed $cause", cause)
-            case (_, signal) ⇒
+            case (_, signal) =>
               ctx.log.info(s"★ Signal $signal ★")
           }
           /*.snapshotWhen {
@@ -112,7 +113,7 @@ object ChatRoom {
           case _                        ⇒ false
         }*/
           .snapshotWhen(snapshotPredicate(ctx))
-          //save a snapshot on every 100 events and keep max 2
+          // save a snapshot on every 100 events and keep max 2
           .withRetention(RetentionCriteria.snapshotEvery(numberOfEvents = snapshotEveryN, keepNSnapshots = 2))
           .onPersistFailure(
             SupervisorStrategy
@@ -122,18 +123,20 @@ object ChatRoom {
       }
     }
 
-  /** Each chat root contains MergeHub and BroadcastHub connected together to form a runnable graph.
-    * Once we materialize this stream, we get back a pair of Source and Sink that together define the publish and subscribe sides of our chat room.
+  /** Each chat root contains MergeHub and BroadcastHub connected together to form a runnable graph. Once we materialize
+    * this stream, we get back a pair of Source and Sink that together define the publish and subscribe sides of our
+    * chat room.
     *
-    * Dynamic fan-in and fan-out with MergeHub and BroadcastHub (https://doc.akka.io/docs/akka/current/stream/stream-dynamic.html#combining-dynamic-operators-to-build-a-simple-publish-subscribe-service)
+    * Dynamic fan-in and fan-out with MergeHub and BroadcastHub
+    * (https://doc.akka.io/docs/akka/current/stream/stream-dynamic.html#combining-dynamic-operators-to-build-a-simple-publish-subscribe-service)
     *
     * A MergeHub allows to implement a dynamic fan-in junction point(many-to-one) in a graph where elements coming from
-    * different producers are emitted in a First-Comes-First-Served fashion.
-    * If the consumer cannot keep up, then all of the producers will be backpressured.
+    * different producers are emitted in a First-Comes-First-Served fashion. If the consumer cannot keep up, then all of
+    * the producers will be backpressured.
     *
     * A BroadcastHub can be used to consume elements from a common producer by a dynamic set of consumers (one-to-many).
-    * (dynamic number of producers and new consumers can be added on the fly)
-    * The rate of the producer will be automatically adapted to the slowest consumer.
+    * (dynamic number of producers and new consumers can be added on the fly) The rate of the producer will be
+    * automatically adapted to the slowest consumer.
     */
   def chatRoomHub(
     persistenceId: String,
@@ -141,21 +144,21 @@ object ChatRoom {
   )(implicit
     sys: ActorSystem[Nothing]
   ): ChatRoomHub = {
-    //val initBs = sys.settings.config.getInt("akka.stream.materializer.initial-input-buffer-size")
+    // val initBs = sys.settings.config.getInt("akka.stream.materializer.initial-input-buffer-size")
     val bs = 1 << 2
     sys.log.warn("Create chatroom {}", persistenceId)
 
     val ((sinkHub, ks), sourceHub) =
       MergeHub
         .source[Message](perProducerBufferSize = bs)
-        .flatMapConcat(_.asTextMessage.getStreamedText.fold("")(_ + _)) //.recoverWithRetries()
-        //import akka.actor.typed.scaladsl.AskPattern._
-        //.alsoTo(Sink.foreachAsync(1) { entity.ask[ChatRoomReply](PostText(persistenceId, "", "", "", _))(???, ???) })
-        //.alsoTo()
-        //.wireTap(m ⇒ sys.log.info("before p: {}", m)) //for rebug
+        .flatMapConcat(_.asTextMessage.getStreamedText.fold("")(_ + _)) // .recoverWithRetries()
+        // import akka.actor.typed.scaladsl.AskPattern._
+        // .alsoTo(Sink.foreachAsync(1) { entity.ask[ChatRoomReply](PostText(persistenceId, "", "", "", _))(???, ???) })
+        // .alsoTo()
+        // .wireTap(m ⇒ sys.log.info("before p: {}", m)) //for rebug
         .via(
-          //WsScaffolding.flowWithHeartbeat(30.second).via(persist(persistenceId, entity))
-          persist(persistenceId)(sys.classicSystem, persistTimeout).collect { case r: Reply.TextPostedReply ⇒
+          // WsScaffolding.flowWithHeartbeat(30.second).via(persist(persistenceId, entity))
+          persist(persistenceId)(sys.classicSystem, persistTimeout).collect { case r: Reply.TextPostedReply =>
             TextMessage.Strict(s"${r.chatId}:${r.seqNum} - ${r.content}")
           }
         )
@@ -203,30 +206,30 @@ object ChatRoom {
     sys: ActorSystem[Nothing]
   ): ReplyEffect[ChatRoomEvent, ChatRoomState] =
     cmd match {
-      case cmd: Command.JoinUser ⇒
+      case cmd: Command.JoinUser =>
         Effect
           .persist(ChatRoomEvent.UserJoined(cmd.user, EventSourcedBehavior.lastSequenceNumber(ctx) + 1, cmd.pubKey))
-          .thenReply(cmd.replyTo) { updateState: ChatRoomState ⇒ //That's new state after applying the event
+          .thenReply(cmd.replyTo) { updateState: ChatRoomState => // That's new state after applying the event
 
             val settings =
-              StreamRefAttributes.subscriptionTimeout(to) //.and(akka.stream.Attributes.inputBuffer(bs, bs))
+              StreamRefAttributes.subscriptionTimeout(to) // .and(akka.stream.Attributes.inputBuffer(bs, bs))
 
             updateState.hub match {
-              case Some(hub) ⇒
+              case Some(hub) =>
                 val chatHistory = updateState.recentHistory.entries.mkString("\n")
-                //Add new producer on the fly.  If the consumer cannot keep up, all producers will be backpressured
+                // Add new producer on the fly.  If the consumer cannot keep up, all producers will be backpressured
                 val srcRefF = (Source.single[Message](TextMessage(chatHistory)) ++ hub.srcHub)
                   .runWith(StreamRefs.sourceRef[Message].addAttributes(settings))
 
-                //Add new consumers on the fly. The rate of the producer will be automatically adapted to the slowest consumer
+                // Add new consumers on the fly. The rate of the producer will be automatically adapted to the slowest consumer
                 val sinkRefF = hub.sinkHub.runWith(StreamRefs.sinkRef[Message].addAttributes(settings))
                 Reply.JoinReply(cmd.chatId, cmd.user, Some(sinkRefF, srcRefF))
-              case None ⇒
+              case None =>
                 Reply.JoinReply(cmd.chatId, cmd.user, None)
             }
           }
 
-      case cmd: Command.PostText ⇒
+      case cmd: Command.PostText =>
         val seqNum = EventSourcedBehavior.lastSequenceNumber(ctx)
         Effect
           .persist(
@@ -239,8 +242,8 @@ object ChatRoom {
               TimeZone.getDefault.getID
             )
           )
-          .thenReply(cmd.replyTo) { updatedState: ChatRoomState ⇒
-            //ctx.log.info("online:[{}]", updatedState.online.mkString(","))
+          .thenReply(cmd.replyTo) { updatedState: ChatRoomState =>
+            // ctx.log.info("online:[{}]", updatedState.online.mkString(","))
             Reply.TextPostedReply(
               cmd.chatId,
               seqNum,
@@ -250,15 +253,15 @@ object ChatRoom {
             )
           }
 
-      case cmd: Command.Leave ⇒
+      case cmd: Command.Leave =>
         Effect
           .persist(ChatRoomEvent.UserDisconnected(cmd.user))
-          .thenReply(cmd.replyTo) { updatedState: ChatRoomState ⇒
+          .thenReply(cmd.replyTo) { updatedState: ChatRoomState =>
             ctx.log.info("{} disconnected - online:[{}]", cmd.user, updatedState.usersOnline.mkString(""))
             Reply.LeaveReply(cmd.chatId, cmd.user)
           }
 
-      case cmd: Command.HandOffChatRoom ⇒
+      case cmd: Command.HandOffChatRoom =>
         state.hub.foreach(_.ks.shutdown())
         ctx.log.info(cmd.getClass.getName)
         Effect.none.thenStop().thenNoReply()
@@ -273,7 +276,7 @@ object ChatRoom {
     ctx: ActorContext[Command[Reply]]
   ): ChatRoomState =
     event match {
-      case ChatRoomEvent.UserJoined(user, _, pubKey) ⇒
+      case ChatRoomEvent.UserJoined(user, _, pubKey) =>
         val newState =
           if (state.usersOnline.isEmpty && state.hub.isEmpty) state.copy(hub = Some(chatRoomHub(persistenceId, kksRef)))
           else state
@@ -282,11 +285,11 @@ object ChatRoom {
         newState.usersOnline.+=(user)
         newState
 
-      case ChatRoomEvent.UserTextAdded(seqNum, originator, receiver, content, when, tz) ⇒
+      case ChatRoomEvent.UserTextAdded(seqNum, originator, receiver, content, when, tz) =>
         val zoneDT = ZonedDateTime.ofInstant(Instant.ofEpochMilli(when), ZoneId.of(tz))
         state.recentHistory :+ s"[$seqNum at ${frmtr.format(zoneDT)}] - $originator -> $receiver:$content"
         state
-      case ChatRoomEvent.UserDisconnected(login) ⇒
+      case ChatRoomEvent.UserDisconnected(login) =>
         state.copy(usersOnline = state.usersOnline - login)
     }
 

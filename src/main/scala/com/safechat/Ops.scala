@@ -17,10 +17,10 @@ trait Ops {
   def internalDockerAddr: Option[InetAddress] =
     NetworkInterface.getNetworkInterfaces.asScala.toList
       .find(_.getName == ethName)
-      .flatMap(x ⇒ x.getInetAddresses.asScala.toList.find(i ⇒ i.getHostAddress.matches(ipExpression)))
+      .flatMap(x => x.getInetAddresses.asScala.toList.find(i => i.getHostAddress.matches(ipExpression)))
 
   def argsToOpts(args: Seq[String]): Map[String, String] =
-    args.collect { case Opt(key, value) ⇒ key → value }.toMap
+    args.collect { case Opt(key, value) => key -> value }.toMap
 
   def applySystemProperties(options: Map[String, String]): Unit =
     for ((key, value) ← options if key startsWith "-D") {
@@ -30,7 +30,7 @@ trait Ops {
 
   def applyProperties(args: Array[String]) = {
     val Opt = """-D(\S+)=(\S+)""".r
-    args.toList.foreach { case Opt(key, value) ⇒
+    args.toList.foreach { case Opt(key, value) =>
       println(s"Config override: $key = $value")
       System.setProperty(key, value)
     }

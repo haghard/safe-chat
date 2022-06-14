@@ -24,7 +24,7 @@ class DynamicLeastShardAllocationStrategy(
     shardId: ShardId,
     currentShardAllocations: Map[ActorRef, immutable.IndexedSeq[ShardId]]
   ): Future[ActorRef] = {
-    val (regionWithLeastShards, _) = currentShardAllocations.minBy { case (_, v) ⇒ v.size }
+    val (regionWithLeastShards, _) = currentShardAllocations.minBy { case (_, v) => v.size }
     Future.successful(regionWithLeastShards)
   }
 
@@ -33,11 +33,11 @@ class DynamicLeastShardAllocationStrategy(
     rebalanceInProgress: Set[ShardId]
   ): Future[Set[ShardId]] =
     if (rebalanceInProgress.size < maxSimultaneousRebalance) {
-      val (_, leastShards) = currentShardAllocations.minBy { case (_, v) ⇒ v.size }
+      val (_, leastShards) = currentShardAllocations.minBy { case (_, v) => v.size }
 
       val mostShards = currentShardAllocations
-        .collect { case (_, v) ⇒
-          v.filterNot(s ⇒ rebalanceInProgress(s))
+        .collect { case (_, v) =>
+          v.filterNot(s => rebalanceInProgress(s))
         }
         .maxBy(_.size)
 
@@ -47,10 +47,10 @@ class DynamicLeastShardAllocationStrategy(
         val factoredRebalanceLimit = (rebalanceFactor, rebalanceNumber) match {
           // This condition is to maintain semantic backwards compatibility, from when rebalanceThreshold was also
           // the number of shards to move.
-          case (0.0, 0)            ⇒ rebalanceThreshold
-          case (0.0, justAbsolute) ⇒ justAbsolute
-          case (justFactor, 0)     ⇒ math.max((justFactor * mostShards.size).round.toInt, 1)
-          case (factor, absolute)  ⇒ math.min(math.max((factor * mostShards.size).round.toInt, 1), absolute)
+          case (0.0, 0)            => rebalanceThreshold
+          case (0.0, justAbsolute) => justAbsolute
+          case (justFactor, 0)     => math.max((justFactor * mostShards.size).round.toInt, 1)
+          case (factor, absolute)  => math.min(math.max((factor * mostShards.size).round.toInt, 1), absolute)
         }
 
         // The ideal number to rebalance to so these nodes have an even number of shards

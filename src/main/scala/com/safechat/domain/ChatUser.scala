@@ -20,14 +20,14 @@ object ChatUserSnapshot extends DefaultJsonProtocol {
   implicit object UserSnapshotJsonFormat extends JsonFormat[ChatUserSnapshot] {
     override def write(c: ChatUserSnapshot) =
       JsObject(
-        "e"  → JsNumber(c.e.toString),
-        "n"  → JsNumber(c.n.toString),
-        "d"  → JsNumber(c.d.toString),
-        "p"  → JsNumber(c.p.toString),
-        "q"  → JsNumber(c.q.toString),
-        "dp" → JsNumber(c.dp.toString),
-        "dq" → JsNumber(c.dq.toString),
-        "qi" → JsNumber(c.qi.toString)
+        "e"  -> JsNumber(c.e.toString),
+        "n"  -> JsNumber(c.n.toString),
+        "d"  -> JsNumber(c.d.toString),
+        "p"  -> JsNumber(c.p.toString),
+        "q"  -> JsNumber(c.q.toString),
+        "dp" -> JsNumber(c.dp.toString),
+        "dq" -> JsNumber(c.dq.toString),
+        "qi" -> JsNumber(c.qi.toString)
       )
 
     override def read(json: JsValue): ChatUserSnapshot =
@@ -41,7 +41,7 @@ object ChatUserSnapshot extends DefaultJsonProtocol {
               JsNumber(dp),
               JsNumber(dq),
               JsNumber(qi)
-            ) ⇒
+            ) =>
           ChatUserSnapshot(
             e.toBigInt,
             n.toBigInt,
@@ -59,10 +59,10 @@ object ChatUserSnapshot extends DefaultJsonProtocol {
 case class ChatUser(val pub: RSAPublicKey, val priv: RSAPrivateCrtKey) {
   val handle = Handle.ofKey(pub)
 
-  //public key
+  // public key
   val asX509 = crypto.base64Encode(pub.getEncoded)
 
-  //private key
+  // private key
   val asPKCS8: Array[Byte] = priv.getEncoded
 
   override def toString =

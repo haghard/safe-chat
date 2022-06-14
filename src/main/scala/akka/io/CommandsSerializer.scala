@@ -28,9 +28,8 @@ import scala.util.Using.Releasable
 
 /** https://doc.akka.io/docs/akka/current/remoting-artery.html#bytebuffer-based-serialization
   *
-  * Artery introduced a new serialization mechanism.
-  * This implementation takes advantage of new Artery serialization mechanism
-  * which allows the ByteBufferSerializer to directly write into and read from a shared java.nio.ByteBuffer
+  * Artery introduced a new serialization mechanism. This implementation takes advantage of new Artery serialization
+  * mechanism which allows the ByteBufferSerializer to directly write into and read from a shared java.nio.ByteBuffer
   * instead of being forced to allocate and return an Array[Byte] for each serialized message.
   *
   * https://blog.softwaremill.com/akka-references-serialization-with-protobufs-up-to-akka-2-5-87890c4b6cb0
@@ -49,25 +48,25 @@ object CommandsSerializer {
   def withEnvelope(cmd: com.safechat.actors.Command[_]) = {
     val replyTo = ProtobufSerializer.serializeActorRef(cmd.replyTo.toClassic).toByteString.asReadOnlyByteBuffer()
     cmd match {
-      case Command.JoinUser(chatId, user, pubKey, _) ⇒
+      case Command.JoinUser(chatId, user, pubKey, _) =>
         new com.safechat.avro.command.CmdEnvelope(
           chatId.value,
           replyTo,
           new com.safechat.avro.command.JoinUser(user.value, pubKey)
         )
-      case Command.PostText(chatId, sender, receiver, content, _) ⇒
+      case Command.PostText(chatId, sender, receiver, content, _) =>
         new com.safechat.avro.command.CmdEnvelope(
           chatId.value,
           replyTo,
           new com.safechat.avro.command.PostText(sender.value, receiver.value, content)
         )
-      case Command.Leave(chatId, user, _) ⇒
+      case Command.Leave(chatId, user, _) =>
         new com.safechat.avro.command.CmdEnvelope(
           chatId.value,
           replyTo,
           new com.safechat.avro.command.Leave(user.value)
         )
-      case _: Command.HandOffChatRoom ⇒
+      case _: Command.HandOffChatRoom =>
         new com.safechat.avro.command.CmdEnvelope(
           Command.handOffChatRoom.chatId.value,
           null,
@@ -81,14 +80,14 @@ object CommandsSerializer {
 
   def read[T](buf: ByteBuffer, writerSchema: Schema, readerSchema: Schema): T = {
     val reader = new SpecificDatumReader[T](writerSchema, readerSchema)
-    //val reader  = new SpecificDatumReader[T](writerSchema)
+    // val reader  = new SpecificDatumReader[T](writerSchema)
     val decoder = DecoderFactory.get.directBinaryDecoder(new ByteBufferInputStream(buf), null)
     reader.read(null.asInstanceOf[T], decoder)
   }
 
   def toDomainCmd(env: CmdEnvelope, system: ExtendedActorSystem) =
     env.getPayload.asInstanceOf[org.apache.avro.specific.SpecificRecordBase] match {
-      case c: com.safechat.avro.command.JoinUser ⇒
+      case c: com.safechat.avro.command.JoinUser =>
         Command.JoinUser(
           ChatId(env.getChatId.toString),
           UserId(c.getUser.toString),
@@ -97,7 +96,7 @@ object CommandsSerializer {
             .deserializeActorRef(system, ActorRefData.parseFrom(env.getReplyTo))
             .toTyped[Reply.JoinReply]
         )
-      case c: com.safechat.avro.command.PostText ⇒
+      case c: com.safechat.avro.command.PostText =>
         Command.PostText(
           ChatId(env.getChatId.toString),
           UserId(c.getSender.toString),
@@ -107,7 +106,7 @@ object CommandsSerializer {
             .deserializeActorRef(system, ActorRefData.parseFrom(env.getReplyTo))
             .toTyped[Reply.TextPostedReply]
         )
-      case c: com.safechat.avro.command.Leave ⇒
+      case c: com.safechat.avro.command.Leave =>
         Command.Leave(
           ChatId(env.getChatId.toString),
           UserId(c.getUser.toString),
@@ -115,13 +114,13 @@ object CommandsSerializer {
             .deserializeActorRef(system, ActorRefData.parseFrom(env.getReplyTo))
             .toTyped[Reply.LeaveReply]
         )
-      case _: com.safechat.avro.command.HandOffChatRoom ⇒
+      case _: com.safechat.avro.command.HandOffChatRoom =>
         Command.handOffChatRoom
     }
 
   def toBytes(cmd: com.safechat.actors.Command[_], schema: Schema): Array[Byte] =
-    Using.resource(new java.io.ByteArrayOutputStream()) { baos ⇒
-      Using.resource(EncoderFactory.get.directBinaryEncoder(baos, null)) { enc ⇒
+    Using.resource(new java.io.ByteArrayOutputStream()) { baos =>
+      Using.resource(EncoderFactory.get.directBinaryEncoder(baos, null)) { enc =>
         new SpecificDatumWriter(schema).write(withEnvelope(cmd), enc)
       }
       baos.toByteArray
@@ -154,10 +153,10 @@ final class CommandsSerializer(val system: ExtendedActorSystem)
 
   override def toBinary(o: AnyRef): Array[Byte] =
     o match {
-      case cmd: com.safechat.actors.Command[_] ⇒
-        //system.log.warning(s"*** toBinary ${o.getClass.getName}")
+      case cmd: com.safechat.actors.Command[_] =>
+        // system.log.warning(s"*** toBinary ${o.getClass.getName}")
         toBytes(cmd, schemaMap(activeSchemaHash))
-      case _ ⇒
+      case _ =>
         illegalArgument(
           s"Serialization for ${o.getClass.getName} isn't supported. Check toBinary method in ${this.getClass.getName} class."
         )
@@ -165,15 +164,15 @@ final class CommandsSerializer(val system: ExtendedActorSystem)
 
   override def toBinary(o: AnyRef, directBuf: ByteBuffer): Unit =
     o match {
-      case cmd: com.safechat.actors.Command[_] ⇒
-        //system.log.warning(s"*** toBinary0 ${o.getClass.getName}")
-        Using.resource(new akka.io.ByteBufferOutputStream(directBuf)) { baos ⇒
-          Using.resource(EncoderFactory.get.directBinaryEncoder(baos, null)) { enc ⇒
+      case cmd: com.safechat.actors.Command[_] =>
+        // system.log.warning(s"*** toBinary0 ${o.getClass.getName}")
+        Using.resource(new akka.io.ByteBufferOutputStream(directBuf)) { baos =>
+          Using.resource(EncoderFactory.get.directBinaryEncoder(baos, null)) { enc =>
             new SpecificDatumWriter(schemaMap(activeSchemaHash)).write(withEnvelope(cmd), enc)
           }
         }
 
-      case _ ⇒
+      case _ =>
         illegalArgument(
           s"Serialization for ${o.getClass.getName} isn't supported. Check toBinary(buf) method in ${this.getClass.getName} class."
         )

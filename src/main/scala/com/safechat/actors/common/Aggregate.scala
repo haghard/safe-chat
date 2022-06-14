@@ -29,28 +29,28 @@ abstract class Aggregate[State, Cmd, Event](
   snapshotEvery: Int
 )(implicit stateTag: ClassTag[State], cmdTag: ClassTag[Cmd], eventTag: ClassTag[Event])
     extends PersistentActor
-    with ActorLogging { self: CommandHandler[State, Cmd, Event] with EventHandler[State, Event] ⇒
+    with ActorLogging { self: CommandHandler[State, Cmd, Event] with EventHandler[State, Event] =>
 
   override def receiveRecover: Receive = {
-    case e: Event ⇒
+    case e: Event =>
       state = applyEvent(e, state)
-    case SnapshotOffer(_, snapshot: State) ⇒
+    case SnapshotOffer(_, snapshot: State) =>
       state = snapshot
-    case RecoveryCompleted ⇒
+    case RecoveryCompleted =>
       onRecoveryCompleted(state)
-    case other ⇒
+    case other =>
       log.error("Unable to handle {} during recovery", other)
   }
 
   def onRecoveryCompleted(state: State)
 
   override def receiveCommand: Receive = {
-    case cmd: Cmd ⇒
+    case cmd: Cmd =>
       applyCommand(cmd, state) match {
-        case RejectCmd(reply) ⇒
+        case RejectCmd(reply) =>
           sender() ! reply
-        case PersistEvent(event) ⇒
-          persist(event) { ev ⇒
+        case PersistEvent(event) =>
+          persist(event) { ev =>
             state = applyEvent(ev, state)
             if (lastSequenceNr % snapshotEvery == 0)
               maybeSnapshot(state)
@@ -58,13 +58,13 @@ abstract class Aggregate[State, Cmd, Event](
       }
 
     // snapshot-related messages
-    case SaveSnapshotSuccess(metadata) ⇒
+    case SaveSnapshotSuccess(metadata) =>
       log.info(s"Saving snapshot succeeded: $metadata")
 
-    case SaveSnapshotFailure(metadata, reason) ⇒
+    case SaveSnapshotFailure(metadata, reason) =>
       log.warning(s"Saving snapshot $metadata failed because of $reason")
 
-    case other ⇒
+    case other =>
       log.error("Unable to validate unknown cmd {}, ignoring it", other)
   }
 

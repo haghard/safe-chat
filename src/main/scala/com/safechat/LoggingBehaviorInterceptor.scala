@@ -14,7 +14,7 @@ import scala.reflect.ClassTag
 object LoggingBehaviorInterceptor {
   def apply[T: ClassTag](logger: Logger)(behavior: Behavior[T]): Behavior[T] = {
     val interceptor = new LoggingBehaviorInterceptor[T](logger)
-    Behaviors.intercept(() ⇒ interceptor)(behavior)
+    Behaviors.intercept(() => interceptor)(behavior)
   }
 }
 
@@ -39,7 +39,7 @@ final class LoggingBehaviorInterceptor[T: ClassTag] private (logger: Logger) ext
 
   override def isSame(other: BehaviorInterceptor[Any, Any]): Boolean =
     other match {
-      case _: LoggingBehaviorInterceptor[_] ⇒ true
-      case _                                ⇒ super.isSame(other)
+      case _: LoggingBehaviorInterceptor[_] => true
+      case _                                => super.isSame(other)
     }
 }

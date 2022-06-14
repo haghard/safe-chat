@@ -1,7 +1,6 @@
 package akka.io
 
-/** Simple {@link InputStream} implementation that exposes currently
-  * available content of a {@link ByteBuffer}.
+/** Simple {@link InputStream} implementation that exposes currently available content of a {@link ByteBuffer}.
   *
   * Simular to com.fasterxml.jackson.databind.util.ByteBufferBackedInputStream
   */

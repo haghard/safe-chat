@@ -5,8 +5,7 @@ import akka.persistence.journal.ReadEventAdapter
 
 /** https://github.com/rockthejvm/akka-persistence/blob/master/src/main/scala/part4_practices/EventAdapters.scala
   *
-  * journal -> serializer -> read event adapter ->  actor
-  *  (bytes)     (GA)            (GAV2)             (receiveRecover)
+  * journal -> serializer -> read event adapter -> actor (bytes) (GA) (GAV2) (receiveRecover)
   */
 final class ReadAdapter extends ReadEventAdapter {
 

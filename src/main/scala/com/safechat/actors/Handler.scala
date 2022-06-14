@@ -41,14 +41,14 @@ object Handler {
       newState.usersOnline.add(event.userId)
 
       val reply = newState.hub match {
-        case Some(hub) ⇒
+        case Some(hub) =>
           val settings      = StreamRefAttributes.subscriptionTimeout(failoverTimeout)
           val recentHistory = newState.recentHistory.entries.mkString("\n")
           val srcRef = (Source.single[Message](TextMessage(recentHistory)) ++ hub.srcHub)
             .runWith(StreamRefs.sourceRef[Message].addAttributes(settings))
           val sinkRef = hub.sinkHub.runWith(StreamRefs.sinkRef[Message].addAttributes(settings))
           Reply.JoinReply(cmd.chatId, event.userId, Some((sinkRef, srcRef)))
-        case None ⇒
+        case None =>
           Reply.JoinReply(cmd.chatId, event.userId, None)
       }
       cmd.replyTo.tell(reply)

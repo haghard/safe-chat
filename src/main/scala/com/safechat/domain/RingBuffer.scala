@@ -13,9 +13,8 @@ final class RingBuffer[T: scala.reflect.ClassTag] private (capacity: Int, buffer
   private var tail: Long = 0L
   private var head: Long = 0L
 
-  private def this(capacity: Int) {
+  private def this(capacity: Int) =
     this(RingBuffer.nextPowerOfTwo(capacity), Array.ofDim[T](RingBuffer.nextPowerOfTwo(capacity)))
-  }
 
   def add(e: T): Unit = :+(e)
 

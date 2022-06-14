@@ -29,20 +29,20 @@ object ExtraDirectives {
         "to produce a timely response to your request.\r\nPlease try again in a short while!"
     )
 
-  def aroundRequest(onRequest: RequestContext ⇒ Try[RouteResult] ⇒ Unit): Directive0 =
-    (extractRequestContext & extractExecutionContext).tflatMap { tuple ⇒
+  def aroundRequest(onRequest: RequestContext => Try[RouteResult] => Unit): Directive0 =
+    (extractRequestContext & extractExecutionContext).tflatMap { tuple =>
       val onDone = onRequest(tuple._1)
-      mapInnerRoute { inner ⇒
-        withRequestTimeoutResponse { _ ⇒
+      mapInnerRoute { inner =>
+        withRequestTimeoutResponse { _ =>
           onDone(Success(Complete(timeoutResponse)))
           timeoutResponse
         } {
-          inner.andThen { resultFuture ⇒
+          inner.andThen { resultFuture =>
             resultFuture
               .map {
-                case c @ Complete(response) ⇒
+                case c @ Complete(response) =>
                   Complete(
-                    response.mapEntity { entity ⇒
+                    response.mapEntity { entity =>
                       if (entity.isKnownEmpty) {
                         onDone(Success(c))
                         entity
@@ -50,18 +50,18 @@ object ExtraDirectives {
                         // On an empty entity, `transformDataBytes` unsets `isKnownEmpty`.
                         // Call onDone right away, since there's no significant amount of
                         // data to send, anyway.
-                        entity.transformDataBytes(Flow[ByteString].watchTermination() { case (m, f) ⇒
-                          f.map(_ ⇒ c)(tuple._2).onComplete(onDone)(tuple._2)
+                        entity.transformDataBytes(Flow[ByteString].watchTermination() { case (m, f) =>
+                          f.map(_ => c)(tuple._2).onComplete(onDone)(tuple._2)
                           m
                         })
                     }
                   )
-                case other ⇒
+                case other =>
                   onDone(Success(other))
                   other
               }(tuple._2)
               .andThen { // skip this if you use akka.http.scaladsl.server.handleExceptions, put onDone there
-                case Failure(ex) ⇒
+                case Failure(ex) =>
                   onDone(Failure(ex))
               }(tuple._2)
           }
@@ -69,29 +69,29 @@ object ExtraDirectives {
       }
     }
 
-  /** There are three possible outcomes of a request:
-    *   a) the request completes successfuly, Success(Complete(response)) is passed to onDone
-    *   b) the request is rejected (e.g. because of a non-matching inner route), then Success(Rejected(rejections)) is passed
-    *   c) producing the response body fails, and hence the request fails as well: Failure is passed to onDone
+  /** There are three possible outcomes of a request: a) the request completes successfuly, Success(Complete(response))
+    * is passed to onDone b) the request is rejected (e.g. because of a non-matching inner route), then
+    * Success(Rejected(rejections)) is passed c) producing the response body fails, and hence the request fails as well:
+    * Failure is passed to onDone
     */
-  def logLatency(log: LoggingAdapter)(ctx: RequestContext): Try[RouteResult] ⇒ Unit = {
+  def logLatency(log: LoggingAdapter)(ctx: RequestContext): Try[RouteResult] => Unit = {
     val start = System.currentTimeMillis
 
     {
-      case Success(Complete(resp)) ⇒
+      case Success(Complete(resp)) =>
         val millis = System.currentTimeMillis - start
-        //val params = ctx.request.uri.rawQueryString.fold("")(identity)
+        // val params = ctx.request.uri.rawQueryString.fold("")(identity)
         val url = ctx.request.uri.path.toString
         log.info(
-          s"""[${resp.status.intValue}] ${ctx.request.method.name} $url?params took:$millis ms""" //params
+          s"""[${resp.status.intValue}] ${ctx.request.method.name} $url?params took:$millis ms""" // params
         )
-      case Success(Rejected(_)) ⇒
+      case Success(Rejected(_)) =>
       /*
               val msLatency = System.currentTimeMillis - start
               val url       = ctx.request.uri.path.toString
               val params    = ctx.request.uri.rawQueryString.fold("")(identity)
               log.info(s"""Rejected:${ctx.request.method.name} ${url}?${params} took:${msLatency} ms""")*/
-      case Failure(ex) ⇒
+      case Failure(ex) =>
         val millis = System.currentTimeMillis - start
         val url    = ctx.request.uri.path.toString
         val params = ctx.request.uri.rawQueryString.fold("")(identity)

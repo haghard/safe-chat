@@ -44,11 +44,11 @@ object Boot extends Ops {
     val env = sys.props.get(ENV_VAR).getOrElse(throw new Exception(s"$ENV_VAR not found"))
     val configFile = sys.props
       .get(CONFIG_VAR)
-      .map(confPath ⇒ new File(s"${new File(confPath).getAbsolutePath}/$env.conf"))
+      .map(confPath => new File(s"${new File(confPath).getAbsolutePath}/$env.conf"))
       .getOrElse(throw new Exception(s"Env var $CONFIG_VAR not found"))
 
     val akkaPort = sys.props
-      .get("akka.remote.artery.canonical.port") //AKKA_PORT
+      .get("akka.remote.artery.canonical.port") // AKKA_PORT
       .flatMap(_.toIntOption)
       .getOrElse(throw new Exception("akka.remote.artery.canonical.port not found"))
 
@@ -71,7 +71,7 @@ object Boot extends Ops {
     val contactPoints =
       sys.props
         .get(CONTACT_POINTS_VAR)
-        .map { points ⇒
+        .map { points =>
           val array = points.split(",")
           if (array.size > 0) array
           else throw new Exception(s"$CONTACT_POINTS_VAR expected not to be nonEmtpy")
@@ -81,10 +81,10 @@ object Boot extends Ops {
     val dbConf = {
       val dbUser = sys.props.get(CAS_USR_VAR).getOrElse(throw new Exception(s"$CAS_USR_VAR not found"))
       val dbPsw  = sys.props.get(CAS_PSW_VAR).getOrElse(throw new Exception(s"$CAS_PSW_VAR not found"))
-      sys.props.get(CASSANDRA_VAR).map { hosts ⇒
+      sys.props.get(CASSANDRA_VAR).map { hosts =>
         val contactPointsString = hosts
           .split(",")
-          .map { hostPort ⇒
+          .map { hostPort =>
             val ap = hostPort.split(":")
             s"""datastax-java-driver.basic.contact-points += "${ap(0)}:${ap(1)}""""
           }
@@ -99,28 +99,28 @@ object Boot extends Ops {
       .get("akka.remote.artery.canonical.hostname")
       .getOrElse(throw new Exception("akka.remote.artery.canonical.hostname is expected"))
 
-    //https://doc.akka.io/docs/akka/current/remoting-artery.html#akka-behind-nat-or-in-a-docker-container
-    //https://youtu.be/EPNBF5PXb84?list=PLbZ2T3O9BuvczX5j03bWMrMFzK5OAs9mZ&t=1075
-    //Inside the Docker container we bind to all available network interfaces
+    // https://doc.akka.io/docs/akka/current/remoting-artery.html#akka-behind-nat-or-in-a-docker-container
+    // https://youtu.be/EPNBF5PXb84?list=PLbZ2T3O9BuvczX5j03bWMrMFzK5OAs9mZ&t=1075
+    // Inside the Docker container we bind to all available network interfaces
     val dockerHostName = internalDockerAddr
       .map(_.getHostAddress)
       // TODO: for local debug !!!!!!!!!!!!!!!!!
       .getOrElse(hostName)
-    //.getOrElse("0.0.0.0")
+    // .getOrElse("0.0.0.0")
 
     val httpManagementPort = httpPort - 1
 
     applySystemProperties(
       Map(
-        //-Dakka.remote.artery.canonical.hostname =   192.168.0.3
-        //management
-        "-Dakka.management.http.hostname" → hostName, //192.168.0.3
-        "-Dakka.management.http.port"     → httpManagementPort.toString, //8079
-        //internal hostname
-        "-Dakka.remote.artery.bind.hostname"   → dockerHostName, //172.17.0.3
-        "-Dakka.remote.artery.bind.port"       → akkaPort.toString,
-        "-Dakka.management.http.bind-hostname" → dockerHostName, //172.17.0.3
-        "-Dakka.management.http.bind-port"     → httpManagementPort.toString
+        // -Dakka.remote.artery.canonical.hostname =   192.168.0.3
+        // management
+        "-Dakka.management.http.hostname" -> hostName,                    // 192.168.0.3
+        "-Dakka.management.http.port"     -> httpManagementPort.toString, // 8079
+        // internal hostname
+        "-Dakka.remote.artery.bind.hostname"   -> dockerHostName, // 172.17.0.3
+        "-Dakka.remote.artery.bind.port"       -> akkaPort.toString,
+        "-Dakka.management.http.bind-hostname" -> dockerHostName, // 172.17.0.3
+        "-Dakka.management.http.bind-port"     -> httpManagementPort.toString
       )
     )
 
@@ -128,7 +128,7 @@ object Boot extends Ops {
       pureconfig.ConfigSource.file(configFile).at(AkkaSystemName).loadOrThrow[Boot.AppCfg]
 
     val cfg: Config = {
-      //https://doc.akka.io/docs/akka-management/current/akka-management.html
+      // https://doc.akka.io/docs/akka-management/current/akka-management.html
       /*val managementConf =
         s"""
           |akka.management {
@@ -150,12 +150,12 @@ object Boot extends Ops {
           |}
           |""".stripMargin*/
 
-      //seed nodes | contact points
-      //https://doc.akka.io/docs/akka-management/current/bootstrap/local-config.html
-      //https://github.com/akka/akka-management/blob/master/integration-test/local/src/test/scala/akka/management/LocalBootstrapTest.scala
-      //Configuration based discovery can be used to set the Cluster Bootstrap process locally within an IDE or from the command line.
+      // seed nodes | contact points
+      // https://doc.akka.io/docs/akka-management/current/bootstrap/local-config.html
+      // https://github.com/akka/akka-management/blob/master/integration-test/local/src/test/scala/akka/management/LocalBootstrapTest.scala
+      // Configuration based discovery can be used to set the Cluster Bootstrap process locally within an IDE or from the command line.
       val bootstrapEndpoints = {
-        val endpointsList = contactPoints.map(s ⇒ s"{host=$s,port=$httpManagementPort}").mkString(",")
+        val endpointsList = contactPoints.map(s => s"{host=$s,port=$httpManagementPort}").mkString(",")
         ConfigFactory
           .parseString(s"akka.discovery.config.services { $AkkaSystemName = { endpoints = [ $endpointsList ] }}")
           .resolve()
@@ -165,10 +165,10 @@ object Boot extends Ops {
         .withFallback(dbConf)
         .withFallback(ConfigFactory.parseFile(configFile).resolve())
         .withFallback(ConfigFactory.load())
-      //.withFallback(pureconfig.ConfigSource.default.loadOrThrow[Config]) //.at(AkkaSystemName)
+      // .withFallback(pureconfig.ConfigSource.default.loadOrThrow[Config]) //.at(AkkaSystemName)
     }
 
-    //check dispatchers
+    // check dispatchers
     cfg.getObject(dbDispatcher)
     cfg.getObject(httpDispatcher)
 
@@ -186,7 +186,7 @@ object Boot extends Ops {
     val system =
       akka.actor.typed.ActorSystem[Nothing](Guardian(dockerHostName, httpPort, gr, appCfg), AkkaSystemName, cfg)
 
-    //akka.management.scaladsl.AkkaManagement(system).start(_.withAuth(basicAuth(system)))
+    // akka.management.scaladsl.AkkaManagement(system).start(_.withAuth(basicAuth(system)))
     // Akka Management hosts the HTTP routes used by bootstrap
     akka.management.scaladsl.AkkaManagement(system).start()
 
@@ -201,7 +201,7 @@ object Boot extends Ops {
       //ts.tell(SpawnProtocol.Spawn(guardian(dockerHostName, httpPort), "guardian", akka.actor.typed.Props.empty, ts.ignoreRef))
     }*/
 
-    //TODO: for debug only
+    // TODO: for debug only
 
     val _ = scala.io.StdIn.readLine()
     system.log.warn("Shutting down ...")
@@ -215,11 +215,11 @@ object Boot extends Ops {
   // http 127.0.0.1:8558/cluster/members "Authorization:Basic QWxhZGRpbjpPcGVuU2VzYW1l"
   private def basicAuth(sys: ActorSystem[Nothing])(credentials: Credentials): Future[Option[String]] =
     credentials match {
-      case p @ Credentials.Provided(id) ⇒
+      case p @ Credentials.Provided(id) =>
         Future {
           if ((id == "Aladdin") && p.verify("OpenSesame")) Some(id) else None
         }(sys.executionContext) /*(sys.dispatchers.lookup(DispatcherSelector.fromConfig(Server.HttpDispatcher)))*/
-      case _ ⇒ Future.successful(None)
+      case _ => Future.successful(None)
     }
 
   def greeting(
@@ -229,8 +229,8 @@ object Boot extends Ops {
     contactPoints: String,
     eventSchemaMapping: Map[String, String]
   ): String = {
-    //cfg.getDuration("akka.http.server.idle-timeout")
-    //cfg.getDuration("akka.http.host-connection-pool.idle-timeout")
+    // cfg.getDuration("akka.http.server.idle-timeout")
+    // cfg.getDuration("akka.http.host-connection-pool.idle-timeout")
 
     val info = new StringBuilder()
       .append('\n')
@@ -280,7 +280,7 @@ object Boot extends Ops {
     val memorySize = ManagementFactory.getOperatingSystemMXBean
       .asInstanceOf[com.sun.management.OperatingSystemMXBean]
       .getTotalPhysicalMemorySize
-    //.getTotalMemorySize()
+    // .getTotalMemorySize()
     val runtimeInfo = new StringBuilder()
       .append('\n')
       .append(s"Cores:${Runtime.getRuntime.availableProcessors}")

@@ -137,11 +137,11 @@ object Command {
     override val toString = s"Leave($chatId, $user)"
   }
 
-  //The message that will be sent to entities when they are to be stopped for a re-balance or graceful shutdown of a ShardRegion, e.g. PoisonPill.
+  // The message that will be sent to entities when they are to be stopped for a re-balance or graceful shutdown of a ShardRegion, e.g. PoisonPill.
   final case class HandOffChatRoom(
     chatId: ChatId = ChatId("null"),
     user: UserId = UserId("null"),
-    replyTo: ActorRef[Nothing] = null //akka.actor.ActorRef.noSender.toTyped[Nothing]
+    replyTo: ActorRef[Nothing] = null // akka.actor.ActorRef.noSender.toTyped[Nothing]
   ) extends Command[Nothing] {
     type Event = Nothing
     override val toString = "HandOffChatRoom"
@@ -254,8 +254,8 @@ object Command {
  */
 
 sealed trait ChatRoomEvent {
-  //def userId: UserId
-  //def seqNum: Long
+  // def userId: UserId
+  // def seqNum: Long
 }
 
 object ChatRoomEvent {
@@ -282,28 +282,28 @@ final case class ChatRoomHub(
 
 //https://doc.akka.io/docs/akka/current/typed/style-guide.html#functional-versus-object-oriented-style
 final case class ChatRoomState(
-  users: mutable.Map[UserId, String] = mutable.Map.empty, //user -> pubKey
+  users: mutable.Map[UserId, String] = mutable.Map.empty, // user -> pubKey
   usersOnline: mutable.Set[UserId] = mutable.Set.empty,
   recentHistory: RingBuffer[String],
   hub: Option[ChatRoomHub] = None,
   commandsWithoutCheckpoint: Int = 0,
-  openConnectionsPerUser: mutable.Map[UserId, Short] = mutable.Map.empty //to limit open connections per user
+  openConnectionsPerUser: mutable.Map[UserId, Short] = mutable.Map.empty // to limit open connections per user
 ) {
 
   def applyCmd(cmd: Command[Reply]): ReplyEffect[ChatRoomEvent, ChatRoomState] =
     cmd match {
-      case c: JoinUser        ⇒ Effect.persist(UserJoined(c.user, -1, c.pubKey)).thenNoReply()
-      case _: PostText        ⇒ Effect.noReply
-      case _: Leave           ⇒ Effect.noReply
-      case _: HandOffChatRoom ⇒ Effect.noReply
+      case c: JoinUser        => Effect.persist(UserJoined(c.user, -1, c.pubKey)).thenNoReply()
+      case _: PostText        => Effect.noReply
+      case _: Leave           => Effect.noReply
+      case _: HandOffChatRoom => Effect.noReply
     }
 
   def applyEvent(event: ChatRoomEvent): ChatRoomState =
     event match {
-      case _: ChatRoomEvent.UserJoined       ⇒ ???
-      case _: ChatRoomEvent.UserTextAdded    ⇒ ???
-      case _: ChatRoomEvent.UserDisconnected ⇒ ???
-      //case Null                ⇒ ???
+      case _: ChatRoomEvent.UserJoined       => ???
+      case _: ChatRoomEvent.UserTextAdded    => ???
+      case _: ChatRoomEvent.UserDisconnected => ???
+      // case Null                ⇒ ???
     }
 }
 

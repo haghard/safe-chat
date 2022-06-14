@@ -19,11 +19,11 @@ object WsScaffolding {
   def flowWithHeartbeat(d: FiniteDuration): Flow[Message, Message, akka.NotUsed] = {
     val hbMsg = TextMessage(hbMessage)
     Flow.fromGraph(
-      GraphDSL.create() { implicit b ⇒
+      GraphDSL.create() { implicit b =>
         import GraphDSL.Implicits._
         val heartbeats = b.add(Source.tick(d, d, hbMsg))
-        //0 - preferred port reserved for messages from pub-sub
-        //1 - secondary port reserved for heartbeat
+        // 0 - preferred port reserved for messages from pub-sub
+        // 1 - secondary port reserved for heartbeat
         val merge = b.add(MergePreferred[Message](1, eagerComplete = true))
         heartbeats ~> merge.in(0)
         FlowShape(merge.preferred, merge.out)

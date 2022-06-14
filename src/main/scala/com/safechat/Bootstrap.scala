@@ -66,41 +66,41 @@ final case class Bootstrap(
     .bindFlow(routes)
 
   f.onComplete {
-    case Failure(ex) ⇒
+    case Failure(ex) =>
       classicSystem.log.error(s"Shutting down because can't bind to $httpBindHostName:$port", ex)
       shutdown.run(Bootstrap.BindFailure)
-    case Success(binding) ⇒
+    case Success(binding) =>
       classicSystem.log.info(s"★ ★ ★ Listening for HTTP connections on ${binding.localAddress} * * *")
-      shutdown.addTask(PhaseBeforeServiceUnbind, "before-unbind") { () ⇒
+      shutdown.addTask(PhaseBeforeServiceUnbind, "before-unbind") { () =>
         Future {
           classicSystem.log.info("★ ★ ★ CoordinatedShutdown [before-unbind] ★ ★ ★")
           Done
         }
       }
 
-      //PhaseServiceUnbind - stop accepting new req
-      shutdown.addTask(PhaseServiceUnbind, "http-api.unbind") { () ⇒
-        //No new connections are accepted. Existing connections are still allowed to perform request/response cycles
-        binding.unbind().map { done ⇒
+      // PhaseServiceUnbind - stop accepting new req
+      shutdown.addTask(PhaseServiceUnbind, "http-api.unbind") { () =>
+        // No new connections are accepted. Existing connections are still allowed to perform request/response cycles
+        binding.unbind().map { done =>
           classicSystem.log.info("★ ★ ★ CoordinatedShutdown [http-api.unbind] ★ ★ ★")
           done
         }
       }
 
-      //forcefully kills connections and kill switches that are still open
-      shutdown.addTask(PhaseServiceStop, "close.connections") { () ⇒
+      // forcefully kills connections and kill switches that are still open
+      shutdown.addTask(PhaseServiceStop, "close.connections") { () =>
         val kks = kksRef.get()
         kks.foreach(_.abort(new Exception("abort")))
-        Http().shutdownAllConnectionPools().map { _ ⇒
+        Http().shutdownAllConnectionPools().map { _ =>
           classicSystem.log.info("★ ★ ★ CoordinatedShutdown [close.connections] ★ ★ ★")
           Done
         }
       }
 
-      //PhaseServiceRequestsDone - process in-flight requests
+      // PhaseServiceRequestsDone - process in-flight requests
 
-      //graceful termination of chatroom hubs
-      shutdown.addTask(PhaseServiceRequestsDone, "kss.shutdown") { () ⇒
+      // graceful termination of chatroom hubs
+      shutdown.addTask(PhaseServiceRequestsDone, "kss.shutdown") { () =>
         Future.successful {
           val kks = kksRef.get()
           classicSystem.log.info(s"★ ★ ★ CoordinatedShutdown [kss.shutdown.${kks.size} ]  ★ ★ ★")
@@ -109,13 +109,12 @@ final case class Bootstrap(
         }
       }
 
-      //graceful termination of requests being handled on this connection
-      shutdown.addTask(PhaseServiceRequestsDone, "http-api.terminate") { () ⇒
-        /** It doesn't accept new connection but it drains the existing connections
-          * Until the `terminationDeadline` all the req that have been accepted will be completed
-          * and only than the shutdown will continue
+      // graceful termination of requests being handled on this connection
+      shutdown.addTask(PhaseServiceRequestsDone, "http-api.terminate") { () =>
+        /** It doesn't accept new connection but it drains the existing connections Until the `terminationDeadline` all
+          * the req that have been accepted will be completed and only than the shutdown will continue
           */
-        binding.terminate(terminationDeadline).map { _ ⇒
+        binding.terminate(terminationDeadline).map { _ =>
           classicSystem.log.info("★ ★ ★ CoordinatedShutdown [http-api.terminate]  ★ ★ ★")
           Done
         }
@@ -128,25 +127,25 @@ final case class Bootstrap(
         }
       }*/
 
-      shutdown.addTask(PhaseServiceUnbind, "akka-management.stop") { () ⇒
-        AkkaManagement(classicSystem).stop().map { done ⇒
+      shutdown.addTask(PhaseServiceUnbind, "akka-management.stop") { () =>
+        AkkaManagement(classicSystem).stop().map { done =>
           classicSystem.log.info("★ ★ ★ CoordinatedShutdown [akka-management.stop]  ★ ★ ★")
           done
         }
       }
 
-      //Best-effort attempt to cleanup leases without waiting for TTL
-      shutdown.addTask(PhaseClusterExitingDone, "release.lease") { () ⇒
+      // Best-effort attempt to cleanup leases without waiting for TTL
+      shutdown.addTask(PhaseClusterExitingDone, "release.lease") { () =>
         val leaseOwner = leaseOwnerFromAkkaMember(classicSystem, ua.address)
         val lease = akka.coordination.lease.scaladsl
           .LeaseProvider(classicSystem)
           .getLease(s"${Boot.AkkaSystemName}-akka-${CassandraLease.SbrPref}", CassandraLease.configPath, leaseOwner)
 
         lease match {
-          case lease: CassandraLease ⇒
+          case lease: CassandraLease =>
             val msg = s"★ ★ ★ CoordinatedShutdown [release.lease] by $leaseOwner released on exit: {} ★ ★ ★"
-            lease.releaseOnExit(msg).map(_ ⇒ Done)
-          case _ ⇒ Future.successful(Done)
+            lease.releaseOnExit(msg).map(_ => Done)
+          case _ => Future.successful(Done)
         }
       }
 
@@ -170,7 +169,7 @@ final case class Bootstrap(
         } else Future.successful(Done)
       }*/
 
-      shutdown.addTask(PhaseActorSystemTerminate, "system.term") { () ⇒
+      shutdown.addTask(PhaseActorSystemTerminate, "system.term") { () =>
         Future.successful {
           classicSystem.log.info("★ ★ ★ CoordinatedShutdown [system.term] ★ ★ ★")
           Done

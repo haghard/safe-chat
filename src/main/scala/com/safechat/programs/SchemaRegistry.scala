@@ -12,19 +12,19 @@ import scala.jdk.CollectionConverters._
 
 object SchemaRegistry {
 
-  //private val activeSchema: File = new File("./src/main/avro/ChatRoomV1.avsc")
+  // private val activeSchema: File = new File("./src/main/avro/ChatRoomV1.avsc")
   private val activeSchema: File = new File("avro/ChatRoomV1.avsc")
 
   private val schemaHistory: List[File] = Nil
-  //List(new File("./src/main/avro/prev/ChatRoomV1.avsc")) //, "/avro/ChatRoomV1.avsc")
+  // List(new File("./src/main/avro/prev/ChatRoomV1.avsc")) //, "/avro/ChatRoomV1.avsc")
 
   private val activeSchemaHash: String = getMD5FromUrl(activeSchema)
 
   private val schemaMap: Map[String, Schema] = Map(
-    activeSchemaHash → getSchemaFromUrl(activeSchema)
-  ) ++ schemaHistory.map { schemaVersion ⇒
-    //val oldSchema = new FileInputStream(schemaVersion)
-    //getClass.getResource(schemaVersion)
+    activeSchemaHash -> getSchemaFromUrl(activeSchema)
+  ) ++ schemaHistory.map { schemaVersion =>
+    // val oldSchema = new FileInputStream(schemaVersion)
+    // getClass.getResource(schemaVersion)
     (getMD5FromUrl(schemaVersion), getSchemaFromUrl(schemaVersion))
   }
 
@@ -46,12 +46,12 @@ object SchemaRegistry {
     var avroSchemaMapping: Map[String, String] = Map.empty
     topLevelRecords
       .filter(_.getName.contains("EventEnvelope"))
-      .map { eventSchema ⇒
+      .map { eventSchema =>
         val it = eventSchema.getField(fieldName).schema().getTypes.iterator()
         while (it.hasNext) {
           val sch = it.next()
           avroSchemaMapping =
-            avroSchemaMapping + (sch.getDoc.replaceAll("Refers to", "").trim → s"${sch.getNamespace}.${sch.getName}")
+            avroSchemaMapping + (sch.getDoc.replaceAll("Refers to", "").trim -> s"${sch.getNamespace}.${sch.getName}")
         }
       }
 
@@ -66,7 +66,7 @@ object SchemaRegistry {
       }
     }
 
-    domainEvents.map(domainEvent ⇒ (domainEvent, avroSchemaMapping(domainEvent))).toMap
+    domainEvents.map(domainEvent => (domainEvent, avroSchemaMapping(domainEvent))).toMap
   }
 
   /*

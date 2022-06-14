@@ -15,7 +15,8 @@ import scala.compat.java8.FutureConverters.CompletionStageOps
 import scala.concurrent.Future
 import scala.util.control.NonFatal
 
-/** This implementation can be used for either `akka.sharding.use-lease` or `split-brain-resolver.active-strategy = lease-majority`.
+/** This implementation can be used for either `akka.sharding.use-lease` or `split-brain-resolver.active-strategy =
+  * lease-majority`.
   *
   * https://github.com/haghard/linguistic/blob/1b6bc8af7674982537cf574d3929cea203a2b6fa/server/src/main/scala/linguistic/dao/Accounts.scala
   * https://github.com/dekses/cassandra-lock/blob/master/src/main/java/com/dekses/cassandra/lock/LockFactory.java
@@ -58,10 +59,10 @@ final class CassandraLease(system: ExtendedActorSystem, leaseTaken: AtomicBoolea
     .builder(s"SELECT owner FROM $ksName.leases WHERE name = ?")
     .addPositionalValues(settings.leaseName)
     .setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM)
-    //A SERIAL consistency level allows reading the current (and possibly uncommitted) state of data without proposing a new addition or update.
-    //If a SERIAL read finds an uncommitted transaction in progress, the database performs a read repair as part of the commit.
-    .setSerialConsistencyLevel(ConsistencyLevel.LOCAL_SERIAL) //for 1 dc
-    //.setTracing()
+    // A SERIAL consistency level allows reading the current (and possibly uncommitted) state of data without proposing a new addition or update.
+    // If a SERIAL read finds an uncommitted transaction in progress, the database performs a read repair as part of the commit.
+    .setSerialConsistencyLevel(ConsistencyLevel.LOCAL_SERIAL) // for 1 dc
+    // .setTracing()
     .build()
 
   private val insert = SimpleStatement
@@ -87,12 +88,12 @@ final class CassandraLease(system: ExtendedActorSystem, leaseTaken: AtomicBoolea
     .build()
 
   override def checkLease(): Boolean = false
-  //leaseTaken.get()
+  // leaseTaken.get()
 
   def releaseOnExit(msg: String): Future[Boolean] =
     cqlSession
-      .flatMap { cqlSession ⇒
-        cqlSession.executeAsync(delete).toScala.map { r ⇒
+      .flatMap { cqlSession =>
+        cqlSession.executeAsync(delete).toScala.map { r =>
           val bool = r.wasApplied()
           system.log.info(msg, bool)
           bool
@@ -110,55 +111,54 @@ final class CassandraLease(system: ExtendedActorSystem, leaseTaken: AtomicBoolea
   override def acquire(): Future[Boolean] =
     acquire(ConstantFun.scalaAnyToUnit)
 
-  /** For info
-    *  https://doc.akka.io/docs/akka-enhancements/current/split-brain-resolver.html#expected-failover-time
-    *  https://www.youtube.com/watch?v=WqzAuRX_CZ8
+  /** For info https://doc.akka.io/docs/akka-enhancements/current/split-brain-resolver.html#expected-failover-time
+    * https://www.youtube.com/watch?v=WqzAuRX_CZ8
     *
-    * This implementation provides the following guaranties:
-    *   If the winner grabs the lock, others should get back with false as soon as possible so that they could shutdown themselves.
+    * This implementation provides the following guaranties: If the winner grabs the lock, others should get back with
+    * false as soon as possible so that they could shutdown themselves.
     *
-    * One weakness if the winner grads the lock and dies immediately after that, no one will be able to grad it again during next ttl time.
+    * One weakness if the winner grads the lock and dies immediately after that, no one will be able to grad it again
+    * during next ttl time.
     *
-    *  Total failover time:
-    *    failure detection (5 sec)
-    *    stable-after (7 sec)
-    *    down-removal-margin (by default ~ stable-after) (7 sec)
+    * Total failover time: failure detection (5 sec) stable-after (7 sec) down-removal-margin (by default ~
+    * stable-after) (7 sec)
     *
-    *  (5 s) + (7 s) + (7 s * 3/4) ~ 18 secs
+    * (5 s) + (7 s) + (7 s * 3/4) ~ 18 secs
     *
-    *  What happens if the node that holds the lease crashes?
+    * What happens if the node that holds the lease crashes?
     *
-    *  Each lease has a TTL that is set which defaults to 25 s. When TTL passes another node is allowed to take the lease.
+    * Each lease has a TTL that is set which defaults to 25 s. When TTL passes another node is allowed to take the
+    * lease.
     *
-    *  https://doc.akka.io/docs/akka-management/current/kubernetes-lease.html
+    * https://doc.akka.io/docs/akka-management/current/kubernetes-lease.html
     */
-  override def acquire(leaseLostCallback: Option[Throwable] ⇒ Unit): Future[Boolean] =
+  override def acquire(leaseLostCallback: Option[Throwable] => Unit): Future[Boolean] =
     cqlSession
-      .flatMap { cqlSession ⇒
+      .flatMap { cqlSession =>
         cqlSession
           .executeAsync(insert)
           .toScala
-          .map { rs ⇒
+          .map { rs =>
             val bool = rs.wasApplied()
             system.log.warning(s"CassandraLease ${settings.leaseName} by ${settings.ownerName} acquired: $bool")
             bool
           }
       }
       .recoverWith {
-        case e: WriteTimeoutException ⇒
+        case e: WriteTimeoutException =>
           system.log.error(e, "Cassandra write error :")
           if (e.getWriteType eq WriteType.CAS) {
-            //The timeout has happened while doing the compare-and-swap for an conditional update.
-            //In this case, the update may or may not have been applied so we try to re-read it.
+            // The timeout has happened while doing the compare-and-swap for an conditional update.
+            // In this case, the update may or may not have been applied so we try to re-read it.
             cqlSession.flatMap(
               _.executeAsync(select).toScala
-                .map { r ⇒
+                .map { r =>
                   val row = r.one()
                   if (row ne null) row.getString("owner") == settings.ownerName else false
                 }
             )
           } else Future.successful(false)
-        case NonFatal(ex) ⇒
+        case NonFatal(ex) =>
           system.log.error(ex, "CassandraLease {}. Acquire error", settings.leaseName)
           Future.successful(false)
       }

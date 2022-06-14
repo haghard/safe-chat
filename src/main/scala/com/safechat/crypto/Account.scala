@@ -26,14 +26,14 @@ object AccountSnapshot extends DefaultJsonProtocol {
   implicit object AccountBackupJsonFormat extends JsonFormat[AccountSnapshot] {
     override def write(c: AccountSnapshot) =
       JsObject(
-        "e"  → JsNumber(c.e.toString),
-        "n"  → JsNumber(c.n.toString),
-        "d"  → JsNumber(c.d.toString),
-        "p"  → JsNumber(c.p.toString),
-        "q"  → JsNumber(c.q.toString),
-        "dp" → JsNumber(c.dp.toString),
-        "dq" → JsNumber(c.dq.toString),
-        "qi" → JsNumber(c.qi.toString)
+        "e"  -> JsNumber(c.e.toString),
+        "n"  -> JsNumber(c.n.toString),
+        "d"  -> JsNumber(c.d.toString),
+        "p"  -> JsNumber(c.p.toString),
+        "q"  -> JsNumber(c.q.toString),
+        "dp" -> JsNumber(c.dp.toString),
+        "dq" -> JsNumber(c.dq.toString),
+        "qi" -> JsNumber(c.qi.toString)
       )
 
     override def read(json: JsValue): AccountSnapshot =
@@ -47,7 +47,7 @@ object AccountSnapshot extends DefaultJsonProtocol {
               JsNumber(dp),
               JsNumber(dq),
               JsNumber(qi)
-            ) ⇒
+            ) =>
           AccountSnapshot(
             e.toBigInt,
             n.toBigInt,
@@ -66,10 +66,10 @@ object AccountSnapshot extends DefaultJsonProtocol {
 case class Account(private val pub: RSAPublicKey, priv: RSAPrivateCrtKey) {
   val handle = Handle.ofKey(pub)
 
-  //public key
+  // public key
   val asX509 = crypto.base64Encode(pub.getEncoded)
 
-  //private key
+  // private key
   val asPKCS8: Array[Byte] = priv.getEncoded
 
   override def toString =
@@ -146,5 +146,5 @@ object Account {
   def recoverFromPubKey(bs: String): Option[RSAPublicKey] =
     crypto
       .base64Decode(bs)
-      .map(bts ⇒ KeyFactory.getInstance(ALG).generatePublic(new X509EncodedKeySpec(bts)).asInstanceOf[RSAPublicKey])
+      .map(bts => KeyFactory.getInstance(ALG).generatePublic(new X509EncodedKeySpec(bts)).asInstanceOf[RSAPublicKey])
 }

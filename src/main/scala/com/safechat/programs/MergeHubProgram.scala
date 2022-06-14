@@ -20,7 +20,7 @@ import scala.concurrent.duration.DurationInt
 /** https://github.com/akka/akka/issues/30057
   * https://github.com/akka/akka/blob/318b9614a31d7e1850702fd0231f53c804402bff/akka-stream-tests/src/test/scala/akka/stream/scaladsl/HubSpec.scala#L191
   *
-  *  runMain com.safechat.programs.MergeHubProgram
+  * runMain com.safechat.programs.MergeHubProgram
   */
 object MergeHubProgram {
 
@@ -40,14 +40,14 @@ object MergeHubProgram {
 
     val downstream = TestSubscriber.probe[Long]()
 
-    //val (((sink, dc), ks), p) =
+    // val (((sink, dc), ks), p) =
     val ((sink, dc), _) =
       MergeHub
         .sourceWithDraining[Long](perProducerBufferSize = 2)
         .via(
           Flow[Long]
             .buffer(qSize, OverflowStrategy.backpressure)
-            .mapAsync(4) { i ⇒
+            .mapAsync(4) { i =>
               Future {
                 val d = ThreadLocalRandom.current().nextLong(10L, 50L)
                 Thread.sleep(d)
@@ -55,14 +55,14 @@ object MergeHubProgram {
               }
             }
         )
-        //.take(numOfElements)
+        // .take(numOfElements)
         .viaMat(KillSwitches.single)(Keep.both)
-        //.toMat(BroadcastHub.sink[Message](bufferSize = recentHistorySize))(Keep.both)
+        // .toMat(BroadcastHub.sink[Message](bufferSize = recentHistorySize))(Keep.both)
         .toMat(Sink.fromSubscriber(downstream))(Keep.left)
-        //.toMat(Sink.asPublisher(false))(Keep.both)
+        // .toMat(Sink.asPublisher(false))(Keep.both)
         .run()
 
-    //Source.fromPublisher(p)
+    // Source.fromPublisher(p)
 
     /*
     val (sink, ks) =
@@ -74,21 +74,21 @@ object MergeHubProgram {
         .run()
      */
 
-    //.toMat(Sink.fromSubscriber(downstream))(Keep.both).run()
+    // .toMat(Sink.fromSubscriber(downstream))(Keep.both).run()
 
     Source(1L to mid).throttle(1, 5.millis).runWith(sink)
     Source(mid + 1 to numOfElements).throttle(1, 5.millis).runWith(sink)
 
-    //Will cancel any new producer and will complete as soon as all the currently connected producers complete.
+    // Will cancel any new producer and will complete as soon as all the currently connected producers complete.
     dc.drainAndComplete()
 
-    //cancel new producers while draining
+    // cancel new producers while draining
     val upstream3 = TestPublisher.probe[Long]()
     Source.fromPublisher(upstream3).runWith(sink)
     upstream3.expectCancellation()
 
-    //But works
-    //Source.repeat(100).throttle(1, 5.millis).runWith(sink)
+    // But works
+    // Source.repeat(100).throttle(1, 5.millis).runWith(sink)
 
     downstream.request(mid)
     println(downstream.expectNextN(mid).mkString(","))
@@ -96,7 +96,7 @@ object MergeHubProgram {
     downstream.request(mid)
     println(downstream.expectNextN(mid).mkString(","))
 
-    //Stop the whole stream
+    // Stop the whole stream
     downstream.cancel()
 
     downstream.expectComplete()

@@ -21,15 +21,16 @@ object ShardedChatRoomClassic {
   ): ActorRef[Command[Reply]] = {
 
     val chatRoomRegion = ClusterSharding(system).start(
-      typeName = ChatRoom.entityKey.name, //shared
+      typeName = ChatRoom.entityKey.name, // shared
       entityProps = ChatRoomClassic.props(totalFailoverTimeout, kksRef, appCfg),
-      settings = ClusterShardingSettings(system).withPassivateIdleAfter(appCfg.passivationAfter), //20.seconds 5.minutes
+      settings =
+        ClusterShardingSettings(system).withPassivateIdleAfter(appCfg.passivationAfter), // 20.seconds 5.minutes
       extractShardId = ChatRoomClassic.shardExtractor,
       extractEntityId = ChatRoomClassic.idExtractor,
       allocationStrategy = new DynamicLeastShardAllocationStrategy(1, 10, 2, 0.0),
-      //allocationStrategy = akka.cluster.sharding.ShardCoordinator.ShardAllocationStrategy.leastShardAllocationStrategy(ShardedChatRooms.numberOfShards / 5, 0.2),
-      //allocationStrategy = new akka.cluster.sharding.external.ExternalShardAllocationStrategy(system, ChatRoom.entityKey.name),
-      handOffStopMessage = Command.handOffChatRoom //akka.actor.PoisonPill
+      // allocationStrategy = akka.cluster.sharding.ShardCoordinator.ShardAllocationStrategy.leastShardAllocationStrategy(ShardedChatRooms.numberOfShards / 5, 0.2),
+      // allocationStrategy = new akka.cluster.sharding.external.ExternalShardAllocationStrategy(system, ChatRoom.entityKey.name),
+      handOffStopMessage = Command.handOffChatRoom // akka.actor.PoisonPill
     )
 
     chatRoomRegion.toTyped[Command[Reply]]

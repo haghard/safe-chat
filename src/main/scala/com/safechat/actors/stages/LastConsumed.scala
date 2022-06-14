@@ -36,17 +36,17 @@ final class LastConsumed[T] extends GraphStageWithMaterializedValue[FlowShape[T,
           }
 
           override def onUpstreamFinish(): Unit = {
-            //log.info("upstream finish")
+            // log.info("upstream finish")
             p.success(current)
             super.onUpstreamFinish()
           }
 
           override def onUpstreamFailure(ex: Throwable): Unit = {
-            //log.info("upstream failure")
+            // log.info("upstream failure")
             p.success(current)
 
-            //don't fail here intentionally
-            //super.onUpstreamFailure(LastSeenException(ex, current))
+            // don't fail here intentionally
+            // super.onUpstreamFailure(LastSeenException(ex, current))
             super.onUpstreamFinish()
           }
         }

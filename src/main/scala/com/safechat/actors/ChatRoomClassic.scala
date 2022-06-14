@@ -41,13 +41,13 @@ object ChatRoomClassic {
   def msg(persistenceId: String, seqNum: Long, userId: String, recipient: String, content: String) =
     s"[$persistenceId:$seqNum - from:$userId -> to:$recipient] - $content"
 
-  val idExtractor: ShardRegion.ExtractEntityId = { case cmd: Command[Reply] ⇒ (cmd.chatId.value, cmd) }
+  val idExtractor: ShardRegion.ExtractEntityId = { case cmd: Command[Reply] => (cmd.chatId.value, cmd) }
 
-  //How many shards should you try to have in your system? 10 per node is recommended
+  // How many shards should you try to have in your system? 10 per node is recommended
   val shardExtractor: ShardRegion.ExtractShardId = {
-    case cmd: Command[Reply] ⇒ cmd.chatId.value
-    //only if you use memember entities
-    case ShardRegion.StartEntity(chatId) ⇒ chatId
+    case cmd: Command[Reply] => cmd.chatId.value
+    // only if you use memember entities
+    case ShardRegion.StartEntity(chatId) => chatId
   }
 
   private def journal(
@@ -64,7 +64,7 @@ object ChatRoomClassic {
               `chatId`,
               sequenceNr @ _,
               ChatRoomEvent.UserTextAdded(userId, seqNum, recipient, content, w, tz)
-            ) ⇒
+            ) =>
           ChatRoomEvent.UserTextAdded(userId, seqNum, recipient, content, w, tz)
       }
 
@@ -122,17 +122,17 @@ object ChatRoomClassic {
     val reader: Source[ChatRoomEvent.UserTextAdded, akka.NotUsed] =
       journal(chatId, fromSequenceNr, classicSystem)
         .buffer(1, OverflowStrategy.backpressure)
-    //.viaMat(new LastConsumed[ChatRoomEvent])(Keep.right)
+    // .viaMat(new LastConsumed[ChatRoomEvent])(Keep.right)
 
     val ((sinkHub, ks), sourceHub) =
       MergeHub
-        //.sourceWithDraining[Message](perProducerBufferSize = 1)
+        // .sourceWithDraining[Message](perProducerBufferSize = 1)
         .source[Message](perProducerBufferSize = 1)
         .flatMapConcat(_.asTextMessage.getStreamedText.fold("")(_ + _))
         .via(persist(chatId))
         .async(Boot.httpDispatcher, 1)
         .zip(reader)
-        .map { case (r @ _, userTextAdded) ⇒
+        .map { case (r @ _, userTextAdded) =>
           val content = ChatRoomClassic.msg(
             chatId,
             userTextAdded.seqNum,
@@ -165,8 +165,8 @@ class ChatRoomClassic(implicit
 
   private val chatId = ChatId(self.path.name)
 
-  //Do not use it directly. Use `chatId` instead
-  override val persistenceId = chatId.value //self.path.name
+  // Do not use it directly. Use `chatId` instead
+  override val persistenceId = chatId.value // self.path.name
 
   override def receiveRecover: Receive = {
     var regUsersKeys: mutable.Map[UserId, String] = mutable.Map.empty
@@ -175,27 +175,27 @@ class ChatRoomClassic(implicit
     var hub: Option[ChatRoomHub]                  = None
 
     {
-      case e: ChatRoomEvent ⇒
+      case e: ChatRoomEvent =>
         e match {
-          case ChatRoomEvent.UserJoined(userId, _, pubKey) ⇒
+          case ChatRoomEvent.UserJoined(userId, _, pubKey) =>
             regUsersKeys.put(userId, pubKey)
             online += userId
 
-          case ChatRoomEvent.UserTextAdded(userId, seqNum, recipient, content, _, _) ⇒
+          case ChatRoomEvent.UserTextAdded(userId, seqNum, recipient, content, _, _) =>
             recentHistory :+ ChatRoomClassic.msg(chatId.value, seqNum, userId.value, recipient.value, content)
 
-          case ChatRoomEvent.UserDisconnected(userId) ⇒
+          case ChatRoomEvent.UserDisconnected(userId) =>
             online -= userId
         }
 
-      case SnapshotOffer(metadata, snapshot: ChatRoomState) ⇒
+      case SnapshotOffer(metadata, snapshot: ChatRoomState) =>
         log.info(s"Recovered snapshot: $metadata")
         val state = snapshot
         regUsersKeys = state.users
         online = state.usersOnline
         recentHistory = state.recentHistory
 
-      case RecoveryCompleted ⇒
+      case RecoveryCompleted =>
         if (regUsersKeys.nonEmpty)
           hub = Some(chatRoomHub(chatId.value, appCfg.recentHistorySize, lastSequenceNr, kksRef))
 
@@ -211,28 +211,28 @@ class ChatRoomClassic(implicit
     } else state.copy(commandsWithoutCheckpoint = state.commandsWithoutCheckpoint + 1)
 
   def notActive(state: ChatRoomState): Receive = {
-    case cmd: Command.JoinUser ⇒
-      persist(ChatRoomEvent.UserJoined(cmd.user, lastSequenceNr + 1, cmd.pubKey)) { ev ⇒
+    case cmd: Command.JoinUser =>
+      persist(ChatRoomEvent.UserJoined(cmd.user, lastSequenceNr + 1, cmd.pubKey)) { ev =>
         val newState = maybeSnapshot(Handler(cmd, cmd.coerce(ev), state))
         unstashAll()
         context become active(newState)
       }
 
-    case other ⇒
-      //Shouldn't arrive here
+    case other =>
+      // Shouldn't arrive here
       log.error("Unexpected cmd {} (notActive) mode", other)
       stash()
   }
 
   def active(state: ChatRoomState): Receive = {
-    case cmd: Command.JoinUser ⇒
-      persist(ChatRoomEvent.UserJoined(cmd.user, lastSequenceNr + 1, cmd.pubKey)) { ev ⇒
+    case cmd: Command.JoinUser =>
+      persist(ChatRoomEvent.UserJoined(cmd.user, lastSequenceNr + 1, cmd.pubKey)) { ev =>
         val newState = maybeSnapshot(Handler(cmd, cmd.coerce(ev), state))
         context become active(newState)
       }
 
-    case cmd: Command.PostText ⇒
-      //log.info("registered:[{}] - online:[{}]", state.users.keySet.mkString(","), state.usersOnline.mkString(","))
+    case cmd: Command.PostText =>
+      // log.info("registered:[{}] - online:[{}]", state.users.keySet.mkString(","), state.usersOnline.mkString(","))
       persist(
         ChatRoomEvent.UserTextAdded(
           cmd.sender,
@@ -242,19 +242,19 @@ class ChatRoomClassic(implicit
           System.currentTimeMillis,
           TimeZone.getDefault.getID
         )
-      ) { ev ⇒
+      ) { ev =>
         val newState = maybeSnapshot(Handler(cmd, cmd.coerce(ev), state))
         context become active(newState)
       }
 
-    case cmd: Command.Leave ⇒
-      persist(ChatRoomEvent.UserDisconnected(cmd.user)) { ev ⇒
+    case cmd: Command.Leave =>
+      persist(ChatRoomEvent.UserDisconnected(cmd.user)) { ev =>
         val newState = maybeSnapshot(Handler(cmd, cmd.coerce(ev), state))
         context become active(newState)
       }
 
-    case cmd: Command.HandOffChatRoom ⇒
-      state.hub.foreach { hub ⇒
+    case cmd: Command.HandOffChatRoom =>
+      state.hub.foreach { hub =>
         hub.ks.shutdown()
         unregisterKS(kksRef, hub.ks)
       }
@@ -262,10 +262,10 @@ class ChatRoomClassic(implicit
       context.stop(self)
 
     // snapshot-related messages
-    case SaveSnapshotSuccess(metadata) ⇒
+    case SaveSnapshotSuccess(metadata) =>
       log.info(s"Saving snapshot succeeded: $metadata")
 
-    case SaveSnapshotFailure(metadata, reason) ⇒
+    case SaveSnapshotFailure(metadata, reason) =>
       log.warning(s"Saving snapshot $metadata failed because of $reason")
   }
 
