@@ -18,7 +18,7 @@ import scala.concurrent.duration._
 
 import ExtraDirectives._
 
-final case class ChatRoomApi(rooms: ShardedChatRooms, to: FiniteDuration)(implicit
+final case class ChatRoomApi(rooms: ShardedChatRooms, totalFailoverTimeout: FiniteDuration)(implicit
   sys: ActorSystem[Nothing]
 ) extends Directives {
   implicit val cx         = sys.executionContext

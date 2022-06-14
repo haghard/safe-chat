@@ -274,7 +274,7 @@ libraryDependencies ++= Seq(
   //"org.apache.avro" %   "avro-compiler"   %   "1.10.1",
 
   "commons-codec"   %   "commons-codec"   %   "1.11",
-  "org.scalatest"   %%  "scalatest"       %   "3.2.11" % Test,
+  "org.scalatest"   %%  "scalatest"       %   "3.2.12" % Test,
 
   "com.typesafe.akka" %% "akka-stream-testkit" % akkaVersion,
 
@@ -290,7 +290,7 @@ libraryDependencies ++= Seq(
   //https://github.com/politrons/reactiveScala/blob/master/scala_features/src/main/scala/app/impl/scala/ReflectionFeature.scala
   //"org.scala-lang" % "scala-reflect" % scalaVersion.value
 
-  "com.lihaoyi" % "ammonite" % "2.5.2" % "test" cross CrossVersion.full,
+  "com.lihaoyi" % "ammonite" % "2.5.4" % "test" cross CrossVersion.full,
 )
 
 //comment out for test:run
@@ -308,12 +308,12 @@ AvroConfig / enableDecimalLogicalType := true
 
 // Scalafix
 
-
 ThisBuild / scalafixDependencies += "com.github.liancheng" %% "organize-imports" % "0.6.0"
 
 Global / semanticdbEnabled := true
 Global / semanticdbVersion := scalafixSemanticdb.revision
 Global / watchAntiEntropy := scala.concurrent.duration.FiniteDuration(5, java.util.concurrent.TimeUnit.SECONDS)
+
 
 
 addCommandAlias("sfix", "scalafix OrganizeImports; test:scalafix OrganizeImports")

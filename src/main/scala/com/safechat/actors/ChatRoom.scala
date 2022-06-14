@@ -65,8 +65,9 @@ object ChatRoom {
       implicit val actorCtx = ctx
       val pId               = PersistenceId(entityCtx.entityTypeKey.name, entityCtx.entityId)
 
+      //fp style
+      //fp style
       /*
-      fp style
       EventSourcedBehavior.withEnforcedReplies[UserCmd, ChatRoomEvent, ChatRoomState](
         pId,
         com.safechat.actors.ChatRoomState(),
@@ -86,7 +87,7 @@ object ChatRoom {
           /*.withTagger {
           //tagged events are useful for querying  by tag
           case m: MsgEnvelope if m.getPayload.isInstanceOf[Joined] ⇒ Set("user")
-        }*/
+          }*/
           .receiveSignal {
             case (state, RecoveryCompleted) ⇒
               //val leaseName = s"${sys.name}-shard-${ChatRoomEntity.entityKey.name}-${entityCtx.entityId}"

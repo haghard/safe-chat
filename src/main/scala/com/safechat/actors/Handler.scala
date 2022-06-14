@@ -91,5 +91,5 @@ object Handler {
     failoverTimeout: FiniteDuration,
     kksRef: AtomicReference[immutable.Set[UniqueKillSwitch]],
     appCfg: AppCfg
-  ) = H(c, e, state)
+  ): ChatRoomState = H(c, e, state)
 }

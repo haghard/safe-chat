@@ -24,7 +24,7 @@ object ShardedChatRooms {
   val numberOfShards = 1 << 8
 
   object ChatRoomsMsgExtractor {
-    //We want to have one shard per one chat room so that we could achieve isolations for all rooms
+    //We want to have one shard:entity per one chat room so that we could achieve isolations for all rooms
     def apply[T <: Command[Reply]]( /*numberOfShards: Int*/ ): ShardingMessageExtractor[T, T] =
       new ShardingMessageExtractor[T, T] {
 

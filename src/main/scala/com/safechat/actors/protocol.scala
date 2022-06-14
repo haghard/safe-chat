@@ -280,8 +280,6 @@ final case class ChatRoomHub(
   ks: UniqueKillSwitch
 )
 
-//final case class Content(userId: String, recipient: String, content: String)
-
 //https://doc.akka.io/docs/akka/current/typed/style-guide.html#functional-versus-object-oriented-style
 final case class ChatRoomState(
   users: mutable.Map[UserId, String] = mutable.Map.empty, //user -> pubKey

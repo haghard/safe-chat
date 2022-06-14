@@ -177,7 +177,7 @@ object JournalEventsSerializer {
   * Avro provides full compatibility support.
   *
   * 1.  Backward compatible change - write with V1 and read with V2
-  * 2.  Forward compatible change -  write with V2 and read with V1
+  * 2.  Forward compatible change - write with V2 and read with V1
   * 3.  Fully compatible if your change is Backward and Forward compatible
   * 4.  Breaking is non of those
   *
