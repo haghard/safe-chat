@@ -8,8 +8,7 @@ import scala.collection.mutable
 /** One more interesting implementation is akka.remote.artery.LruBoundedCache
   * https://www.sebastiansylvan.com/post/robin-hood-hashing-should-be-your-default-hash-table-implementation/
   *
-  * ZIO stm based LRUCache
-  * https://scalac.io/how-to-write-a-completely-lock-free-concurrent-lru-cache-with-zio-stm/
+  * ZIO stm based LRUCache https://scalac.io/how-to-write-a-completely-lock-free-concurrent-lru-cache-with-zio-stm/
   */
 object LRUCaches {
 
@@ -88,7 +87,7 @@ object LRUCaches {
     def +=(key: K, value: V): Unit =
       put(key, value)
 
-    //Returns true if this map should remove its eldest entry
+    // Returns true if this map should remove its eldest entry
     override protected def removeEldestEntry(eldest: java.util.Map.Entry[K, V]): Boolean =
       size() > capacity
 
@@ -117,9 +116,10 @@ object LRUCaches {
     }
   }
 
-  /** For implementing an efficient LRU Cache (meaning get and put operations are executed in O(1) time), we could use two data structures:
-    * Hash Map: containing (key, value) pairs.
-    * Doubly linked list: which will contain the history of referenced keys. The Most Recently Used key will be at the start of the list, and the Least Recently Used one will be at the end.
+  /** For implementing an efficient LRU Cache (meaning get and put operations are executed in O(1) time), we could use
+    * two data structures: Hash Map: containing (key, value) pairs. Doubly linked list: which will contain the history
+    * of referenced keys. The Most Recently Used key will be at the start of the list, and the Least Recently Used one
+    * will be at the end.
     */
   class LRUCache[K, V](
     capacity: Int,
@@ -202,7 +202,7 @@ object LRUCaches {
       }
 
       loopList(leastRU, new mutable.StringBuilder().append("list:")) +
-      loopMap(nodes.keySet.iterator, new mutable.StringBuilder().append("map:"), true)
+        loopMap(nodes.keySet.iterator, new mutable.StringBuilder().append("map:"), true)
     }
   }
 }

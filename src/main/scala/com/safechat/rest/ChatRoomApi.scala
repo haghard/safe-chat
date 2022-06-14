@@ -42,7 +42,7 @@ final case class ChatRoomApi(rooms: ShardedChatRooms, totalFailoverTimeout: Fini
       )
   )*/
 
-  //web socket flow
+  // web socket flow
   /*
   Flow[Message]
     .flatMapConcat(_.asTextMessage.getStreamedText.fold("")(_+_)) //the websocket spec says that a single msg over web socket can be streamed (multiple chunks)
@@ -59,7 +59,7 @@ final case class ChatRoomApi(rooms: ShardedChatRooms, totalFailoverTimeout: Fini
     rooms
       .join(chatId, userId, pubKey)
       .mapTo[Reply.JoinReply]
-  //.recoverWith { case scala.util.control.NonFatal(ex) ⇒ getChatRoomFlow(rooms, chatId, user, pubKey) }
+  // .recoverWith { case scala.util.control.NonFatal(ex) ⇒ getChatRoomFlow(rooms, chatId, user, pubKey) }
 
   private def chatRoomWsFlow(
     rooms: ShardedChatRooms,
@@ -67,13 +67,13 @@ final case class ChatRoomApi(rooms: ShardedChatRooms, totalFailoverTimeout: Fini
     userId: UserId,
     pubKey: String
   ): Future[Flow[Message, Message, Future[NotUsed]]] =
-    getChatRoomFlow(rooms, chatId, userId, pubKey).map { case Reply.JoinReply(chatId, userId, sinkSourceRef, _) ⇒
+    getChatRoomFlow(rooms, chatId, userId, pubKey).map { case Reply.JoinReply(chatId, userId, sinkSourceRef, _) =>
       sinkSourceRef match {
-        case Some((sinkRef, sourceRef)) ⇒
-          Flow.fromMaterializer { (mat, attr) ⇒
-            //val ec: ExecutionContextExecutor = mat.executionContext
-            //val disp                        = attr.get[ActorAttributes.Dispatcher].get
-            //println("attributes: " + attr.attributeList.mkString(","))
+        case Some((sinkRef, sourceRef)) =>
+          Flow.fromMaterializer { (mat, attr) =>
+            // val ec: ExecutionContextExecutor = mat.executionContext
+            // val disp                        = attr.get[ActorAttributes.Dispatcher].get
+            // println("attributes: " + attr.attributeList.mkString(","))
 
             /*
             cannot create top-level actor from the outside on ActorSystem with custom user guardian !!!!!!
@@ -100,13 +100,13 @@ final case class ChatRoomApi(rooms: ShardedChatRooms, totalFailoverTimeout: Fini
              */
 
             val buf = attr.get[akka.stream.Attributes.InputBuffer].get
-            //FlowWithContext[Message, Long].asFlow.scan(()) { case (m, c) => (m, c) }
+            // FlowWithContext[Message, Long].asFlow.scan(()) { case (m, c) => (m, c) }
 
             Flow
               .fromSinkAndSourceCoupled(
                 sinkRef.sink,
                 sourceRef.source
-                  .scan[(Long, Message)]((0L, TextMessage.Strict(s"$userId:$chatId:connected"))) { case (state, m) ⇒
+                  .scan[(Long, Message)]((0L, TextMessage.Strict(s"$userId:$chatId:connected"))) { case (state, m) =>
                     val next = state._1 + 1L
                     classicSys.log.info("{}@ {} Msg № {}", userId, chatId, next)
                     (next, m)
@@ -119,9 +119,9 @@ final case class ChatRoomApi(rooms: ShardedChatRooms, totalFailoverTimeout: Fini
                 true
               )*/
               .buffer(buf.max, OverflowStrategy.backpressure)
-              .backpressureTimeout(3.seconds) //automatic cleanup for very slow subscribers.
-              .watchTermination() { (_, done) ⇒
-                done.flatMap { _ ⇒
+              .backpressureTimeout(3.seconds) // automatic cleanup for very slow subscribers.
+              .watchTermination() { (_, done) =>
+                done.flatMap { _ =>
                   classicSys.log.info("{}@{} flow has been terminated", userId, chatId)
                   rooms.leave(chatId, userId)
                 }
@@ -129,22 +129,23 @@ final case class ChatRoomApi(rooms: ShardedChatRooms, totalFailoverTimeout: Fini
               }
           }
 
-        case None ⇒ throw new Exception(s"$chatId join failure !")
+        case None => throw new Exception(s"$chatId join failure !")
       }
     }
 
-  /**  As long as at least one connection is opened to the chat room, the associated persistent entity won't be passivated.
+  /** As long as at least one connection is opened to the chat room, the associated persistent entity won't be
+    * passivated.
     */
   val routes: Route =
-    extractLog { implicit log ⇒
-      (path("chat" / Segment / "user" / Segment) & parameter("pub".as[String])) { (chatId, user, pubKey) ⇒
+    extractLog { implicit log =>
+      (path("chat" / Segment / "user" / Segment) & parameter("pub".as[String])) { (chatId, user, pubKey) =>
         val flow =
-          //When ChatRoom entities get rebalanced, a flow(src, sink) we've got once may no longed be working so we need to restart it transparently for the clients
-          RestartFlow.withBackoff(akka.stream.RestartSettings(2.seconds, 4.seconds, 0.4))(() ⇒
+          // When ChatRoom entities get rebalanced, a flow(src, sink) we've got once may no longed be working so we need to restart it transparently for the clients
+          RestartFlow.withBackoff(akka.stream.RestartSettings(2.seconds, 4.seconds, 0.4))(() =>
             Flow.futureFlow(chatRoomWsFlow(rooms, ChatId(chatId), UserId(user), pubKey))
           )
 
-        //responds with 101 "Switching Protocols"
+        // responds with 101 "Switching Protocols"
         aroundRequest(logLatency(log))(handleWebSocketMessages(flow))
       }
     }

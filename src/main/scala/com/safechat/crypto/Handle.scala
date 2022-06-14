@@ -17,8 +17,8 @@ abstract class Base64EncodedBytes {
 
   override def equals(that: Any): Boolean =
     that match {
-      case bs: Base64EncodedBytes ⇒ bs.bytes.sameElements(bytes)
-      case _                      ⇒ false
+      case bs: Base64EncodedBytes => bs.bytes.sameElements(bytes)
+      case _                      => false
     }
 
   override def hashCode(): Int =
