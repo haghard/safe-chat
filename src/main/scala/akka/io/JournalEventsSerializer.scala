@@ -176,25 +176,36 @@ object JournalEventsSerializer {
   *
   * Avro provides full compatibility support.
   *
-  *   1. Backward compatible change - write with V1 and read with V2 2. Forward compatible change - write with V2 and
-  *      read with V1 3. Fully compatible if your change is Backward and Forward compatible 4. Breaking is non of those
+  *   1. Backward compatible change - write with V1 and read with V2.
+  *
+  * 2. Forward compatible change - write with V2 and read with V1.
+  *
+  * 3. Fully compatible if your change is Backward and Forward compatible.
+  *
+  * 4. Breaking is non of those.
   *
   * Full compatibility is required for rolling updates. Old and new versions of events can be exchanged between
   * processes at the same time.
   *
   * Advices when writing Avro schema:
-  *   1. Add field with defaults 2. Remove only fields which have defaults
+  *   1. Add field with defaults.
+  *
+  * 2. Remove only fields which have defaults.
   *
   * If you target full compatibility follows these rules:
-  *   1. Removing fields with defaults is fully compatible change 2. Adding fields with defaults is fully compatible
-  *      change
+  *
+  *   1. Removing fields with defaults is fully compatible change.
+  *
+  * 2. Adding fields with defaults is fully compatible change.
   *
   * Enum can't evolve over time.
   *
   * When evolving schema, ALWAYS give defaults.
   *
   * When evolving schema, NEVER
-  *   1. rename fields 2. remove required fields
+  *   1. rename fields.
+  *
+  * 2. remove required fields.
   *
   * Schema-evolution-is-not-that-complex:
   * https://medium.com/data-rocks/schema-evolution-is-not-that-complex-b7cf7eb567ac Akka-references-serialization:
