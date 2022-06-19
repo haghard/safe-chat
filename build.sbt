@@ -4,7 +4,22 @@ import sbtdocker.ImageName
 val projectName   = "safe-chat"
 val Version       = "0.5.1"
 
+
 val akkaVersion     = "2.6.19"
+
+//val akkaVersion     = "2.6.19+92-a81ab6dc-SNAPSHOT"
+
+//https://oss.sonatype.org/content/repositories/snapshots/com/typesafe/akka/akka-actor-typed_2.13/
+/*
+2.6.18+98-331db9b8-SNAPSHOT" //"2.6.18"
+2.6.19+89-462b4738-SNAPSHOT/	Sun Jun 05 16:48:52 UTC 2022
+2.6.19+9-3e1a43f9-SNAPSHOT/	Thu Mar 24 15:29:51 UTC 2022
+2.6.19+90-3f61dfdb-SNAPSHOT/	Mon Jun 13 08:11:31 UTC 2022
+2.6.19+91-2c85b86b-SNAPSHOT/	Mon Jun 13 09:07:44 UTC 2022
+2.6.19+92-a81ab6dc-SNAPSHOT/	Tue Jun 14 07:47:46 UTC 2022
+*/
+
+
 val akkaHttpVersion = "10.2.9"
 val AkkaManagement  = "1.1.3"
 val AkkaPersistenceCassandraVersion = "1.0.5"
