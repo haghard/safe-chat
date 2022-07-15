@@ -63,14 +63,14 @@ object Mutation {
 
 //Describes targeted changes
 sealed trait Patch[State] { self =>
-  def +(that: Patch[State]): Patch[State] = Patch.AtomicBatch(self, that)
+  def +(that: Patch[State]): Patch[State] = Patch.Both(self, that)
 }
 
 //Describes targeted changes
 object Patch {
   type Id[T] = T
 
-  final case class AtomicBatch[State](a: Patch[State], b: Patch[State]) extends Patch[State]
+  final case class Both[State](a: Patch[State], b: Patch[State]) extends Patch[State]
 
   // These patches go to the journal instead of events !!!
   // TODO: mutation: replace Mutation[Id, UserId] with TypeTag(a Protoc type that represents a concrete mutation)
@@ -108,7 +108,7 @@ object Example extends App {
   def evalRec(state: UserState, P: Patch[UserState]): scala.util.control.TailCalls.TailRec[UserState] = {
     import scala.util.control.TailCalls._
     P match {
-      case AtomicBatch(a, b) =>
+      case Both(a, b) =>
         tailcall(evalRec(state, a)).flatMap(s => evalRec(s, b))
       case m: SetUserId =>
         done(m.mutation.update(state)(UserId(m.id)))
@@ -136,8 +136,8 @@ object Example extends App {
 
     if (acc.size <= maxStackSize)
       patch match {
-        case AtomicBatch(next, leaf) => evalOptimized(state, next, acc :+ leaf)
-        case last                    => evalState(state, acc :+ last)
+        case Both(next, leaf) => evalOptimized(state, next, acc :+ leaf)
+        case last             => evalState(state, acc :+ last)
       }
     else {
       val localState = evalState(state, acc)
@@ -160,7 +160,7 @@ object Example extends App {
     }
 
     mod match {
-      case AtomicBatch(both, leaf) =>
+      case Both(both, leaf) =>
         if (acc.size <= maxStackSize) evalOptimized2(state, leaf, both :: acc)
         else {
           val localState = evalState(state, acc)
@@ -170,8 +170,8 @@ object Example extends App {
         acc.headOption match {
           case Some(value) =>
             value match {
-              case both: AtomicBatch[_] => evalOptimized2(state, both, one :: acc.tail)
-              case _                    => evalState(state, acc.head :: one :: acc.tail)
+              case both: Both[_] => evalOptimized2(state, both, one :: acc.tail)
+              case _             => evalState(state, acc.head :: one :: acc.tail)
             }
           case None => evalState(state, one :: acc)
         }
@@ -181,7 +181,7 @@ object Example extends App {
   def eval(state: UserState, m: Patch[UserState]): UserState =
     m match {
       // if (next.isEmpty) eval(state, a, Some(b)) else eval(state, next.get, None)
-      case AtomicBatch(both, single) =>
+      case Both(both, single) =>
         // reverse order
         // eval(eval(state, single), both)
         // direct order
