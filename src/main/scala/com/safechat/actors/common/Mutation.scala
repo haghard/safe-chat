@@ -49,8 +49,8 @@ object Mutation {
   }
 
   /*Op[({ type UserIdMap[A] = Map[UserId, A] })#UserIdMap, (UserId, String)]*/
-  // implicit object AddPermition extends Op[Map[UserId, ?], (UserId, String)] {
-  // implicit object AddPermition extends Op[Map[UserId, *], (UserId, String)] {
+  // implicit object AddPermission extends Op[Map[UserId, ?], (UserId, String)] {
+  // implicit object AddPermission extends Op[Map[UserId, *], (UserId, String)] {
   implicit object AddPermission extends Mutation[({ type UserIdMap[A] = Map[UserId, A] })#UserIdMap, (UserId, String)] {
     def update(state: UserState)(args: (UserId, String)): UserState = {
       val userId = args._1
@@ -85,7 +85,7 @@ object Patch {
     id: String,
     permission: String,
     mutation: Mutation[({ type UserIdMap[A] = Map[UserId, A] })#UserIdMap, (UserId, String)] = Mutation.AddPermission
-    // OP: Op[Map[UserId, ?], (UserId, String)] = Op.AddPermition
+    // OP: Op[Map[UserId, ?], (UserId, String)] = Op.AddPermission
   ) extends Patch[UserState]
 }
 
@@ -104,29 +104,19 @@ object Example extends App {
   def addPerm(id: String, p: String): Patch[UserState] = AddUserPermission(id, p)
 
   /** https://blog.higher-order.com/
-    *
-    * def ackermannO(m: Int, n: Int): Task[Int] = { def step(m: Int, n: Int, stack: Int): Task[Int] = if (stack >=
-    * maxStack) suspend(ackermannO(m, n)) else go(m, n, stack + 1) def go(m: Int, n: Int, stack: Int): Task[Int] = (m,
-    * n) match { case (0, _) => now(n + 1) case (m, 0) => step(m - 1, 1, stack) case (m, n) => for { internalRec <-
-    * step(m, n - 1, stack) result <- step(m - 1, internalRec, stack) } yield result } go(m, n, 0) }
     */
   def evalRec(state: UserState, P: Patch[UserState]): scala.util.control.TailCalls.TailRec[UserState] = {
     import scala.util.control.TailCalls._
     P match {
       case AtomicBatch(a, b) =>
-        // println(s"AtomicBatch($a,$b)")
         tailcall(evalRec(state, a)).flatMap(s => evalRec(s, b))
       case m: SetUserId =>
-        println(s"SetUserId(${m.id})")
         done(m.mutation.update(state)(UserId(m.id)))
       case m: AddSiblingId =>
-        println(s"AddSiblingId(${m.id})")
         done(m.mutation.update(state)(UserId(m.id)))
       case m: RemoveSiblingId =>
-        println(s"RemoveSiblingId(${m.id})")
         done(m.mutation.update(state)(UserId(m.id)))
       case m: AddUserPermission =>
-        println(s"AddUserPermission(${m.id})")
         done(m.mutation.update(state)((UserId(m.id), m.permission)))
     }
   }
