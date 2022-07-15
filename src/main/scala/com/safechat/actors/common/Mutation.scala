@@ -11,7 +11,7 @@ final case class User(id: UserId, name: UserName)
 final case class UserState(
   id: UserId = UserId("-1"),
   siblings: Set[UserId] = Set.empty,
-  permisions: Map[UserId, String] = Map.empty,
+  permission: Map[UserId, String] = Map.empty,
   counters: Map[UserId, Long] = Map.empty
 )
 
@@ -51,11 +51,11 @@ object Mutation {
   /*Op[({ type UserIdMap[A] = Map[UserId, A] })#UserIdMap, (UserId, String)]*/
   // implicit object AddPermition extends Op[Map[UserId, ?], (UserId, String)] {
   // implicit object AddPermition extends Op[Map[UserId, *], (UserId, String)] {
-  implicit object AddPermition extends Mutation[({ type UserIdMap[A] = Map[UserId, A] })#UserIdMap, (UserId, String)] {
+  implicit object AddPermission extends Mutation[({ type UserIdMap[A] = Map[UserId, A] })#UserIdMap, (UserId, String)] {
     def update(state: UserState)(args: (UserId, String)): UserState = {
       val userId = args._1
       val p      = args._2
-      state.modify(_.permisions).using(_ + (userId -> p))
+      state.modify(_.permission).using(_ + (userId -> p))
       // scala.util.Try(s.modify(_.permisions.at(userId)).setTo(p)).getOrElse(s)
     }
   }
@@ -73,7 +73,7 @@ object Patch {
   final case class AtomicBatch[State](a: Patch[State], b: Patch[State]) extends Patch[State]
 
   // These patches go to the journal instead of events !!!
-  // TODO: mutation: repace Mutation[Id, UserId] with TypeTag(a Protoc type that represents a concrete mutation)
+  // TODO: mutation: replace Mutation[Id, UserId] with TypeTag(a Protoc type that represents a concrete mutation)
   final case class SetUserId(id: String, mutation: Mutation[Id, UserId] = Mutation.SetUser) extends Patch[UserState]
   final case class AddSiblingId(id: String, mutation: Mutation[Set, UserId] = Mutation.AddSibling)
       extends Patch[UserState]
@@ -81,10 +81,10 @@ object Patch {
   final case class RemoveSiblingId(id: String, mutation: Mutation[Set, UserId] = Mutation.RmSibling)
       extends Patch[UserState]
 
-  final case class AddUserPermitions(
+  final case class AddUserPermission(
     id: String,
-    permision: String,
-    mutation: Mutation[({ type UserIdMap[A] = Map[UserId, A] })#UserIdMap, (UserId, String)] = Mutation.AddPermition
+    permission: String,
+    mutation: Mutation[({ type UserIdMap[A] = Map[UserId, A] })#UserIdMap, (UserId, String)] = Mutation.AddPermission
     // OP: Op[Map[UserId, ?], (UserId, String)] = Op.AddPermition
   ) extends Patch[UserState]
 }
@@ -101,7 +101,7 @@ object Example extends App {
   def setUserId(id: String): Patch[UserState]          = SetUserId(id)
   def addSibling(id: String): Patch[UserState]         = AddSiblingId(id)
   def rmSibling(id: String): Patch[UserState]          = RemoveSiblingId(id)
-  def addPerm(id: String, p: String): Patch[UserState] = AddUserPermitions(id, p)
+  def addPerm(id: String, p: String): Patch[UserState] = AddUserPermission(id, p)
 
   /** https://blog.higher-order.com/
     *
@@ -113,11 +113,21 @@ object Example extends App {
   def evalRec(state: UserState, P: Patch[UserState]): scala.util.control.TailCalls.TailRec[UserState] = {
     import scala.util.control.TailCalls._
     P match {
-      case AtomicBatch(a, b)    => tailcall(evalRec(state, a)).flatMap(s => evalRec(s, b))
-      case m: SetUserId         => done(m.mutation.update(state)(UserId(m.id)))
-      case m: AddSiblingId      => done(m.mutation.update(state)(UserId(m.id)))
-      case m: RemoveSiblingId   => done(m.mutation.update(state)(UserId(m.id)))
-      case m: AddUserPermitions => done(m.mutation.update(state)((UserId(m.id), m.permision)))
+      case AtomicBatch(a, b) =>
+        // println(s"AtomicBatch($a,$b)")
+        tailcall(evalRec(state, a)).flatMap(s => evalRec(s, b))
+      case m: SetUserId =>
+        println(s"SetUserId(${m.id})")
+        done(m.mutation.update(state)(UserId(m.id)))
+      case m: AddSiblingId =>
+        println(s"AddSiblingId(${m.id})")
+        done(m.mutation.update(state)(UserId(m.id)))
+      case m: RemoveSiblingId =>
+        println(s"RemoveSiblingId(${m.id})")
+        done(m.mutation.update(state)(UserId(m.id)))
+      case m: AddUserPermission =>
+        println(s"AddUserPermission(${m.id})")
+        done(m.mutation.update(state)((UserId(m.id), m.permission)))
     }
   }
 
@@ -195,7 +205,7 @@ object Example extends App {
         m.mutation.update(state)(UserId(m.id))
 
       case m: RemoveSiblingId   => m.mutation.update(state)(UserId(m.id))
-      case m: AddUserPermitions => m.mutation.update(state)((UserId(m.id), m.permision))
+      case m: AddUserPermission => m.mutation.update(state)((UserId(m.id), m.permission))
     }
 
   // val ops = List.range(2, 15).foldLeft(setUserId("1"))((acc, c) ⇒ acc + addSibling(c.toString))
