@@ -108,16 +108,11 @@ object Example extends App {
   def evalRec(state: UserState, P: Patch[UserState]): scala.util.control.TailCalls.TailRec[UserState] = {
     import scala.util.control.TailCalls._
     P match {
-      case Both(a, b) =>
-        tailcall(evalRec(state, a)).flatMap(s => evalRec(s, b))
-      case m: SetUserId =>
-        done(m.mutation.update(state)(UserId(m.id)))
-      case m: AddSiblingId =>
-        done(m.mutation.update(state)(UserId(m.id)))
-      case m: RemoveSiblingId =>
-        done(m.mutation.update(state)(UserId(m.id)))
-      case m: AddUserPermission =>
-        done(m.mutation.update(state)((UserId(m.id), m.permission)))
+      case Both(a, b)           => tailcall(evalRec(state, a)).flatMap(s => evalRec(s, b))
+      case m: SetUserId         => done(m.mutation.update(state)(UserId(m.id)))
+      case m: AddSiblingId      => done(m.mutation.update(state)(UserId(m.id)))
+      case m: RemoveSiblingId   => done(m.mutation.update(state)(UserId(m.id)))
+      case m: AddUserPermission => done(m.mutation.update(state)((UserId(m.id), m.permission)))
     }
   }
 
@@ -188,18 +183,30 @@ object Example extends App {
         eval(eval(state, both), single)
       // stackoverflow
       case m: SetUserId =>
+        println(s"SetUserId(${m.id})")
         m.mutation.update(state)(UserId(m.id))
 
       case m: AddSiblingId =>
-        println("add" + m.id)
+        println(s"AddSiblingId(${m.id})")
         m.mutation.update(state)(UserId(m.id))
 
-      case m: RemoveSiblingId   => m.mutation.update(state)(UserId(m.id))
-      case m: AddUserPermission => m.mutation.update(state)((UserId(m.id), m.permission))
+      case m: RemoveSiblingId =>
+        println(s"RemoveSiblingId(${m.id})")
+        m.mutation.update(state)(UserId(m.id))
+
+      case m: AddUserPermission =>
+        println(s"AddUserPermission(${m.id})")
+        m.mutation.update(state)((UserId(m.id), m.permission))
     }
 
   // val ops = List.range(2, 15).foldLeft(setUserId("1"))((acc, c) ⇒ acc + addSibling(c.toString))
   // val ops = List.range(1, 1_000_000).foldLeft(setUserId("0"))((acc, c) ⇒ acc + addSibling(c.toString))
+
+  /*
+  val adds = List.range(1, 1_000_000).foldLeft(setUserId("0"))((acc, c) => acc + addSibling(c.toString))
+  val ops: Patch[UserState] = List.range(1, 999_995).foldLeft(adds)((acc, c) => acc + rmSibling(c.toString))
+   */
+
   val ops: Patch[UserState] = setUserId("0") + addSibling("1") + addSibling("2") + addPerm("2", "all") + rmSibling("1")
 
   // val s = evalOptimized(UserState(), ops)
