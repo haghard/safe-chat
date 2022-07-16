@@ -4,15 +4,64 @@ import com.softwaremill.quicklens._
 
 import scala.collection.mutable.ArrayBuffer
 
+/*
 final case class UserId(id: String)     extends AnyVal
 final case class UserName(name: String) extends AnyVal
-final case class User(id: UserId, name: UserName)
+ */
+
+//https://youtu.be/WyvawRRuU2c
+//https://github.com/plokhotnyuk/jsoniter-scala/blob/master/jsoniter-scala-macros/shared/src/test/scala/com/github/plokhotnyuk/jsoniter_scala/macros/JsonCodecMakerSpec.scala
+object UsrId {
+  type T = Base with Tag
+  type Base = Any {
+    type Hack
+  }
+  trait Tag
+  object mk {
+    def apply(value: Long): T            = value.asInstanceOf[T]
+    def unapply(userId: T): Option[Long] = Option(userId).map(_.value)
+  }
+  final implicit class Ops(private val userId: T) extends AnyVal {
+    def value: Long = userId.asInstanceOf[Long]
+  }
+}
+
+object UsrName {
+  type T = Base with Tag
+  type Base = Any {
+    type Hack
+  }
+  trait Tag
+  object make {
+    def apply(name: String): T            = name.asInstanceOf[T]
+    def unapply(value: T): Option[String] = Option(value).map(_.value)
+  }
+  final implicit class Ops(private val name: T) extends AnyVal {
+    def value: String = name.asInstanceOf[String]
+  }
+}
+
+object Perm {
+  type T = Base with Tag
+  type Base = Any {
+    type Hack
+  }
+  trait Tag
+  object mk {
+    def apply(permission: String): T      = permission.asInstanceOf[T]
+    def unapply(value: T): Option[String] = Option(value).map(_.value)
+  }
+  final implicit class Ops(private val permission: T) extends AnyVal {
+    def value: String = permission.asInstanceOf[String]
+  }
+}
+
+final case class User(usr: UsrId.T, name: UsrName.T)
 
 final case class UserState(
-  id: UserId = UserId("-1"),
-  siblings: Set[UserId] = Set.empty,
-  permission: Map[UserId, String] = Map.empty,
-  counters: Map[UserId, Long] = Map.empty
+  id: UsrId.T = UsrId.mk(-1),
+  siblings: Set[UsrId.T] = Set.empty,
+  usrPermissions: Map[UsrId.T, Perm.T] = Map.empty
 )
 
 //https://github.com/typelevel/kind-projector
@@ -31,31 +80,32 @@ object Mutation {
   type Id[T] = T
 
   /*implicit*/
-  object SetUser extends Mutation[Id, UserId] {
-    def update(state: UserState)(args: UserId): UserState =
-      state.modify(_.id).setTo(args)
+  object SetUser extends Mutation[Id, UsrId.T] {
+    def update(state: UserState)(arg: UsrId.T): UserState =
+      state.modify(_.id).setTo(arg)
   }
 
   /*implicit*/
-  object AddSibling extends Mutation[Set, UserId] {
-    def update(state: UserState)(args: UserId): UserState =
+  object AddSibling extends Mutation[Set, UsrId.T] {
+    def update(state: UserState)(args: UsrId.T): UserState =
       state.modify(_.siblings).using(_ + args)
   }
 
   /*implicit*/
-  object RmSibling extends Mutation[Set, UserId] {
-    def update(state: UserState)(args: UserId): UserState =
+  object RmSibling extends Mutation[Set, UsrId.T] {
+    def update(state: UserState)(args: UsrId.T): UserState =
       state.modify(_.siblings).using(_ - args)
   }
 
   /*Op[({ type UserIdMap[A] = Map[UserId, A] })#UserIdMap, (UserId, String)]*/
   // implicit object AddPermission extends Op[Map[UserId, ?], (UserId, String)] {
   // implicit object AddPermission extends Op[Map[UserId, *], (UserId, String)] {
-  implicit object AddPermission extends Mutation[({ type UserIdMap[A] = Map[UserId, A] })#UserIdMap, (UserId, String)] {
-    def update(state: UserState)(args: (UserId, String)): UserState = {
+  implicit object AddPermission
+      extends Mutation[({ type UserIdMap[A] = Map[UsrId.T, A] })#UserIdMap, (UsrId.T, Perm.T)] {
+    def update(state: UserState)(args: (UsrId.T, Perm.T)): UserState = {
       val userId = args._1
       val p      = args._2
-      state.modify(_.permission).using(_ + (userId -> p))
+      state.modify(_.usrPermissions).using(_ + (userId -> p))
       // scala.util.Try(s.modify(_.permisions.at(userId)).setTo(p)).getOrElse(s)
     }
   }
@@ -74,19 +124,26 @@ object Patch {
 
   // These patches go to the journal instead of events !!!
   // TODO: mutation: replace Mutation[Id, UserId] with TypeTag(a Protoc type that represents a concrete mutation)
-  final case class SetUserId(id: String, mutation: Mutation[Id, UserId] = Mutation.SetUser) extends Patch[UserState]
-  final case class AddSiblingId(id: String, mutation: Mutation[Set, UserId] = Mutation.AddSibling)
+  final case class SetUserId(userId: UsrId.T, mutation: Mutation[Id, UsrId.T] = Mutation.SetUser)
+      extends Patch[UserState]
+  final case class AddSiblingId(sibId: UsrId.T, mutation: Mutation[Set, UsrId.T] = Mutation.AddSibling)
       extends Patch[UserState]
 
-  final case class RemoveSiblingId(id: String, mutation: Mutation[Set, UserId] = Mutation.RmSibling)
+  final case class RemoveSiblingId(sibId: UsrId.T, mutation: Mutation[Set, UsrId.T] = Mutation.RmSibling)
       extends Patch[UserState]
 
   final case class AddUserPermission(
-    id: String,
-    permission: String,
-    mutation: Mutation[({ type UserIdMap[A] = Map[UserId, A] })#UserIdMap, (UserId, String)] = Mutation.AddPermission
+    userId: UsrId.T,
+    permission: Perm.T,
+    mutation: Mutation[({ type UserIdMap[A] = Map[UsrId.T, A] })#UserIdMap, (UsrId.T, Perm.T)] = Mutation.AddPermission
     // OP: Op[Map[UserId, ?], (UserId, String)] = Op.AddPermission
   ) extends Patch[UserState]
+
+  // constructors
+  def setUserId(usr: UsrId.T): Patch[UserState]          = SetUserId(usr)
+  def addSibling(sib: UsrId.T): Patch[UserState]         = AddSiblingId(sib)
+  def rmSibling(sib: UsrId.T): Patch[UserState]          = RemoveSiblingId(sib)
+  def addPerm(usr: UsrId.T, p: Perm.T): Patch[UserState] = AddUserPermission(usr, p)
 }
 
 //runMain com.safechat.actors.common.Example
@@ -98,21 +155,16 @@ object Example extends App {
   def compile(patch: Patch[UserState]): UserState => UserState    = { state => eval(state, patch) }
   def compileRec(patch: Patch[UserState]): UserState => UserState = { state => evalRec(state, patch).result }
 
-  def setUserId(id: String): Patch[UserState]          = SetUserId(id)
-  def addSibling(id: String): Patch[UserState]         = AddSiblingId(id)
-  def rmSibling(id: String): Patch[UserState]          = RemoveSiblingId(id)
-  def addPerm(id: String, p: String): Patch[UserState] = AddUserPermission(id, p)
-
   /** https://blog.higher-order.com/
     */
   def evalRec(state: UserState, P: Patch[UserState]): scala.util.control.TailCalls.TailRec[UserState] = {
     import scala.util.control.TailCalls._
     P match {
       case Both(a, b)           => tailcall(evalRec(state, a)).flatMap(s => evalRec(s, b))
-      case m: SetUserId         => done(m.mutation.update(state)(UserId(m.id)))
-      case m: AddSiblingId      => done(m.mutation.update(state)(UserId(m.id)))
-      case m: RemoveSiblingId   => done(m.mutation.update(state)(UserId(m.id)))
-      case m: AddUserPermission => done(m.mutation.update(state)((UserId(m.id), m.permission)))
+      case m: SetUserId         => done(m.mutation.update(state)(m.userId))
+      case m: AddSiblingId      => done(m.mutation.update(state)(m.sibId))
+      case m: RemoveSiblingId   => done(m.mutation.update(state)(m.sibId))
+      case m: AddUserPermission => done(m.mutation.update(state)((m.userId, m.permission)))
     }
   }
 
@@ -183,20 +235,20 @@ object Example extends App {
         eval(eval(state, both), single)
       // stackoverflow
       case m: SetUserId =>
-        println(s"SetUserId(${m.id})")
-        m.mutation.update(state)(UserId(m.id))
+        println(s"SetUserId(${m.userId})")
+        m.mutation.update(state)(m.userId)
 
       case m: AddSiblingId =>
-        println(s"AddSiblingId(${m.id})")
-        m.mutation.update(state)(UserId(m.id))
+        println(s"AddSiblingId(${m.sibId})")
+        m.mutation.update(state)(m.sibId)
 
       case m: RemoveSiblingId =>
-        println(s"RemoveSiblingId(${m.id})")
-        m.mutation.update(state)(UserId(m.id))
+        println(s"RemoveSiblingId(${m.sibId})")
+        m.mutation.update(state)(m.sibId)
 
       case m: AddUserPermission =>
-        println(s"AddUserPermission(${m.id})")
-        m.mutation.update(state)((UserId(m.id), m.permission))
+        println(s"AddUserPermission(${m.userId})")
+        m.mutation.update(state)((m.userId, m.permission))
     }
 
   // val ops = List.range(2, 15).foldLeft(setUserId("1"))((acc, c) ⇒ acc + addSibling(c.toString))
@@ -207,7 +259,8 @@ object Example extends App {
   val ops: Patch[UserState] = List.range(1, 999_995).foldLeft(adds)((acc, c) => acc + rmSibling(c.toString))
    */
 
-  val ops: Patch[UserState] = setUserId("0") + addSibling("1") + addSibling("2") + addPerm("2", "all") + rmSibling("1")
+  val ops: Patch[UserState] = setUserId(UsrId.mk(0L)) + addSibling(UsrId.mk(1L)) +
+    addSibling(UsrId.mk(2)) + addPerm(UsrId.mk(2), Perm.mk("all")) + rmSibling(UsrId.mk(1))
 
   // val s = evalOptimized(UserState(), ops)
   // val s = evalOptimized2(UserState(), ops)
