@@ -124,6 +124,20 @@ object ChatRoomClassic {
         .buffer(1, OverflowStrategy.backpressure)
     // .viaMat(new LastConsumed[ChatRoomEvent])(Keep.right)
 
+    // format: off
+    /** {{{
+      * +--------------------------------------------------------------------------+
+      * |    +-------+                            +-------+       +-------------+  |
+      * |    |Client ○------+                     |Reader ○------> Client's sink|  |
+      * |    +-------+      |                     +-------+       +-------------+  |
+      * |                   |       +--------+       |                             |
+      * |                   |       |        |------>|pulls                        |
+      * |                   +------>|Journal |<------+                             |
+      * |                           +--------+                                     |
+      * +--------------------------------------------------------------------------+
+      * }}}
+      */
+    // format: on
     val ((sinkHub, ks), sourceHub) =
       MergeHub
         // .sourceWithDraining[Message](perProducerBufferSize = 1)
