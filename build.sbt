@@ -283,7 +283,7 @@ libraryDependencies ++= Seq(
 
   "org.apache.avro" %   "avro"         %   "1.11.0",
 
-  "com.softwaremill.quicklens" %% "quicklens" % "1.8.5",
+  "com.softwaremill.quicklens" %% "quicklens" % "1.8.8",
 
   //"com.twitter"     %%  "bijection-avro"  %   "0.9.6",  // ++ 2.12.13!
   //"org.apache.avro" %   "avro-compiler"   %   "1.10.1",
