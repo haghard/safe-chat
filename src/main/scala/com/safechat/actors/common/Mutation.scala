@@ -263,13 +263,13 @@ object Example extends App {
     addSibling(UsrId.mk(2)) + addPerm(UsrId.mk(2), Perm.mk("all")) + rmSibling(UsrId.mk(1))
 
   // val s = evalOptimized(UserState(), ops)
-  // val s = evalOptimized2(UserState(), ops)
+  val s = evalOptimized2(UserState(), ops)
 
   // val s = compile(ops)(UserState()) //java.lang.StackOverflowError
   // val s = compileRec(ops)(UserState())
 
   // val s = eval(UserState(), ops) //java.lang.StackOverflowError
   // scala.util.control.TailCalls
-  val s = evalRec(UserState(), ops).result
+  // val s = evalRec(UserState(), ops).result
   println(s)
 }

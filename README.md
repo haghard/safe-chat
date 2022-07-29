@@ -1,7 +1,7 @@
 # End-to-End encrypted chat
 
 # Main idea
-We want to have a MergeHub connected with a BroadcastHub to achieve dynamic fan-in/fan-out (many-to-many) per a chat room in combination with StreamRefs to get long-running streams of data between two entities over the network.  
+We want to have a MergeHub connected with a BroadcastHub to achieve dynamic fan-in/fan-out (many-to-many) per a chat room in combination with StreamRefs to get long-running streams of data over the network.  
 
 
 ## Connect
@@ -301,6 +301,9 @@ https://blog.softwaremill.com/7-mistakes-when-using-apache-cassandra-51d2cf6df51
 https://github.com/wiringbits/safer.chat
 
 https://doc.akka.io/docs/akka-persistence-cassandra/1.0/migrations.html
+
+## Cassandra data modeler
+http://www.sestevez.com/sestevez/CassandraDataModeler/
 
 ## Sharding
 
