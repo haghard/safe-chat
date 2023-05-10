@@ -5,7 +5,7 @@ val projectName   = "safe-chat"
 val Version       = "0.5.1"
 
 
-val akkaVersion     = "2.6.19"
+val akkaVersion     = "2.6.20"
 
 //val akkaVersion     = "2.6.19+92-a81ab6dc-SNAPSHOT"
 
@@ -20,8 +20,8 @@ val akkaVersion     = "2.6.19"
 */
 
 
-val akkaHttpVersion = "10.2.9"
-val AkkaManagement  = "1.1.3"
+val akkaHttpVersion = "10.2.10"
+val AkkaManagement  = "1.1.4"
 val AkkaPersistenceCassandraVersion = "1.0.5"
 
 val AkkaProjectionVersion = "1.2.3"
@@ -231,7 +231,7 @@ lazy val root = project
 
 libraryDependencies ++= Seq(
   "com.typesafe.akka"       %% "akka-slf4j"             % akkaVersion,
-  "com.github.pureconfig"   %% "pureconfig"             % "0.17.1",
+  "com.github.pureconfig"   %% "pureconfig"             % "0.17.2",
 
   "com.typesafe.akka"       %% "akka-stream-typed"      % akkaVersion,
   "com.typesafe.akka"       %% "akka-cluster-typed"     % akkaVersion,
@@ -279,11 +279,11 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-http"            % akkaHttpVersion,
   "com.typesafe.akka" %% "akka-http-spray-json" % akkaHttpVersion,
 
-  "ch.qos.logback" % "logback-classic" % "1.2.11",
+  "ch.qos.logback" % "logback-classic" % "1.4.6",
 
   "org.apache.avro" %   "avro"         %   "1.11.0",
 
-  "com.softwaremill.quicklens" %% "quicklens" % "1.8.8",
+  "com.softwaremill.quicklens" %% "quicklens" % "1.8.10",
 
   //"com.twitter"     %%  "bijection-avro"  %   "0.9.6",  // ++ 2.12.13!
   //"org.apache.avro" %   "avro-compiler"   %   "1.10.1",
@@ -305,7 +305,7 @@ libraryDependencies ++= Seq(
   //https://github.com/politrons/reactiveScala/blob/master/scala_features/src/main/scala/app/impl/scala/ReflectionFeature.scala
   //"org.scala-lang" % "scala-reflect" % scalaVersion.value
 
-  "com.lihaoyi" % "ammonite" % "2.5.4" % "test" cross CrossVersion.full,
+  "com.lihaoyi" % "ammonite" % "2.5.8" % "test" cross CrossVersion.full,
 )
 
 //comment out for test:run
