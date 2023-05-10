@@ -131,7 +131,7 @@ object ChatRoomClassic {
       * |    |Client ○------+                     |Reader ○------> Client's sink|  |
       * |    +-------+      |                     +-------+       +-------------+  |
       * |                   |       +--------+       |                             |
-      * |                   |       |        |------>|pulls                        |
+      * |                   |Persist|        |------>|Pull                         |
       * |                   +------>|Journal |<------+                             |
       * |                           +--------+                                     |
       * +--------------------------------------------------------------------------+
@@ -147,6 +147,8 @@ object ChatRoomClassic {
         .async(Boot.httpDispatcher, 1)
         .zip(reader)
         .map { case (r @ _, userTextAdded) =>
+
+
           val content = ChatRoomClassic.msg(
             chatId,
             userTextAdded.seqNum,

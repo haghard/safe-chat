@@ -1,0 +1,138 @@
+[
+{
+   "type":"record",
+   "name":"EventEnvelope",
+   "namespace":"com.safechat.avro.persistent.domain",
+   "fields":[
+      {
+         "name":"correlationId",
+         "type":"string"
+      },
+      {
+         "name":"when",
+         "type":"long"
+      },
+      {
+         "name":"tz",
+         "type":"string"
+      },
+      {
+         "name": "payload",
+         "type":[
+            {
+               "name": "UserJoined",
+               "type": "record",
+               "namespace": "com.safechat.avro.persistent.domain",
+               "doc" : "Refers to com.safechat.actors.ChatRoomEvent$UserJoined",
+               "fields": [
+                   { "name": "seqNum", "type": "long" },
+                   { "name": "login", "type": "string" },
+                   { "name": "pubKey", "type": "string" },
+                   { "name": "email", "type": [ "null", "string" ], "default" : null, "doc": "optional email" }
+               ]
+            },
+            {
+               "name": "UserTextAdded",
+               "type": "record",
+               "namespace": "com.safechat.avro.persistent.domain",
+               "doc" : "Refers to com.safechat.actors.ChatRoomEvent$UserTextAdded",
+               "fields": [
+                   { "name": "seqNum", "type": "long" },
+                   { "name": "user", "type": "string" },
+                   { "name": "receiver", "type": "string" },
+                   { "name": "text", "type": "string" }
+               ]
+            },
+            {
+               "name": "UserDisconnected",
+               "type": "record",
+               "namespace": "com.safechat.avro.persistent.domain",
+               "doc" : "Refers to com.safechat.actors.ChatRoomEvent$UserDisconnected",
+               "fields": [
+                 { "name": "login", "type": "string" },
+                 { "name": "email", "type": [ "null", "string" ], "default" : null, "doc": "optional email" }
+               ]
+            }
+         ]
+      }
+   ]
+},
+{
+   "type":"record",
+   "name":"CmdEnvelope",
+   "namespace":"com.safechat.avro.command",
+   "fields":[
+     {  "name":"chatId",  "type":"string" },
+     {  "name":"replyTo", "type":"bytes" },
+     {  "name": "payload",
+        "type":[
+           {
+              "name": "JoinUser",
+              "type": "record",
+              "namespace": "com.safechat.avro.command",
+              "doc" : "com.safechat.avro.command.JoinUser",
+              "fields": [
+                  { "name": "user", "type": "string" },
+                  { "name": "pubKey", "type": "string" }
+              ]
+           },
+           {
+              "name": "PostText",
+              "type": "record",
+              "namespace": "com.safechat.avro.command",
+              "doc" : "com.safechat.avro.command.PostText",
+              "fields": [
+                  { "name": "sender", "type": "string" },
+                  { "name": "receiver", "type": "string" },
+                  { "name": "content", "type": "string" }
+              ]
+           },
+           {
+              "name": "Leave",
+              "type": "record",
+              "namespace": "com.safechat.avro.command",
+              "doc" : "com.safechat.avro.command.Leave",
+              "fields": [
+                { "name": "user", "type": "string" }
+              ]
+           },
+           {
+             "name": "HandOffChatRoom",
+             "type": "record",
+             "namespace": "com.safechat.avro.command",
+             "doc" : "com.safechat.avro.command.HandOffChatRoom",
+             "fields": [
+                { "name": "chatId", "type": "string" },
+                { "name": "user", "type": "string" }
+             ]
+          }
+        ]
+     }
+   ]
+},
+{
+     "type":"record",
+     "name":"ChatRoomState",
+     "namespace":"com.safechat.avro.persistent.state",
+     "fields":[
+        {
+          "name" : "registeredUsers",
+          "type" : {
+            "type" : "map",
+            "values" : "string",
+            "default": []
+          },
+          "doc": "Registered users and their pub keys"
+        },
+        {
+          "name" : "recentHistory",
+          "type" : {
+            "type" : "array",
+            "items" : "string",
+            "default": []
+          },
+          "doc": "Recent messages"
+        }
+     ]
+}
+]

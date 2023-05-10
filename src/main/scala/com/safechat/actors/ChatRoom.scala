@@ -209,6 +209,7 @@ object ChatRoom {
       case cmd: Command.JoinUser =>
         Effect
           .persist(ChatRoomEvent.UserJoined(cmd.user, EventSourcedBehavior.lastSequenceNumber(ctx) + 1, cmd.pubKey))
+          //.thenRun()
           .thenReply(cmd.replyTo) { updateState: ChatRoomState => // That's new state after applying the event
 
             val settings =
